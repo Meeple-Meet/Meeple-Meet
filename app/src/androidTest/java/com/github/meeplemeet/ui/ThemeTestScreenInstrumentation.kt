@@ -21,7 +21,6 @@ class ThemeTestScreenInstrumentation {
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("themeMode_DARK").assertExists()
-    Thread.sleep(5000) // Keep the screen visible for 5 seconds
   }
 
   @Test
@@ -30,7 +29,6 @@ class ThemeTestScreenInstrumentation {
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("themeMode_LIGHT").assertExists()
-    Thread.sleep(5000) // Keep the screen visible for 5 seconds
   }
 
   @Test

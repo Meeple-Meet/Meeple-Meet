@@ -101,7 +101,7 @@ class NotificationTests : FirestoreTests() {
     assertEquals(1, updatedBob.notifications.size)
     val notification = updatedBob.notifications[0]
     assertNotNull(notification.uid)
-    assertEquals(alice.uid, notification.senderOrDiscussionId)
+    assertEquals(alice.uid, notification.senderId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.FRIEND_REQUEST, notification.type)
     assertFalse(notification.read)
@@ -121,10 +121,8 @@ class NotificationTests : FirestoreTests() {
 
     // Charlie received from Alice and Bob
     assertEquals(2, updatedCharlie.notifications.size)
-    val notificationFromAlice =
-        updatedCharlie.notifications.find { it.senderOrDiscussionId == alice.uid }
-    val notificationFromBob =
-        updatedCharlie.notifications.find { it.senderOrDiscussionId == bob.uid }
+    val notificationFromAlice = updatedCharlie.notifications.find { it.senderId == alice.uid }
+    val notificationFromBob = updatedCharlie.notifications.find { it.senderId == bob.uid }
     assertNotNull(notificationFromAlice)
     assertNotNull(notificationFromBob)
     assertEquals(NotificationType.FRIEND_REQUEST, notificationFromAlice!!.type)
@@ -132,7 +130,7 @@ class NotificationTests : FirestoreTests() {
 
     // Bob received from Alice
     assertEquals(1, updatedBob.notifications.size)
-    assertEquals(alice.uid, updatedBob.notifications[0].senderOrDiscussionId)
+    assertEquals(alice.uid, updatedBob.notifications[0].senderId)
   }
 
   // ==================== sendJoinDiscussionNotification Tests ====================
@@ -150,27 +148,27 @@ class NotificationTests : FirestoreTests() {
             name = "Discussion 2", description = "Second discussion", creatorId = alice.uid)
 
     // Test basic creation with correct fields
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion1)
+    accountRepository.sendJoinDiscussionNotification(alice.uid, bob.uid, discussion1)
     var updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(1, updatedBob.notifications.size)
-    assertEquals(discussion1.uid, updatedBob.notifications[0].senderOrDiscussionId)
+    assertEquals(discussion1.uid, updatedBob.notifications[0].discussionId)
     assertEquals(bob.uid, updatedBob.notifications[0].receiverId)
     assertEquals(NotificationType.JOIN_DISCUSSION, updatedBob.notifications[0].type)
     assertFalse(updatedBob.notifications[0].read)
 
     // Test multiple users invited to same discussion
-    accountRepository.sendJoinDiscussionNotification(charlie.uid, discussion1)
+    accountRepository.sendJoinDiscussionNotification(alice.uid, charlie.uid, discussion1)
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
     assertEquals(1, updatedCharlie.notifications.size)
-    assertEquals(discussion1.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
+    assertEquals(discussion1.uid, updatedCharlie.notifications[0].discussionId)
     assertEquals(NotificationType.JOIN_DISCUSSION, updatedCharlie.notifications[0].type)
 
     // Test one user invited to multiple discussions
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion2)
+    accountRepository.sendJoinDiscussionNotification(alice.uid, bob.uid, discussion2)
     updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(2, updatedBob.notifications.size)
-    val notif1 = updatedBob.notifications.find { it.senderOrDiscussionId == discussion1.uid }
-    val notif2 = updatedBob.notifications.find { it.senderOrDiscussionId == discussion2.uid }
+    val notif1 = updatedBob.notifications.find { it.discussionId == discussion1.uid }
+    val notif2 = updatedBob.notifications.find { it.discussionId == discussion2.uid }
     assertNotNull(notif1)
     assertNotNull(notif2)
     assertEquals(NotificationType.JOIN_DISCUSSION, notif1!!.type)
@@ -189,21 +187,21 @@ class NotificationTests : FirestoreTests() {
             participants = listOf(alice.uid))
 
     // Test basic creation with correct fields
-    accountRepository.sendJoinSessionNotification(bob.uid, discussion)
+    accountRepository.sendJoinSessionNotification(alice.uid, bob.uid, discussion)
     val updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(1, updatedBob.notifications.size)
     val notification = updatedBob.notifications[0]
-    assertEquals(discussion.uid, notification.senderOrDiscussionId)
+    assertEquals(discussion.uid, notification.discussionId)
     assertEquals(bob.uid, notification.receiverId)
     assertEquals(NotificationType.JOIN_SESSION, notification.type)
     assertFalse(notification.read)
 
     // Test multiple users can be invited to same session
-    accountRepository.sendJoinSessionNotification(charlie.uid, discussion)
+    accountRepository.sendJoinSessionNotification(alice.uid, charlie.uid, discussion)
     val updatedCharlie = accountRepository.getAccount(charlie.uid)
     assertEquals(1, updatedCharlie.notifications.size)
     assertEquals(NotificationType.JOIN_SESSION, updatedCharlie.notifications[0].type)
-    assertEquals(discussion.uid, updatedCharlie.notifications[0].senderOrDiscussionId)
+    assertEquals(discussion.uid, updatedCharlie.notifications[0].discussionId)
   }
 
   // ==================== readNotification Tests ====================
@@ -244,15 +242,14 @@ class NotificationTests : FirestoreTests() {
 
     var updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(2, updatedBob.notifications.size)
-    val firstNotification = updatedBob.notifications.find { it.senderOrDiscussionId == alice.uid }!!
-    val secondNotification =
-        updatedBob.notifications.find { it.senderOrDiscussionId == charlie.uid }!!
+    val firstNotification = updatedBob.notifications.find { it.senderId == alice.uid }!!
+    val secondNotification = updatedBob.notifications.find { it.senderId == charlie.uid }!!
 
     // Test deleting specific notification
     accountRepository.deleteNotification(bob.uid, firstNotification.uid)
     updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(1, updatedBob.notifications.size)
-    assertEquals(charlie.uid, updatedBob.notifications[0].senderOrDiscussionId)
+    assertEquals(charlie.uid, updatedBob.notifications[0].senderId)
 
     // Test deleting remaining notification
     accountRepository.deleteNotification(bob.uid, secondNotification.uid)
@@ -286,7 +283,7 @@ class NotificationTests : FirestoreTests() {
             creatorId = alice.uid,
             participants = listOf(alice.uid))
 
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion)
+    accountRepository.sendJoinDiscussionNotification(alice.uid, bob.uid, discussion)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
     val notification = updatedBob.notifications[0]
@@ -309,7 +306,7 @@ class NotificationTests : FirestoreTests() {
     sessionRepository.createSession(
         discussion.uid, "Game Night", "game123", testTimestamp, testLocation, alice.uid)
 
-    accountRepository.sendJoinSessionNotification(bob.uid, discussion)
+    accountRepository.sendJoinSessionNotification(alice.uid, bob.uid, discussion)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
     val notification = updatedBob.notifications[0]
@@ -355,7 +352,7 @@ class NotificationTests : FirestoreTests() {
     delay(500)
     val updatedAccount = accountFlow.first()
     assertEquals(1, updatedAccount.notifications.size)
-    assertEquals(alice.uid, updatedAccount.notifications[0].senderOrDiscussionId)
+    assertEquals(alice.uid, updatedAccount.notifications[0].senderId)
   }
 
   @Test
@@ -522,8 +519,8 @@ class NotificationTests : FirestoreTests() {
             name = "Mixed Test", description = "Testing", creatorId = alice.uid)
 
     accountRepository.sendFriendRequestNotification(bob.uid, alice)
-    accountRepository.sendJoinDiscussionNotification(bob.uid, discussion)
-    accountRepository.sendJoinSessionNotification(bob.uid, discussion)
+    accountRepository.sendJoinDiscussionNotification(alice.uid, bob.uid, discussion)
+    accountRepository.sendJoinSessionNotification(alice.uid, bob.uid, discussion)
 
     val updatedBob = accountRepository.getAccount(bob.uid)
     assertEquals(3, updatedBob.notifications.size)

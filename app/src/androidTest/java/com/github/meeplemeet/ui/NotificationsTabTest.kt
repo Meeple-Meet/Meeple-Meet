@@ -14,6 +14,7 @@ import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
+import com.github.meeplemeet.model.account.NotificationNoUid
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.discussions.Discussion
@@ -159,7 +160,7 @@ class NotificationsTabTest : FirestoreTests() {
       friendRequestNotification =
           Notification(
               uid = "n1",
-              senderOrDiscussionId = otherUser.uid,
+              senderId = otherUser.uid,
               receiverId = currentUser.uid,
               read = false,
               type = NotificationType.FRIEND_REQUEST,
@@ -168,7 +169,7 @@ class NotificationsTabTest : FirestoreTests() {
       discussionNotification =
           Notification(
               uid = "n2",
-              senderOrDiscussionId = discussion.uid,
+              discussionId = discussion.uid,
               receiverId = currentUser.uid,
               read = true,
               type = NotificationType.JOIN_DISCUSSION,
@@ -178,7 +179,7 @@ class NotificationsTabTest : FirestoreTests() {
       sessionNotification =
           Notification(
               uid = "n3",
-              senderOrDiscussionId = sessionDiscussion.uid,
+              discussionId = sessionDiscussion.uid,
               receiverId = currentUser.uid,
               read = false,
               type = NotificationType.JOIN_SESSION,
@@ -196,8 +197,9 @@ class NotificationsTabTest : FirestoreTests() {
         notificationsRef
             .document(notif.uid)
             .set(
-                com.github.meeplemeet.model.account.NotificationNoUid(
-                    senderOrDiscussionId = notif.senderOrDiscussionId,
+                NotificationNoUid(
+                    senderId = notif.senderId,
+                    discussionId = notif.discussionId,
                     read = notif.read,
                     type = notif.type,
                     sentAt = notif.sentAt))

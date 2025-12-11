@@ -263,7 +263,6 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
       // Bring games header into view to ensure section is visible
       scrollListToTag(
           EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
-      Thread.sleep(500)
 
       val catanCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame1.uid}"
       val ttrCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame2.uid}"

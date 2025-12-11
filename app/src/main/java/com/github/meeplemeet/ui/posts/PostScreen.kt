@@ -10,12 +10,27 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -34,10 +49,32 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.*
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +91,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +99,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountViewModel
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
@@ -81,6 +120,8 @@ const val ERROR_NOT_DELETED_POST: String = "Couldn't delete post. Please try aga
 const val ERROR_SEND_REPLY: String = "Couldn't send reply. Please try again."
 const val ERROR_NOT_DELETED_COMMENT: String = "Couldn't delete comment. Please try again."
 const val ERROR_NOT_EDITED_POST: String = "Couldn't edit post. Please try again."
+
+const val BLOCKED_USER_STRING = "Comment from blocked user"
 
 const val TOPBAR_TITLE: String = "Post"
 const val COMMENT_TEXT_ZONE_PLACEHOLDER: String = "Share your thoughts..."
@@ -833,6 +874,7 @@ private fun ThreadCard(
                 CommentItem(
                     comment = root,
                     author = resolveUser(root.authorId),
+                    currentUser = currentUser,
                     isMine = (root.authorId == currentUser.uid),
                     hasReplies = root.children.isNotEmpty(),
                     isExpanded = expanded,
@@ -909,6 +951,7 @@ private fun CommentsTree(
               CommentItem(
                   comment = c,
                   author = resolveUser(c.authorId),
+                  currentUser = currentUser,
                   isMine = (c.authorId == currentUser.uid),
                   hasReplies = c.children.isNotEmpty(),
                   isExpanded = expanded,
@@ -951,6 +994,7 @@ private fun CommentsTree(
             CommentItem(
                 comment = c,
                 author = resolveUser(c.authorId),
+                currentUser = currentUser,
                 isMine = (c.authorId == currentUser.uid),
                 hasReplies = c.children.isNotEmpty(),
                 isExpanded = expanded,
@@ -1019,6 +1063,7 @@ private fun ThreadGutter(
  *
  * @param comment The comment to display.
  * @param author The author of the comment.
+ * @param currentUser The current user's account information.
  * @param isMine Whether the comment was authored by the current user.
  * @param hasReplies Whether this comment has child replies.
  * @param isExpanded Whether the replies are currently visible.
@@ -1031,6 +1076,7 @@ private fun ThreadGutter(
 private fun CommentItem(
     comment: Comment,
     author: Account?,
+    currentUser: Account,
     isMine: Boolean,
     hasReplies: Boolean = false,
     isExpanded: Boolean = false,
@@ -1043,6 +1089,8 @@ private fun CommentItem(
   var replyText by rememberSaveable(comment.id) { mutableStateOf("") }
   val focusManager = LocalFocusManager.current
 
+  val isBlocked = currentUser.relationships[comment.authorId] == RelationshipStatus.BLOCKED
+
   val clickMod = if (onCardClick != null) Modifier.clickable(onClick = onCardClick) else Modifier
   Column(modifier = clickMod.fillMaxWidth().testTag(PostTags.commentCard(comment.id))) {
     // Comment header
@@ -1051,27 +1099,29 @@ private fun CommentItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
           ProfilePicture(
-              profilePictureUrl = author?.photoUrl,
+              profilePictureUrl = if (isBlocked) null else author?.photoUrl,
               size = Dimensions.AvatarSize.tiny,
               backgroundColor = MessagingColors.redditOrange,
               modifier = Modifier.clearAndSetSemantics {})
           Text(
-              text = author?.name ?: UNKNOWN_USER_PLACEHOLDER,
+              text = if (isBlocked) "Blocked User" else author?.name ?: UNKNOWN_USER_PLACEHOLDER,
               style = MaterialTheme.typography.labelMedium,
               fontSize = Dimensions.TextSize.small,
               fontWeight = FontWeight.SemiBold,
               color = MessagingColors.primaryText,
               modifier = Modifier.testTag(PostTags.commentAuthor(comment.id)))
-          Text(
-              text = "•",
-              fontSize = Dimensions.TextSize.small,
-              color = MessagingColors.secondaryText)
-          Text(
-              text = formatDateTime(comment.timestamp),
-              style = MaterialTheme.typography.labelSmall,
-              fontSize = Dimensions.TextSize.small,
-              color = MessagingColors.secondaryText,
-              modifier = Modifier.testTag(PostTags.commentDate(comment.id)))
+          if (!isBlocked) {
+            Text(
+                text = "•",
+                fontSize = Dimensions.TextSize.small,
+                color = MessagingColors.secondaryText)
+            Text(
+                text = formatDateTime(comment.timestamp),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = Dimensions.TextSize.small,
+                color = MessagingColors.secondaryText,
+                modifier = Modifier.testTag(PostTags.commentDate(comment.id)))
+          }
           Spacer(Modifier.weight(1f))
           if (isMine) {
             IconButton(
@@ -1086,28 +1136,39 @@ private fun CommentItem(
                       modifier = Modifier.size(Dimensions.IconSize.medium))
                 }
           }
-          IconButton(
-              onClick = { replying = !replying },
-              modifier =
-                  Modifier.size(Dimensions.AvatarSize.small)
-                      .testTag(PostTags.commentReplyToggle(comment.id))) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Reply,
-                    contentDescription = "Reply",
-                    tint = MessagingColors.secondaryText,
-                    modifier = Modifier.size(Dimensions.IconSize.medium))
-              }
+          if (!isBlocked)
+              IconButton(
+                  onClick = { replying = !replying },
+                  modifier =
+                      Modifier.size(Dimensions.AvatarSize.small)
+                          .testTag(PostTags.commentReplyToggle(comment.id))) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Reply,
+                        contentDescription = "Reply",
+                        tint = MessagingColors.secondaryText,
+                        modifier = Modifier.size(Dimensions.IconSize.medium))
+                  }
         }
 
     Spacer(Modifier.height(Dimensions.Spacing.medium))
 
     // Comment text
-    Text(
-        text = comment.text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontSize = Dimensions.TextSize.standard,
-        color = MessagingColors.primaryText,
-        modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    if (isBlocked) {
+      Text(
+          text = BLOCKED_USER_STRING,
+          style = MaterialTheme.typography.bodyMedium,
+          fontSize = Dimensions.TextSize.standard,
+          color = MessagingColors.secondaryText,
+          fontStyle = FontStyle.Italic,
+          modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    } else {
+      Text(
+          text = comment.text,
+          style = MaterialTheme.typography.bodyMedium,
+          fontSize = Dimensions.TextSize.standard,
+          color = MessagingColors.primaryText,
+          modifier = Modifier.testTag(PostTags.commentText(comment.id)))
+    }
 
     // "See replies" button when there are replies
     if (hasReplies) {

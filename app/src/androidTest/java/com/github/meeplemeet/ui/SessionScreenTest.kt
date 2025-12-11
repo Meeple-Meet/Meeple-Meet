@@ -24,7 +24,6 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Before
@@ -336,10 +335,8 @@ class SessionViewerScreenTest : FirestoreTests() {
     checkpoint("Repository no longer lists member as session participant") {
       runBlocking {
         // Give SessionViewModel coroutine a moment to perform update
-        delay(300)
-
         val updatedSession = sessionRepository.getSession(baseDiscussion.uid)
-        assert(updatedSession != null) { "Session should still exist after member leaves" }
+        compose.waitUntil { updatedSession != null }
         assert(member.uid !in updatedSession!!.participants) {
           "Expected member to be removed from session participants"
         }
@@ -415,9 +412,8 @@ class SessionViewerScreenTest : FirestoreTests() {
 
     checkpoint("Session is deleted from repository when no admins remain") {
       runBlocking {
-        delay(300)
         val updatedSession = sessionRepository.getSession(soloDiscussion.uid)
-        assert(updatedSession == null) { "Expected session to be deleted when sole admin leaves" }
+        compose.waitUntil { updatedSession == null }
       }
       assert(backCalled)
     }

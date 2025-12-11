@@ -2,23 +2,28 @@
 package com.github.meeplemeet.ui.auth
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
@@ -28,8 +33,14 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,23 +53,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.github.meeplemeet.R
-import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.discussions.Message
-import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.ui.discussions.ChatBubble
-import com.github.meeplemeet.ui.discussions.DiscussionCard
-import com.github.meeplemeet.ui.discussions.PollBubble
 import com.github.meeplemeet.ui.posts.FeedCard
 import com.github.meeplemeet.ui.sessions.SessionOverCard
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.google.firebase.Timestamp
-import java.util.Date
 import kotlinx.coroutines.launch
 
 /** Test tags used for UI testing in the onboarding flow. */
@@ -70,18 +75,16 @@ object OnBoardingTestTags {
   const val PAGER_DOT = "OnBoarding_PagerDot"
   const val PAGER = "OnBoarding_Pager"
   const val DISCUSSION_PREVIEW_CARD = "DiscussionPreviewCard"
-  const val CLOSE_DIALOG = "OnBoarding_CloseDialog"
+  const val SESSION_CREATION_PAGE = "OnBoarding_SessionCreationPage"
+  const val SESSION_CREATION_DATETIME = "OnBoarding_SessionCreationDateTime"
+  const val SESSION_CREATION_PARTICIPANTS = "OnBoarding_SessionCreationParticipants"
+
+  fun sessionCreationParticipant(name: String) = "OnBoarding_SessionCreationParticipant:$name"
 }
 
 /** String constants for onboarding screen content and labels. */
 object OnBoardingStrings {
   const val SKIP = "Skip"
-  const val MEEPLE_MEET_INTRO_DESCRIPTION =
-      "Meeple Meet helps you organize game sessions, join discussions, explore shops, check prices, and find local gaming spaces."
-  const val DISCUSSION_PREVIEW_DESCRIPTION =
-      "Meeple Meet helps you connect with new friends and join fun discussions around your favorite games."
-  const val DISCUSSION_PREVIEW_TAP = "⬆️ Tap the discussion above to continue"
-  const val DISCUSSION_PREVIEW_JUMP = "Jump into the conversation and never miss a meetup!"
   const val SESSION_PAGE_SUBTITLE = "Organize and join gaming meetups with friends"
   const val POST_PAGE_SUBTITLE = "Share your gaming experiences with the world"
   const val MAP_EXPLORATION_SUBTITLE = "Find board game shops and rental spaces near you"
@@ -91,6 +94,27 @@ object OnBoardingStrings {
       "Connect with gamers worldwide! Share strategies, reviews, and join the conversation about your favorite games."
   const val BOARD_GAME_NIGHT = "Board Game Night"
   const val FIVE_NEW_MESSAGES = "5 new messages"
+  const val PARTICIPANTS_SECTION_TEXT = "Participants"
+  const val PARTICIPANT_1 = "Alexandre"
+  const val PARTICIPANT_2 = "Thomas"
+  const val DATE_PREVIEW = "Date"
+  const val TIME_PREVIEW = "Time"
+  const val SESSION_CREATION_CHOOSE_FRIENDS = "Choose a schedule and invite friends"
+  const val SESSION_CREATION_CREATE_SESSION_BUTTON =
+      "Use the button in the discussion's screen to create a new session"
+  const val SESSION_CREATION_TITLE = "Create Sessions"
+}
+
+/** Numeric constants for onboarding screen layout and styling. */
+object OnBoardingNumbers {
+  val DATE_AND_TIME_PREVIEW_HEIGHT: Dp = 10.dp
+  const val DATE_PREVIEW_WIDTH_FACTOR = 0.55f
+  val DISCUSSION_CARD_BORDER_STROKE_WIDTH = 1.5.dp
+  const val DISCUSSION_CARD_BORDER_STROKE_COLOR_ALPHA = 0.20f
+  val DISCUSSION_CARD_ELEVATION = 12.dp
+  const val PARTICIPANTS_AND_SCHEDULE_CARD_ALPHA = 0.1f
+  val PARTICIPANTS_AND_SCHEDULE_CARD_WIDTH = 1.dp
+  val SESSION_CREATION_IMAGE_HEIGHT = 230.dp
 }
 
 /**
@@ -117,25 +141,23 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
 
   Box(
       modifier =
-          Modifier.fillMaxSize()
-              .background(AppColors.primary)
-              .padding(Dimensions.CornerRadius.round)
-              .pointerInput(pagerState.currentPage) {
+          Modifier.fillMaxSize().background(AppColors.primary).pointerInput(
+              pagerState.currentPage) {
                 // Block swipe gestures on page 1 if user hasn't interacted
                 if (pagerState.currentPage == 1 && !hasInteractedWithDiscussion.value) {
                   detectHorizontalDragGestures { _, _ -> }
                 }
               }) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
-              Box(modifier = Modifier.fillMaxWidth()) {
-                SkipButton(onSkip = onSkip, modifier = Modifier.align(Alignment.TopEnd))
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize().padding(Dimensions.CornerRadius.round)) {
+              Box(modifier = Modifier.fillMaxWidth().weight(Dimensions.Weight.full)) {
+                OnBoardingPager(
+                    pagerState = pagerState,
+                    pages = pages,
+                    hasInteractedWithDiscussion = hasInteractedWithDiscussion,
+                    modifier = Modifier.fillMaxSize())
               }
-              OnBoardingPager(
-                  pagerState = pagerState,
-                  pages = pages,
-                  hasInteractedWithDiscussion = hasInteractedWithDiscussion,
-                  modifier = Modifier.weight(Dimensions.Weight.full))
 
               NavigationControls(
                   pagerState = pagerState,
@@ -143,7 +165,6 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                   hasInteractedWithDiscussion = hasInteractedWithDiscussion.value,
                   onNavigate = { page -> scope.launch { pagerState.animateScrollToPage(page) } })
 
-              // Show end button if last page
               if (pagerState.currentPage == pages.lastIndex) {
                 Button(
                     onClick = onFinished,
@@ -158,6 +179,12 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
                     }
               }
             }
+
+        SkipButton(
+            onSkip = onSkip,
+            modifier =
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium))
       }
 }
 
@@ -188,7 +215,7 @@ private fun SkipButton(onSkip: () -> Unit, modifier: Modifier = Modifier) {
  */
 @Composable
 private fun OnBoardingPager(
-    pagerState: androidx.compose.foundation.pager.PagerState,
+    pagerState: PagerState,
     pages: List<OnBoardPage>,
     hasInteractedWithDiscussion: MutableState<Boolean>,
     modifier: Modifier = Modifier
@@ -200,12 +227,10 @@ private fun OnBoardingPager(
         ->
         when (page) {
           0 -> MeepleMeetIntroPage()
-          1 ->
-              DiscussionPreviewPage(
-                  pageData = pages[page], hasInteractedWithDiscussion = hasInteractedWithDiscussion)
-          2 -> MapExplorationPage()
-          3 -> SessionsPage()
-          4 -> PostsPage()
+          1 -> SessionCreationPreviewPage(hasInteractedWithDiscussion = hasInteractedWithDiscussion)
+          2 -> SessionsPage()
+          3 -> PostsPage()
+          4 -> MapExplorationPage()
           5 -> LetsGoPage()
           else -> StandardOnBoardingPage(pageData = pages[page], pageIndex = page)
         }
@@ -231,53 +256,95 @@ fun StandardOnBoardingPage(pageData: OnBoardPage, pageIndex: Int) {
 }
 
 /**
- * Composable for the discussion preview onboarding page.
+ * Composable for the session creation preview onboarding page.
  *
  * @param pageData Data for the page
  * @param hasInteractedWithDiscussion Mutable state tracking user interaction
  */
 @Composable
-fun DiscussionPreviewPage(
-    pageData: OnBoardPage,
-    hasInteractedWithDiscussion: MutableState<Boolean>
-) {
-  val showDialog = remember { mutableStateOf(false) }
+fun SessionCreationPreviewPage(hasInteractedWithDiscussion: MutableState<Boolean>) {
+  LaunchedEffect(Unit) {
+    if (!hasInteractedWithDiscussion.value) {
+      hasInteractedWithDiscussion.value = true
+    }
+  }
+
+  val isDarkTheme = isSystemInDarkTheme()
+  val logoRes = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear
 
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
-      modifier = Modifier.fillMaxSize()) {
-        PageImage(imageRes = pageData.image)
-        PageTitle(title = pageData.title, pageIndex = 1)
+      verticalArrangement = Arrangement.Top,
+      modifier =
+          Modifier.fillMaxSize()
+              .padding(top = Dimensions.Padding.medium)
+              .verticalScroll(rememberScrollState())
+              .testTag(OnBoardingTestTags.SESSION_CREATION_PAGE)) {
+        PageTitle(title = OnBoardingStrings.SESSION_CREATION_TITLE, pageIndex = 1)
+
+        Image(
+            painter = painterResource(id = R.drawable.onboarding_session_discussion),
+            contentDescription = null,
+            modifier =
+                Modifier.fillMaxWidth().height(OnBoardingNumbers.SESSION_CREATION_IMAGE_HEIGHT),
+            contentScale = ContentScale.Fit)
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
         Text(
-            text = OnBoardingStrings.DISCUSSION_PREVIEW_DESCRIPTION,
-            fontSize = Dimensions.TextSize.subtitle,
-            color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.opaque),
-            modifier = Modifier.padding(horizontal = Dimensions.CornerRadius.round))
+            text = OnBoardingStrings.SESSION_CREATION_CREATE_SESSION_BUTTON,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.medium))
 
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-        // Use the existing DiscussionCard component
-        DiscussionCard(
-            modifier = Modifier.testTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD),
-            discussionName = OnBoardingStrings.BOARD_GAME_NIGHT,
-            lastMsg = "Alex: Which Game should we play?",
-            lastMsgDate = Timestamp.now(),
-            unreadMsgCount = 5,
-            profilePictureUrl = null,
-            onClick = {
-              showDialog.value = true
-              hasInteractedWithDiscussion.value = true
-            })
+        CreateSessionDiscussionPreviewCard(
+            logoRes = logoRes,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = Dimensions.Padding.medium)
+                    .testTag(OnBoardingTestTags.DISCUSSION_PREVIEW_CARD))
 
-        Spacer(modifier = Modifier.height(Dimensions.Padding.extraMedium))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
-        InteractionPrompt(hasInteracted = hasInteractedWithDiscussion.value)
+        Text(
+            text = OnBoardingStrings.SESSION_CREATION_CHOOSE_FRIENDS,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.medium))
 
-        if (showDialog.value) {
-          DiscussionDetailDialog(onDismiss = { showDialog.value = false })
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.medium),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.background,
+            shadowElevation = OnBoardingNumbers.DISCUSSION_CARD_ELEVATION,
+            border =
+                BorderStroke(
+                    width = OnBoardingNumbers.PARTICIPANTS_AND_SCHEDULE_CARD_WIDTH,
+                    color =
+                        MaterialTheme.colorScheme.outline.copy(
+                            alpha = OnBoardingNumbers.PARTICIPANTS_AND_SCHEDULE_CARD_ALPHA)),
+        ) {
+          Column(
+              modifier = Modifier.padding(Dimensions.Padding.medium),
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
+                OnBoardingDateTimePreview(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(OnBoardingTestTags.SESSION_CREATION_DATETIME))
+                OnBoardingParticipantsPreview(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(OnBoardingTestTags.SESSION_CREATION_PARTICIPANTS))
+              }
         }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
       }
 }
 
@@ -306,10 +373,11 @@ private fun PageImage(imageRes: Int) {
 private fun PageTitle(title: String, pageIndex: Int) {
   Text(
       text = title,
-      fontSize = Dimensions.TextSize.xLarge,
+      fontSize = Dimensions.TextSize.large,
       fontWeight = FontWeight.Bold,
+      color = MaterialTheme.colorScheme.tertiary,
       modifier =
-          Modifier.padding(bottom = Dimensions.Padding.large)
+          Modifier.padding(bottom = Dimensions.Padding.medium)
               .testTag("${OnBoardingTestTags.PAGE_TITLE}_$pageIndex"))
 }
 
@@ -328,208 +396,6 @@ private fun PageDescription(description: String) {
 }
 
 /**
- * Composable for displaying an interaction prompt on the discussion page.
- *
- * @param hasInteracted Whether the user has interacted with the discussion
- */
-@Composable
-private fun InteractionPrompt(hasInteracted: Boolean) {
-  Text(
-      text =
-          if (!hasInteracted) {
-            OnBoardingStrings.DISCUSSION_PREVIEW_TAP
-          } else {
-            OnBoardingStrings.DISCUSSION_PREVIEW_JUMP
-          },
-      fontSize = if (!hasInteracted) Dimensions.TextSize.standard else Dimensions.TextSize.body,
-      color = if (!hasInteracted) AppColors.focus else AppColors.textIconsFade,
-      fontWeight = if (!hasInteracted) FontWeight.Bold else FontWeight.Normal,
-      modifier =
-          Modifier.padding(
-              top = Dimensions.Padding.medium,
-              start = Dimensions.CornerRadius.round,
-              end = Dimensions.CornerRadius.round))
-}
-
-/**
- * Composable for the discussion detail dialog shown on the discussion preview page.
- *
- * @param onDismiss Callback when the dialog is dismissed
- */
-@Composable
-fun DiscussionDetailDialog(onDismiss: () -> Unit) {
-  androidx.compose.animation.AnimatedVisibility(
-      visible = true,
-      enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandIn(),
-      exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkOut()) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            modifier = Modifier.fillMaxSize().padding(vertical = Dimensions.Padding.giant),
-            containerColor = AppColors.secondary,
-            tonalElevation = Dimensions.Elevation.none,
-            shape = MaterialTheme.shapes.large,
-            title = null,
-            icon = null,
-            text = {
-              Column(
-                  modifier = Modifier.fillMaxSize().padding(Dimensions.Padding.extraLarge),
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
-                    DialogHeader(onClose = onDismiss)
-                    DialogInstructions()
-                    DiscussionHeader()
-                    DialogMessages()
-                    DialogFooter()
-                  }
-            },
-            confirmButton = {},
-            dismissButton = {})
-      }
-}
-
-/**
- * Composable for the header of the discussion detail dialog.
- *
- * @param onClose Callback when the close button is pressed
- */
-@Composable
-private fun DialogHeader(onClose: () -> Unit) {
-  Row(
-      modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium),
-      verticalAlignment = Alignment.CenterVertically) {
-        IconButton(
-            onClick = onClose, modifier = Modifier.testTag(OnBoardingTestTags.CLOSE_DIALOG)) {
-              Icon(
-                  imageVector = Icons.Default.Close,
-                  contentDescription = "Close",
-                  tint = Color.Black)
-            }
-        Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
-        Text(
-            "Session Creation",
-            fontSize = Dimensions.TextSize.largeHeading,
-            fontWeight = FontWeight.Medium,
-            color = AppColors.textIcons,
-            modifier = Modifier.weight(Dimensions.Weight.full))
-      }
-}
-
-/** Composable for displaying instructions in the discussion dialog. */
-@Composable
-private fun DialogInstructions() {
-  Column(
-      modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
-      horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            "Use the button next to the discussion's name to create or join a session",
-            fontSize = Dimensions.TextSize.small,
-            color = AppColors.textIcons,
-            textAlign = TextAlign.Center,
-            modifier =
-                Modifier.padding(top = Dimensions.Padding.tiny, bottom = Dimensions.Padding.small)
-                    .align(Alignment.CenterHorizontally))
-      }
-}
-
-/** Composable for the discussion header section in the dialog. */
-@Composable
-private fun DiscussionHeader() {
-  Surface(
-      color = AppColors.secondary,
-      shape = RoundedCornerShape(Dimensions.Padding.extraLarge),
-      modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium)) {
-        Column {
-          Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier =
-                  Modifier.padding(
-                          horizontal = Dimensions.Padding.large,
-                          vertical = Dimensions.Padding.medium)
-                      .fillMaxWidth()) {
-                Surface(
-                    shape = CircleShape,
-                    color = AppColors.primary,
-                    modifier = Modifier.size(Dimensions.IconSize.huge),
-                ) {
-                  Image(
-                      painter = painterResource(id = R.drawable.logo_clear),
-                      contentDescription = "Discussion Avatar",
-                      modifier = Modifier.padding(Dimensions.Padding.medium))
-                }
-                Spacer(Modifier.width(Dimensions.Padding.large))
-                Column(modifier = Modifier.weight(Dimensions.Weight.full)) {
-                  Text(
-                      OnBoardingStrings.BOARD_GAME_NIGHT,
-                      fontWeight = FontWeight.SemiBold,
-                      fontSize = Dimensions.TextSize.standard,
-                      color = AppColors.textIcons,
-                      modifier = Modifier.testTag("DiscussionHeader_Title"))
-                  Text(
-                      OnBoardingStrings.FIVE_NEW_MESSAGES,
-                      fontSize = Dimensions.TextSize.small,
-                      color = AppColors.textIconsFade)
-                }
-                Spacer(modifier = Modifier.width(Dimensions.Padding.extraMedium))
-                Icon(
-                    imageVector = Icons.Default.LibraryAdd,
-                    contentDescription = "Session",
-                    tint = AppColors.textIcons)
-              }
-          HorizontalDivider(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(
-                          horizontal = Dimensions.ContainerSize.dividerHorizontalPadding,
-                          vertical = Dimensions.Padding.small))
-        }
-      }
-}
-
-/** Composable for displaying example messages in the discussion dialog. */
-@Composable
-private fun DialogMessages() {
-  // Dummy accounts for preview purposes
-  val currentAccount =
-      Account(uid = "currentUser", name = "You", handle = "you", email = "you@example.com")
-  val senderAccount =
-      Account(uid = "Alex", name = "Alex", handle = "alex", email = "alex@example.com")
-
-  ChatBubble(
-      message =
-          Message(
-              uid = "1",
-              senderId = "Alex",
-              content = "Hey! Are we playing Catan tonight?",
-              createdAt = Timestamp.now()),
-      senderAccount = senderAccount,
-      currentAccount = currentAccount)
-  Spacer(Modifier.height(Dimensions.Padding.medium))
-
-  PollBubble(
-      msgIndex = 0,
-      poll =
-          Poll(
-              question = "Which game should we play?",
-              options = listOf("Catan", "Wingspan", "Terraforming Mars"),
-              allowMultipleVotes = true,
-              votes = votes),
-      authorName = "Dany",
-      currentUserId = "currentUser",
-      profilePictureUrl = null,
-      createdAt = Date(),
-      onVote = { x, _ -> x + 1 })
-}
-
-/** Composable for the footer text in the discussion dialog. */
-@Composable
-private fun DialogFooter() {
-  Text(
-      "Tap on any discussion to see full details and join in!",
-      fontSize = Dimensions.TextSize.standard,
-      color = AppColors.textIcons,
-      modifier = Modifier.padding(bottom = Dimensions.Padding.large).fillMaxWidth())
-}
-
-/**
  * Composable for navigation controls (back, page indicators, next) in onboarding.
  *
  * @param pagerState Pager state for current page
@@ -539,13 +405,16 @@ private fun DialogFooter() {
  */
 @Composable
 fun NavigationControls(
-    pagerState: androidx.compose.foundation.pager.PagerState,
+    pagerState: PagerState,
     pages: List<OnBoardPage>,
     hasInteractedWithDiscussion: Boolean,
     onNavigate: (Int) -> Unit
 ) {
   Row(
-      modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.extraLarge),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  vertical = Dimensions.Padding.small, horizontal = Dimensions.Padding.extraLarge),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween) {
         BackButton(
@@ -612,7 +481,9 @@ private fun PageIndicators(pageCount: Int, currentPage: Int) {
               Modifier.padding(horizontal = Dimensions.Spacing.small)
                   .size(animatedSize.dp)
                   .background(
-                      color = if (isSelected) AppColors.textIconsFade else AppColors.secondary,
+                      color =
+                          if (isSelected) MaterialTheme.colorScheme.inversePrimary
+                          else MaterialTheme.colorScheme.surface,
                       shape = CircleShape)
                   .testTag(OnBoardingTestTags.PAGER_DOT))
     }
@@ -663,16 +534,19 @@ val votes: Map<String, List<Int>> = mapOf("1" to listOf(0), "2" to emptyList())
 /** Composable for the Meeple Meet introduction onboarding page. */
 @Composable
 fun MeepleMeetIntroPage() {
-  val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+  val isDarkTheme = isSystemInDarkTheme()
   val logoRes = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear
   Box(modifier = Modifier.fillMaxSize().background(AppColors.primary)) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
-        modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge)) {
+        modifier =
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(Dimensions.Spacing.medium)) {
           PageImage(imageRes = logoRes)
           PageTitle(title = "Meeple Meet", pageIndex = 0)
-          Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
           Column(
               horizontalAlignment = Alignment.Start,
               modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.none)) {
@@ -693,14 +567,6 @@ fun MeepleMeetIntroPage() {
                     "Discover rental spaces and venues for gaming events nearby",
                     tint = AppColors.textIconsFade)
               }
-          Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
-          Text(
-              text = OnBoardingStrings.MEEPLE_MEET_INTRO_DESCRIPTION,
-              fontSize = Dimensions.TextSize.subtitle,
-              color = AppColors.secondary,
-              textAlign = TextAlign.Center,
-              modifier =
-                  Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.extraLarge))
         }
   }
 }
@@ -738,8 +604,11 @@ fun MapExplorationPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Explore Nearby", pageIndex = 2)
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
+        PageTitle(title = "Explore Nearby", pageIndex = 4)
 
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_SUBTITLE,
@@ -880,8 +749,8 @@ fun MapExplorationPage() {
  */
 @Composable
 private fun MapMarkerWithDrawable(
-    offsetX: androidx.compose.ui.unit.Dp,
-    offsetY: androidx.compose.ui.unit.Dp,
+    offsetX: Dp,
+    offsetY: Dp,
     color: Color,
     iconResId: Int,
     label: String
@@ -957,8 +826,11 @@ fun SessionsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Game Sessions", pageIndex = 3)
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
+        PageTitle(title = "Game Sessions", pageIndex = 2)
 
         Text(
             text = OnBoardingStrings.SESSION_PAGE_SUBTITLE,
@@ -1049,8 +921,11 @@ fun PostsPage() {
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Top,
-      modifier = Modifier.fillMaxSize().padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Community Posts", pageIndex = 4)
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(top = Dimensions.Padding.medium)) {
+        PageTitle(title = "Community Posts", pageIndex = 3)
 
         Text(
             text = OnBoardingStrings.POST_PAGE_SUBTITLE,
@@ -1130,13 +1005,16 @@ private fun PostFeatureItem(icon: ImageVector, text: String) {
 /** Composable for the final onboarding page encouraging the user to get started. */
 @Composable
 fun LetsGoPage() {
-  val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+  val isDarkTheme = isSystemInDarkTheme()
   val logoRes = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear
 
   Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center,
-      modifier = Modifier.fillMaxSize().padding(Dimensions.Spacing.xxxLarge)) {
+      modifier =
+          Modifier.fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(Dimensions.Spacing.xxxLarge)) {
         Spacer(modifier = Modifier.weight(0.3f))
 
         PageImage(imageRes = logoRes)
@@ -1152,5 +1030,245 @@ fun LetsGoPage() {
             modifier = Modifier.padding(horizontal = Dimensions.CornerRadius.round))
 
         Spacer(modifier = Modifier.weight(0.7f))
+      }
+}
+
+// ==================== SESSION CREATION PAGE ====================
+
+/**
+ * Composable for displaying a static discussion preview card in the onboarding session creation
+ * page.
+ *
+ * @param logoRes Resource ID for the logo image
+ * @param modifier Modifier for styling
+ */
+@Composable
+private fun CreateSessionDiscussionPreviewCard(
+    logoRes: Int,
+    modifier: Modifier = Modifier,
+) {
+  Card(
+      modifier = modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+      elevation =
+          CardDefaults.cardElevation(
+              defaultElevation = OnBoardingNumbers.DISCUSSION_CARD_ELEVATION),
+      border =
+          BorderStroke(
+              OnBoardingNumbers.DISCUSSION_CARD_BORDER_STROKE_WIDTH,
+              color =
+                  MaterialTheme.colorScheme.outline.copy(
+                      alpha = OnBoardingNumbers.DISCUSSION_CARD_BORDER_STROKE_COLOR_ALPHA))) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = Dimensions.Padding.large,
+                        vertical = Dimensions.Padding.large,
+                    ),
+            verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                  shape = CircleShape,
+                  color = MaterialTheme.colorScheme.surface,
+                  modifier = Modifier.size(Dimensions.IconSize.giant)) {
+                    Image(
+                        painter = painterResource(id = logoRes),
+                        contentDescription = null,
+                        modifier = Modifier.padding(Dimensions.Padding.medium),
+                        contentScale = ContentScale.Fit)
+                  }
+
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+
+              Column(modifier = Modifier.weight(weight = 1f)) {
+                Text(
+                    text = OnBoardingStrings.BOARD_GAME_NIGHT,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = OnBoardingStrings.FIVE_NEW_MESSAGES,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+              Icon(
+                  imageVector = Icons.Default.LibraryAdd,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.tertiary,
+                  modifier = Modifier.size(Dimensions.IconSize.extraLarge))
+            }
+      }
+}
+
+/**
+ * Composable for displaying static date and time fields in the onboarding session creation page.
+ *
+ * @param modifier Modifier for styling
+ */
+@Composable
+private fun OnBoardingDateTimePreview(modifier: Modifier = Modifier) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .background(
+                  color = MaterialTheme.colorScheme.surface,
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium))
+              .padding(Dimensions.Padding.medium),
+      verticalAlignment = Alignment.CenterVertically) {
+        StaticOnBoardingField(
+            label = OnBoardingStrings.DATE_PREVIEW,
+            leadingIcon = {
+              Icon(
+                  imageVector = Icons.Default.CalendarToday,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.tertiary)
+            },
+            modifier =
+                Modifier.weight(OnBoardingNumbers.DATE_PREVIEW_WIDTH_FACTOR)
+                    .heightIn(min = OnBoardingNumbers.DATE_AND_TIME_PREVIEW_HEIGHT))
+
+        Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+
+        StaticOnBoardingField(
+            label = OnBoardingStrings.TIME_PREVIEW,
+            leadingIcon = {
+              Icon(
+                  imageVector = Icons.Default.Timer,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.tertiary)
+            },
+            modifier =
+                Modifier.weight(weight = 1f - OnBoardingNumbers.DATE_PREVIEW_WIDTH_FACTOR)
+                    .heightIn(min = OnBoardingNumbers.DATE_AND_TIME_PREVIEW_HEIGHT))
+      }
+}
+
+/**
+ * Composable for displaying a static onboarding field with label and leading icon.
+ *
+ * @param label Label text to display
+ * @param modifier Modifier for styling
+ * @param leadingIcon leading icon composable
+ */
+@Composable
+private fun StaticOnBoardingField(
+    label: String,
+    modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit),
+) {
+  Row(
+      modifier =
+          modifier
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+              .padding(horizontal = Dimensions.Padding.medium, vertical = Dimensions.Padding.small),
+      verticalAlignment = Alignment.CenterVertically) {
+        leadingIcon()
+        Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+
+        Spacer(modifier = Modifier.weight(weight = 1f))
+
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+}
+
+/**
+ * Composable for displaying the participants section in the onboarding session creation page.
+ *
+ * @param modifier Modifier for styling
+ */
+@Composable
+private fun OnBoardingParticipantsPreview(modifier: Modifier = Modifier) {
+
+  Surface(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .border(
+                  Dimensions.DividerThickness.standard,
+                  MaterialTheme.colorScheme.background,
+                  MaterialTheme.shapes.large)
+              .background(MaterialTheme.colorScheme.background, MaterialTheme.shapes.large),
+      color = MaterialTheme.colorScheme.background,
+      shape = MaterialTheme.shapes.large) {
+        Column(modifier = Modifier.padding(Dimensions.Padding.tiny)) {
+          Text(
+              text = OnBoardingStrings.PARTICIPANTS_SECTION_TEXT,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface)
+
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+          Column(
+              verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+              modifier = Modifier.fillMaxWidth()) {
+                StaticParticipantCard(
+                    name = OnBoardingStrings.PARTICIPANT_1,
+                    avatarRes = R.drawable.onboarding_avatar1)
+                StaticParticipantCard(
+                    name = OnBoardingStrings.PARTICIPANT_2,
+                    avatarRes = R.drawable.onboarding_avatar2)
+              }
+        }
+      }
+}
+
+/**
+ * Composable for displaying a static participant card with name, avatar, and checkbox.
+ *
+ * @param name Name of the participant
+ * @param avatarRes Resource ID for the participant's avatar image
+ * @param modifier Modifier for styling
+ */
+@Composable
+private fun StaticParticipantCard(
+    name: String,
+    avatarRes: Int,
+    modifier: Modifier = Modifier,
+) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+              .background(MaterialTheme.colorScheme.background)
+              .padding(horizontal = Dimensions.Padding.medium, vertical = Dimensions.Padding.small)
+              .testTag(OnBoardingTestTags.sessionCreationParticipant(name)),
+      verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(id = avatarRes),
+            contentDescription = name,
+            modifier = Modifier.size(Dimensions.IconSize.xxLarge).clip(CircleShape),
+            contentScale = ContentScale.Crop)
+
+        Spacer(modifier = Modifier.width(Dimensions.Spacing.xLarge))
+
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface)
+
+        Spacer(modifier = Modifier.weight(weight = 1f))
+
+        Checkbox(
+            checked = true,
+            onCheckedChange = {},
+            enabled = false,
+            colors =
+                CheckboxDefaults.colors(
+                    disabledCheckedColor = MaterialTheme.colorScheme.tertiary,
+                    checkmarkColor = MaterialTheme.colorScheme.onBackground,
+                    disabledUncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant))
       }
 }

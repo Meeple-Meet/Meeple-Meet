@@ -24,14 +24,12 @@ echo ""
 
 # Patterns to exclude from checking
 EXCLUDE_FILES=(
-  # Test files often have repeated strings
   "test/"
   "androidTest/"
-  # Theme/constants files are allowed to have repeated values
   "ui/theme/"
 )
 
-# Common strings to ignore (these are acceptable to repeat)
+# Common strings to ignore
 IGNORE_STRINGS=(
   # Common UI strings
   '""'
@@ -146,9 +144,13 @@ while IFS= read -r file; do
   # Remove multi-line comments (simple approach - may not handle all edge cases)
   sed '/\/\*/,/\*\//d' > "$temp_no_comments"
 
-  # Extract all string literals from the file without comments (strings with 3+ chars)
-  # This regex matches strings in double quotes, excluding single/empty strings
-  strings=$(grep -oE '"[^"]{'"$MIN_STRING_LENGTH"',}"' "$temp_no_comments" 2>/dev/null || true)
+  # Extract all string literals (properly handling escaped quotes)
+  # Use a more robust approach: match complete strings only
+  # The regex ensures we only match valid Kotlin string literals:
+  # - Starts and ends with unescaped quotes
+  # - Content is either: non-quote/non-backslash chars OR escaped sequences
+  strings=$(grep -oP '"(?:[^"\\]|\\["\\nrtbf])*"' "$temp_no_comments" 2>/dev/null | \
+    awk -v min="$MIN_STRING_LENGTH" 'length($0) >= min+2' || true)
 
   rm -f "$temp_no_comments"
 

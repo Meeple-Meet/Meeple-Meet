@@ -1,126 +1,115 @@
+// Claude Code generated the documentation
+
 package com.github.meeplemeet.model.shared.game
 
 import com.github.meeplemeet.BuildConfig
-import com.github.meeplemeet.HttpClientProvider
+import com.github.meeplemeet.FirebaseProvider
+import com.github.meeplemeet.model.FirebaseFunctionsWrapper
+import com.github.meeplemeet.model.FirebaseFunctionsWrapperImpl
 import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.GameSearchException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okio.IOException
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 
 /**
- * Repository implementation for fetching board games from the custom Cloud Functions backend.
+ * Repository implementation for fetching board games using Firebase Cloud Functions.
  *
- * This repository uses Firebase Cloud Functions to fetch game details by ID or to search games by
- * name.
+ * This repository communicates with a custom backend (Firebase Cloud Functions) to retrieve board
+ * game data either by identifiers or via name-based search.
  *
- * @property client The HTTP client used to perform requests. Defaults to
- *   [HttpClientProvider.client].
- * @property baseUrl The base URL for the Cloud Functions backend. Defaults to [getBaseUrl].
+ * It uses a [FirebaseFunctionsWrapper] abstraction to facilitate testing and allow mocking of Cloud
+ * Functions calls.
+ *
+ * @property functionsWrapper Wrapper around Firebase Cloud Functions, used to perform remote calls.
+ * @property ioDispatcher Coroutine dispatcher used for IO-bound operations. Defaults to
+ *   [Dispatchers.IO].
  */
 class CloudBggGameRepository(
-    private val client: OkHttpClient = HttpClientProvider.client,
-    private val baseUrl: HttpUrl = getBaseUrl(),
+    private val functionsWrapper: FirebaseFunctionsWrapper =
+        FirebaseFunctionsWrapperImpl(FirebaseProvider.functions),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : GameRepository {
 
+  /**
+   * Initializes the repository.
+   *
+   * In debug builds, this configures Firebase Functions to use the local emulator.
+   */
+  init {
+    if (BuildConfig.DEBUG) functionsWrapper.useEmulator("10.0.2.2", 5001)
+  }
+
   companion object {
 
-    /** Local emulator URL for development. */
-    private val LOCAL_URL: HttpUrl =
-        HttpUrl.Builder()
-            .scheme("http")
-            .host("10.0.2.2")
-            .port(5001)
-            .addPathSegment("meeple-meet-36ecb")
-            .addPathSegment("us-central1")
-            .build()
-
-    /** Production Cloud Function URL (uses BuildConfig for security). */
-    private val PROD_URL: HttpUrl =
-        HttpUrl.Builder().scheme("https").host(BuildConfig.GAME_API_HOST).build()
-
-    /**
-     * Returns the appropriate base URL depending on the build type.
-     *
-     * Uses [LOCAL_URL] for debug builds and [PROD_URL] for release builds.
-     */
-    fun getBaseUrl(): HttpUrl = if (BuildConfig.DEBUG) LOCAL_URL else PROD_URL
-
-    /** Cloud Function Endpoints */
+    /** Cloud Function endpoint for fetching multiple games by ID. */
     private const val PATH_GET_GAMES_BY_IDS = "getGamesByIds"
+
+    /** Cloud Function endpoint for searching games by name. */
     private const val PATH_SEARCH_GAMES = "searchGames"
   }
 
   /**
-   * Fetches a single game by its unique ID.
+   * Fetches a single [Game] using its unique identifier.
    *
-   * @param gameID The game ID to fetch.
-   * @return The [Game] object corresponding to the given ID.
-   * @throws GameFetchException if fetching fails.
+   * @param gameID Unique identifier of the game to fetch.
+   * @return The matching [Game] object.
+   * @throws GameFetchException If no game is found or if the request fails.
    */
   override suspend fun getGameById(gameID: String): Game =
       withContext(ioDispatcher) {
-        return@withContext getGamesById(gameID).first()
+        getGamesById(gameID).firstOrNull()
+            ?: throw GameFetchException("No game found for id: $gameID")
       }
 
   /**
-   * Fetches multiple games by their IDs.
+   * Fetches a list of games corresponding to the provided identifiers.
    *
-   * @param gameIDs One or more game IDs to fetch.
-   * @return A list of [Game] objects.
-   * @throws IllegalArgumentException if more than 20 IDs are provided.
-   * @throws GameFetchException if fetching fails.
+   * The Cloud Function restricts batch requests to a maximum of 20 IDs.
+   *
+   * @param gameIDs One or more game identifiers. Must not exceed 20.
+   * @return A list of [Game] objects matching the IDs.
+   * @throws IllegalArgumentException If more than 20 IDs are requested.
+   * @throws GameFetchException If the Cloud Function fails or if JSON parsing fails.
    */
   override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
     require(gameIDs.size <= 20) { "A maximum of 20 IDs can be requested at once." }
+
     return withContext(ioDispatcher) {
-      val url =
-          baseUrl
-              .newBuilder()
-              .addPathSegment(PATH_GET_GAMES_BY_IDS)
-              .addQueryParameter("ids", gameIDs.joinToString(","))
-              .build()
+      val params = mapOf("ids" to gameIDs.toList())
 
-      val request = Request.Builder().url(url).build()
+      val data =
+          try {
+            functionsWrapper.call<List<*>>(PATH_GET_GAMES_BY_IDS, params).await()
+          } catch (e: Exception) {
+            throw GameFetchException("Failed calling Cloud Function: ${e.message}", e)
+          }
+
+      if (data.any { it == null || it !is Map<*, *> }) {
+        throw GameFetchException("Failed parsing JSON: invalid element(s) in response")
+      }
+
       try {
-        client.newCall(request).execute().use { response ->
-          val bodyString = response.body?.string().orEmpty()
-          if (!response.isSuccessful) {
-            throw GameFetchException("Failed to fetch games (HTTP ${response.code}): $bodyString")
-          }
-
-          val jsonArray = JSONArray(bodyString)
-          return@withContext (0 until jsonArray.length()).map { i ->
-            jsonArray.getJSONObject(i).toGame()
-          }
-        }
-      } catch (e: JSONException) {
-        throw GameFetchException("Invalid JSON while fetching games: ${e.message}", e)
-      } catch (e: IOException) {
-        throw GameFetchException("Network error while fetching games: ${e.message}", e)
+        data.map { elem -> mapToGame(elem as Map<*, *>) }
+      } catch (e: Exception) {
+        throw GameFetchException("Failed parsing JSON: ${e.message}", e)
       }
     }
   }
 
   /**
-   * Quick fix: temporarily re-implemented to maintain backward compatibility.
+   * Deprecated full search method that returns complete [Game] objects.
    *
-   * This method delegates to [searchGamesByNameLight] to get lightweight results (IDs), then
-   * immediately fetches the full [Game] objects via [getGamesById].
+   * This method remains available for backward compatibility but will be removed in the future. It
+   * now delegates to [searchGamesByNameLight], then resolves the returned IDs via [getGamesById].
    *
-   * Deprecated: use [searchGamesByNameLight] instead. This method will be permanently removed in a
-   * future release.
-   *
-   * @throws GameSearchException if the search fails
-   * @throws GameFetchException if fetching full games fails
+   * @param query The text query to match in game names.
+   * @param maxResults Maximum number of results to return.
+   * @param ignoreCase (Unused) Provided for legacy signature compatibility.
+   * @return A list of full [Game] objects matching the query.
+   * @throws GameSearchException If the search operation fails.
+   * @throws GameFetchException If loading the full game objects fails.
    */
   @Deprecated("Use searchGamesByNameLight for partial search results")
   override suspend fun searchGamesByNameContains(
@@ -135,61 +124,77 @@ class CloudBggGameRepository(
       }
 
   /**
-   * Searches games by name and returns lightweight results (ID + name).
+   * Searches for games by name and returns lightweight results containing only ID and name.
+   *
+   * This method is recommended over the deprecated full search, as it reduces backend load and
+   * allows better UI interactivity.
    *
    * @param query The search query string.
    * @param maxResults Maximum number of results to return.
-   * @return A list of [GameSearchResult] objects.
-   * @throws GameSearchException if the search fails.
+   * @return A list of [GameSearchResult] objects containing minimal game info.
+   * @throws GameSearchException If calling the Cloud Function fails or if JSON parsing fails.
    */
   suspend fun searchGamesByNameLight(query: String, maxResults: Int): List<GameSearchResult> =
       withContext(ioDispatcher) {
-        val url =
-            baseUrl
-                .newBuilder()
-                .addPathSegment(PATH_SEARCH_GAMES)
-                .addQueryParameter("query", query)
-                .addQueryParameter("maxResults", maxResults.toString())
-                .build()
+        val params = mapOf("query" to query, "maxResults" to maxResults)
 
-        val request = Request.Builder().url(url).build()
+        val data =
+            try {
+              functionsWrapper.call<List<*>>(PATH_SEARCH_GAMES, params).await()
+            } catch (e: Exception) {
+              throw GameSearchException("Failed calling Cloud Function: ${e.message}", e)
+            }
+
+        if (data.any { it == null || it !is Map<*, *> }) {
+          throw GameSearchException("Failed parsing JSON: invalid element(s) in response")
+        }
 
         try {
-          client.newCall(request).execute().use { response ->
-            val bodyString = response.body?.string().orEmpty()
-
-            if (!response.isSuccessful) {
-              throw GameSearchException(
-                  "Failed to search games (HTTP ${response.code}): $bodyString")
-            }
-
-            val jsonArray = JSONArray(bodyString)
-            return@withContext (0 until jsonArray.length()).map { i ->
-              jsonArray.getJSONObject(i).toGameSearchResult()
-            }
-          }
+          data.map { elem -> mapToGameSearchResult(elem as Map<*, *>) }
         } catch (e: Exception) {
-          throw GameSearchException("Network error while searching games: ${e.message}", e)
+          throw GameSearchException("Failed parsing JSON: ${e.message}", e)
         }
       }
 
-  /** Converts a [JSONObject] to a [Game] object. */
-  private fun JSONObject.toGame(): Game =
-      Game(
-          uid = getString("uid"),
-          name = getString("name"),
-          description = getString("description"),
-          imageURL = getString("imageURL"),
-          minPlayers = getInt("minPlayers"),
-          maxPlayers = getInt("maxPlayers"),
-          recommendedPlayers = optInt("recommendedPlayers"),
-          averagePlayTime = optInt("averagePlayTime"),
-          minAge = optInt("minAge"),
-          genres =
-              optJSONArray("genres")?.let { arr -> List(arr.length()) { i -> arr.getString(i) } }
-                  ?: emptyList())
+  /**
+   * Converts a JSON-like map returned by Cloud Functions into a fully populated [Game] object.
+   *
+   * All mandatory fields must be present or an [IllegalArgumentException] is thrown.
+   *
+   * @param map Raw JSON structure representing a game.
+   * @return The corresponding [Game] instance.
+   */
+  private fun mapToGame(map: Map<*, *>): Game {
+    return Game(
+        uid = map["uid"]?.toString() ?: throw IllegalArgumentException("Missing uid"),
+        name = map["name"]?.toString() ?: throw IllegalArgumentException("Missing name"),
+        description =
+            map["description"]?.toString() ?: throw IllegalArgumentException("Missing description"),
+        imageURL =
+            map["imageURL"]?.toString() ?: throw IllegalArgumentException("Missing imageURL"),
+        minPlayers =
+            (map["minPlayers"] as? Number)?.toInt()
+                ?: throw IllegalArgumentException("Missing minPlayers"),
+        maxPlayers =
+            (map["maxPlayers"] as? Number)?.toInt()
+                ?: throw IllegalArgumentException("Missing maxPlayers"),
+        recommendedPlayers = (map["recommendedPlayers"] as? Number)?.toInt(),
+        averagePlayTime = (map["averagePlayTime"] as? Number)?.toInt(),
+        minAge = (map["minAge"] as? Number)?.toInt(),
+        genres = (map["genres"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList())
+  }
 
-  /** Converts a [JSONObject] to a [GameSearchResult] object. */
-  private fun JSONObject.toGameSearchResult(): GameSearchResult =
-      GameSearchResult(id = getString("id"), name = getString("name"))
+  /**
+   * Converts a JSON-like map returned by Cloud Functions into a [GameSearchResult].
+   *
+   * Only lightweight fields are extracted.
+   *
+   * @param map Raw JSON structure representing a search result.
+   * @return A parsed [GameSearchResult] instance.
+   */
+  private fun mapToGameSearchResult(map: Map<*, *>): GameSearchResult {
+    return GameSearchResult(
+        id = map["id"]?.toString() ?: throw IllegalArgumentException("Missing id"),
+        name = map["name"]?.toString() ?: throw IllegalArgumentException("Missing name"))
+  }
 }

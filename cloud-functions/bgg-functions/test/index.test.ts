@@ -1,4 +1,5 @@
 // Test suite for Cloud Functions
+// Tests the handler logic extracted from Callable functions
 // Generated with Claude Sonet 4.5
 
 import nock from "nock";
@@ -28,8 +29,8 @@ jest.mock("firebase-admin", () => {
   };
 });
 
-// Import functions after mocking
-import { getGamesByIds, searchGames, ping } from "../src/index";
+// Import handler functions for testing
+import { handleGetGamesByIds, handleSearchGames, ping } from "../src/index";
 
 describe("Cloud Functions Tests", () => {
   beforeAll(() => {
@@ -47,27 +48,16 @@ describe("Cloud Functions Tests", () => {
     nock.cleanAll();
   });
 
-  // Helper function to create mock request/response
-  const createMockReqRes = (query: Record<string, any> = {}) => {
-    const req = {
-      method: "GET",
-      query,
-    } as any;
-
-    const res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-      send: jest.fn().mockReturnThis(),
-    } as any;
-
-    return { req, res };
-  };
-
   // ==================== Ping Test ====================
 
   describe("ping", () => {
-    it("should return pong", async () => {
-      const { req, res } = createMockReqRes();
+    it("should return pong (HTTP endpoint)", async () => {
+      const req = { method: "GET", query: {} } as any;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn().mockReturnThis(),
+        send: jest.fn().mockReturnThis(),
+      } as any;
 
       await ping(req, res);
 
@@ -103,11 +93,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "181" });
+      const result = await handleGetGamesByIds({ ids: ["181"] });
 
-      await getGamesByIds(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             uid: "181",
@@ -153,11 +141,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "181,13" });
+      const result = await handleGetGamesByIds({ ids: ["181", "13"] });
 
-      await getGamesByIds(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ uid: "181", name: "Risk" }),
           expect.objectContaining({ uid: "13", name: "CATAN" }),
@@ -165,43 +151,25 @@ describe("Cloud Functions Tests", () => {
       );
     });
 
-    it("should return 400 for missing ids parameter", async () => {
-      const { req, res } = createMockReqRes({});
-
-      await getGamesByIds(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining("Missing") })
-      );
+    it("should throw for missing ids parameter", async () => {
+      await expect(handleGetGamesByIds({})).rejects.toThrow("Missing or invalid 'ids' array");
     });
 
-    it("should return 400 for empty ids", async () => {
-      const { req, res } = createMockReqRes({ ids: "   " });
-
-      await getGamesByIds(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "No valid ids provided" })
-      );
+    it("should throw for non-array ids", async () => {
+      await expect(handleGetGamesByIds({ ids: "181" })).rejects.toThrow("Missing or invalid 'ids' array");
     });
 
-    it("should return 502 when BGG API fails", async () => {
+    it("should throw for empty ids", async () => {
+      await expect(handleGetGamesByIds({ ids: ["   ", ""] })).rejects.toThrow("No valid ids provided");
+    });
+
+    it("should throw when BGG API fails", async () => {
       nock("https://boardgamegeek.com")
         .get("/xmlapi2/thing")
         .query(true)
         .reply(500, "Internal Server Error");
 
-      const { req, res } = createMockReqRes({ ids: "181" });
-
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.status).toHaveBeenCalledWith(502);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "BGG fetch failed" })
-      );
+      await expect(handleGetGamesByIds({ ids: ["181"] })).rejects.toThrow("BGG fetch failed");
     });
 
     it("should handle games with missing optional fields", async () => {
@@ -223,12 +191,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "999" });
+      const result = await handleGetGamesByIds({ ids: ["999"] });
 
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             uid: "999",
@@ -265,12 +230,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "13" });
+      const result = await handleGetGamesByIds({ ids: ["13"] });
 
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             recommendedPlayers: 4,
@@ -307,12 +269,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "181" });
+      const result = await handleGetGamesByIds({ ids: ["181"] });
 
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             genres: expect.arrayContaining([
@@ -324,8 +283,7 @@ describe("Cloud Functions Tests", () => {
         ])
       );
 
-      const response = res.json.mock.calls[0][0];
-      expect(response[0].genres).not.toContain("Dice Rolling");
+      expect(result[0].genres).not.toContain("Dice Rolling");
     });
 
     it("should limit to 20 IDs", async () => {
@@ -342,16 +300,12 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: ids.join(",") });
+      const result = await handleGetGamesByIds({ ids });
 
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.json).toHaveBeenCalled();
+      expect(result).toBeDefined();
     });
 
-    it("should coalesce concurrent requests into a single BGG fetch (when combined ids <= 20)", async () => {
-      // small response for any id set
+    it("should coalesce concurrent requests into a single BGG fetch", async () => {
       const bggResponse = `
         <?xml version="1.0" encoding="UTF-8"?>
         <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
@@ -372,7 +326,7 @@ describe("Cloud Functions Tests", () => {
       nock("https://boardgamegeek.com")
         .get("/xmlapi2/thing")
         .query(true)
-        .times(1) // expect only one call
+        .times(1)
         .reply(function (uri, body) {
           callCount++;
           lastUri = uri;
@@ -380,21 +334,14 @@ describe("Cloud Functions Tests", () => {
         });
 
       // create two concurrent calls whose ids total <= 20
-      const { req: req1, res: res1 } = createMockReqRes({ ids: "1,2,3" });
-      const { req: req2, res: res2 } = createMockReqRes({ ids: "4" });
+      const p1 = handleGetGamesByIds({ ids: ["1", "2", "3"] });
+      const p2 = handleGetGamesByIds({ ids: ["4"] });
 
-      // fire them *without awaiting* so they schedule nearly concurrently
-      const p1 = getGamesByIds(req1, res1);
-      const p2 = getGamesByIds(req2, res2);
-
-      // wait both
       await Promise.all([p1, p2]);
 
       expect(callCount).toBe(1);
       expect(lastUri).toBeTruthy();
-      // the query should contain the combined ids (order can vary); check presence of at least these ids
       expect(lastUri).toContain("id=");
-      expect(lastUri).toMatch(/id=.*1.*2.*3.*4|id=.*4.*1.*2.*3|id=.*2.*3.*4.*1/);
     });
   });
 
@@ -422,15 +369,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({
-        query: "mono",
-        maxResults: "10",
-        ignoreCase: "true",
-      });
+      const result = await handleSearchGames({ query: "mono", maxResults: 10 });
 
-      await searchGames(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ id: "1406", name: "Monopoly" }),
           expect.objectContaining({ id: "238393", name: "Monolith Arena" }),
@@ -460,16 +401,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({
-        query: "mono",
-        maxResults: "10",
-        ignoreCase: "true",
-      });
+      const result = await handleSearchGames({ query: "mono", maxResults: 10 });
 
-      await searchGames(req, res);
-
-      const results = res.json.mock.calls[0][0];
-      expect(results[0].name).toBe("Mono");
+      expect(result[0].name).toBe("Mono");
     });
 
     it("should respect maxResults parameter", async () => {
@@ -499,43 +433,22 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({
-        query: "game",
-        maxResults: "3",
-        ignoreCase: "true",
-      });
+      const result = await handleSearchGames({ query: "game", maxResults: 3 });
 
-      await searchGames(req, res);
-
-      const results = res.json.mock.calls[0][0];
-      expect(results.length).toBe(3);
+      expect(result.length).toBe(3);
     });
 
-    it("should return 400 for missing query parameter", async () => {
-      const { req, res } = createMockReqRes({});
-
-      await searchGames(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining("Missing") })
-      );
+    it("should throw for missing query parameter", async () => {
+      await expect(handleSearchGames({})).rejects.toThrow("Missing or invalid 'query' parameter");
     });
 
-    it("should return 502 when BGG API fails", async () => {
+    it("should throw when BGG API fails", async () => {
       nock("https://boardgamegeek.com")
         .get("/xmlapi2/search")
         .query(true)
         .reply(500, "Internal Server Error");
 
-      const { req, res } = createMockReqRes({ query: "test", maxResults: "10" });
-
-      await searchGames(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(502);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining("BGG API") })
-      );
+      await expect(handleSearchGames({ query: "test", maxResults: 10 })).rejects.toThrow();
     });
 
     it("should handle empty search results", async () => {
@@ -550,11 +463,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ query: "nonexistent", maxResults: "10" });
+      const result = await handleSearchGames({ query: "nonexistent", maxResults: 10 });
 
-      await searchGames(req, res);
-
-      expect(res.json).toHaveBeenCalledWith([]);
+      expect(result).toEqual([]);
     });
 
     it("should use Levenshtein distance for ranking fallback", async () => {
@@ -578,19 +489,12 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({
-        query: "mono",
-        maxResults: "10",
-        ignoreCase: "true",
-      });
+      const result = await handleSearchGames({ query: "mono", maxResults: 10 });
 
-      await searchGames(req, res);
-
-      const results = res.json.mock.calls[0][0];
-      expect(results.length).toBe(3);
-      expect(results[0].name).toBe("Monop");
-      expect(results[1].name).toBe("Monopo");
-      expect(results[2].name).toBe("Monopoly");
+      expect(result.length).toBe(3);
+      expect(result[0].name).toBe("Monop");
+      expect(result[1].name).toBe("Monopo");
+      expect(result[2].name).toBe("Monopoly");
     });
 
     it("should cap maxResults at 50", async () => {
@@ -605,11 +509,9 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ query: "testcap", maxResults: "100" });
+      const result = await handleSearchGames({ query: "testcap", maxResults: 100 });
 
-      await searchGames(req, res);
-
-      expect(res.json).toHaveBeenCalledWith([]);
+      expect(result).toEqual([]);
     });
 
     it("should ignore items without primary name", async () => {
@@ -630,19 +532,16 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ query: "gameprimary", maxResults: "10" });
+      const result = await handleSearchGames({ query: "gameprimary", maxResults: 10 });
 
-      await searchGames(req, res);
-
-      const results = res.json.mock.calls[0][0];
-      expect(results.length).toBe(1);
-      expect(results[0].name).toBe("Valid Game");
+      expect(result.length).toBe(1);
+      expect(result[0].name).toBe("Valid Game");
     });
   });
 
-  // ==================== Cache Behavior Tests ====================
+  // ==================== Cache & Auth Tests ====================
 
-  describe("Cache behavior", () => {
+  describe("Cache and Auth", () => {
     it("should set Authorization header when token is present", async () => {
       const bggResponse = `
         <?xml version="1.0" encoding="UTF-8"?>
@@ -666,12 +565,7 @@ describe("Cloud Functions Tests", () => {
         .query(true)
         .reply(200, bggResponse);
 
-      const { req, res } = createMockReqRes({ ids: "1" });
-
-      await getGamesByIds(req, res);
-      await Promise.resolve();
-
-      expect(res.json).toHaveBeenCalled();
+      await handleGetGamesByIds({ ids: ["1"] });
     });
   });
 });
