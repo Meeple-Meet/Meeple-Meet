@@ -287,7 +287,9 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav) }
+        AppTheme {
+          DiscussionsOverviewScreen(account = meWithBlockedBob, verified = true, navigation = nav)
+        }
       }
     }
 
