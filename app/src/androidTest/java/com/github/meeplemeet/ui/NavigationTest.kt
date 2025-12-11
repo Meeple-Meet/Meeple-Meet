@@ -17,6 +17,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import java.util.UUID
 import org.junit.Before
 import org.junit.Rule
@@ -34,6 +35,7 @@ class NavigationTest : FirestoreTests() {
   private lateinit var navController: NavHostController
   private lateinit var navigationActions: NavigationActions
 
+  @OptIn(ExperimentalTestApi::class)
   @Before
   fun setup() {
     // Call parent setup first to initialize Firebase emulators
@@ -171,6 +173,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 60_000L)
 
+  @OptIn(ExperimentalTestApi::class)
   @Before
   fun setupAuthenticatedUser() {
     // Sign out any existing Firebase session before creating a new user
@@ -188,10 +191,14 @@ class AuthenticatedNavigationTest : FirestoreTests() {
     val testUsername = "Nav Test User"
 
     composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+
+    // Wait for navigation to complete and UI to be ready after sign up
+    composeTestRule.waitForIdle()
   }
 
   @OptIn(ExperimentalTestApi::class)
   @Test
+  @noretry
   fun allAuthenticatedNavigationChecksInOnePass() =
       with(composeTestRule) {
         /* ----------------------------------------------------------

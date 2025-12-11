@@ -2,6 +2,8 @@ package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
+import com.github.meeplemeet.model.account.Notification
+import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertEquals
@@ -9,6 +11,7 @@ import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -465,6 +468,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.resetRelationship(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     viewModel.sendFriendRequest(accounts[0], accounts[1])
+    delay(200)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
@@ -478,12 +482,12 @@ class RelationshipsTests : FirestoreTests() {
     // Test 1: Prevent accepting when there's no request
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     val fakeNotification =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "fake_notif",
-            senderOrDiscussionId = bob.uid,
+            senderId = bob.uid,
             receiverId = alice.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[0], fakeNotification)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -495,12 +499,12 @@ class RelationshipsTests : FirestoreTests() {
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     val wrongDirectionNotif =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "wrong_notif",
-            senderOrDiscussionId = bob.uid,
+            senderId = bob.uid,
             receiverId = alice.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[0], wrongDirectionNotif)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])
@@ -511,12 +515,12 @@ class RelationshipsTests : FirestoreTests() {
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     val alreadyFriendsNotif =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "friends_notif",
-            senderOrDiscussionId = bob.uid,
+            senderId = bob.uid,
             receiverId = alice.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[0], alreadyFriendsNotif)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.FRIEND, accounts[0].relationships[bob.uid])
@@ -524,12 +528,12 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 4: Prevent accepting same user
     val selfNotif =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "self_notif",
-            senderOrDiscussionId = alice.uid,
+            senderId = alice.uid,
             receiverId = alice.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(alice, selfNotif)
     val aliceAfter = accountRepository.getAccount(alice.uid)
     assertNull(aliceAfter.relationships[alice.uid])
@@ -540,19 +544,19 @@ class RelationshipsTests : FirestoreTests() {
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     val blockedNotif1 =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "blocked_notif1",
-            senderOrDiscussionId = bob.uid,
+            senderId = bob.uid,
             receiverId = alice.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     val blockedNotif2 =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "blocked_notif2",
-            senderOrDiscussionId = alice.uid,
+            senderId = alice.uid,
             receiverId = bob.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[0], blockedNotif1)
     viewModel.acceptFriendRequest(accounts[1], blockedNotif2)
 
@@ -567,12 +571,12 @@ class RelationshipsTests : FirestoreTests() {
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 
     val validNotif =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "valid_notif",
-            senderOrDiscussionId = alice.uid,
+            senderId = alice.uid,
             receiverId = bob.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[1], validNotif)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
@@ -796,12 +800,12 @@ class RelationshipsTests : FirestoreTests() {
 
     // Test 2: After accepting, cannot send another request
     val acceptNotif =
-        com.github.meeplemeet.model.account.Notification(
+        Notification(
             uid = "accept_notif",
-            senderOrDiscussionId = alice.uid,
+            senderId = alice.uid,
             receiverId = bob.uid,
             read = false,
-            type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST)
+            type = NotificationType.FRIEND_REQUEST)
     viewModel.acceptFriendRequest(accounts[1], acceptNotif)
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
 

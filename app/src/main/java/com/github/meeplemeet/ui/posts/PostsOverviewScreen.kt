@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
@@ -63,6 +65,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
  * @param onSelectPost Callback fired when a post card is tapped.
+ * @param account The currently logged in account
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +73,7 @@ fun PostsOverviewScreen(
     verified: Boolean,
     navigation: NavigationActions,
     viewModel: PostOverviewViewModel = viewModel(),
+    account: Account,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
@@ -122,6 +126,9 @@ fun PostsOverviewScreen(
               modifier = Modifier.fillMaxSize().padding(innerPadding),
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
+                  if (account.relationships[post.authorId] == RelationshipStatus.BLOCKED)
+                      return@items
+
                   val dateFormatted =
                       SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                           .format(post.timestamp.toDate())

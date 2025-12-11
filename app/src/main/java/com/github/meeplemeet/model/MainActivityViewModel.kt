@@ -6,20 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.auth.AuthenticationViewModel
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shops.ShopRepository
-import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-const val TAG = "MainActivityViewModel"
 
 /**
  * Main view model for the application that provides real-time data flows for accounts and
@@ -35,23 +32,7 @@ const val TAG = "MainActivityViewModel"
 class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-    private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
-    private val shopRepository: ShopRepository = RepositoryProvider.shops,
 ) : AuthenticationViewModel() {
-
-  /**
-   * Signs out the current user and clears all cached flows.
-   *
-   * Overrides the parent signOut method to ensure that all Firestore listeners are removed when the
-   * user signs out.
-   */
-  override fun signOut() {
-    super.signOut()
-  }
-
-  // Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners.
-  private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
-
   /**
    * Returns a real-time flow of account data for the specified account ID.
    *
@@ -95,7 +76,18 @@ class MainActivityViewModel(
             accountDataFlow) { isOnline, liveAccount, loadedAccount ->
               // When online, prefer live Firestore data
               // When offline, use the loaded account from cache
-              if (isOnline) liveAccount else loadedAccount
+              val account = if (isOnline) liveAccount else loadedAccount
+
+              if (account != null) {
+                // Filter out notifications sent by blocked users
+                val filtered =
+                    account.notifications.filter {
+                      account.relationships[it.senderId] != RelationshipStatus.BLOCKED
+                    }
+                val toRemove = account.notifications.filterNot { filtered.contains(it) }
+                accountRepository.deleteNotifications(account.uid, toRemove.map { it.uid })
+                account.copy(notifications = filtered)
+              } else null
             }
         .stateIn(
             scope = viewModelScope,

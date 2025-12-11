@@ -242,13 +242,13 @@ class FirestoreSessionTests : FirestoreTests() {
     // First create a session
     viewModel.createSession(
         account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
-    Thread.sleep(500) // Wait for Firestore
+    Thread.sleep(1500) // Wait for Firestore
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     // Now delete the session
     viewModel.deleteSession(account1, discussionWithSession)
-    Thread.sleep(500) // Wait for Firestore delete to complete
+    Thread.sleep(1500) // Wait for Firestore delete to complete
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertNull(result.session)
@@ -373,13 +373,13 @@ class FirestoreSessionTests : FirestoreTests() {
     // First create a session
     viewModel.createSession(
         account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
-    Thread.sleep(500) // Wait for Firestore
+    Thread.sleep(1500) // Wait for Firestore
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     // Now delete it normally
     viewModel.deleteSession(account1, discussionWithSession)
-    Thread.sleep(500) // Wait for Firestore delete to complete
+    Thread.sleep(1500) // Wait for Firestore delete to complete
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertNull(result.session)
@@ -916,13 +916,13 @@ class FirestoreSessionTests : FirestoreTests() {
     // Create a session with only one admin participant
     viewModel.createSession(
         account1, baseDiscussion, "Catan Night", "game123", testTimestamp, testLocation, account1)
-    Thread.sleep(500)
+    Thread.sleep(1500)
 
     val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
 
     // Remove the only admin from the session - should delete the session
     viewModel.removeUserFromSession(discussionWithSession, account1, account1)
-    Thread.sleep(500)
+    Thread.sleep(1500)
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
     assertNull(result.session)

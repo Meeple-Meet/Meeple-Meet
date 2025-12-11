@@ -48,8 +48,8 @@ enum class NotificationType {
  * - Executed notifications remain in storage but won't perform actions again
  *
  * @property uid Unique identifier for this notification (map key in Firestore).
- * @property senderOrDiscussionId ID of the sender (for FriendRequest) or discussion/session ID (for
- *   JoinDiscussion/JoinSession).
+ * @property senderId ID of the sender
+ * @property discussionId ID of the discussion/session ID
  * @property receiverId ID of the user receiving this notification.
  * @property read Whether the user has seen/read this notification.
  * @property type The type of notification, determines the action when executed.
@@ -61,7 +61,8 @@ enum class NotificationType {
  */
 data class Notification(
     val uid: String = "",
-    val senderOrDiscussionId: String = "",
+    val senderId: String = "",
+    val discussionId: String = "",
     val receiverId: String = "",
     val read: Boolean = false,
     val type: NotificationType = NotificationType.FRIEND_REQUEST,
@@ -94,17 +95,16 @@ data class Notification(
 
     when (type) {
       NotificationType.FRIEND_REQUEST -> {
-        RepositoryProvider.accounts.acceptFriendRequest(receiverId, senderOrDiscussionId)
+        RepositoryProvider.accounts.acceptFriendRequest(receiverId, senderId)
       }
       NotificationType.JOIN_DISCUSSION -> {
-        RepositoryProvider.discussions.addUserToDiscussion(senderOrDiscussionId, receiverId)
+        RepositoryProvider.discussions.addUserToDiscussion(discussionId, receiverId)
       }
       NotificationType.JOIN_SESSION -> {
-        val disc = RepositoryProvider.discussions.getDiscussion(senderOrDiscussionId)
+        val disc = RepositoryProvider.discussions.getDiscussion(discussionId)
         val currentParticipants = disc.session?.participants ?: emptyList()
         RepositoryProvider.sessions.updateSession(
-            senderOrDiscussionId,
-            newParticipantList = (currentParticipants + receiverId).toSet().toList())
+            discussionId, newParticipantList = (currentParticipants + receiverId).toSet().toList())
       }
     }
     executed = true
@@ -129,7 +129,8 @@ data class Notification(
       Notification(
           uid = uid,
           receiverId = receiverId,
-          senderOrDiscussionId = notificationNoUid.senderOrDiscussionId,
+          senderId = notificationNoUid.senderId,
+          discussionId = notificationNoUid.discussionId,
           read = notificationNoUid.read,
           type = notificationNoUid.type,
           sentAt = notificationNoUid.sentAt,
@@ -155,7 +156,8 @@ data class Notification(
  * account document. The map key serves as the notification UID, and the receiverId is inferred from
  * the account document location, so they're not duplicated in the value.
  *
- * @property senderOrDiscussionId ID of the sender or discussion/session being referenced.
+ * @property senderId ID of the sender
+ * @property discussionId ID of the discussion/session being referenced.
  * @property read Whether the notification has been read.
  * @property type The notification type.
  * @property executed Whether the notification has been executed/accepted.
@@ -164,7 +166,8 @@ data class Notification(
  */
 @Serializable
 data class NotificationNoUid(
-    val senderOrDiscussionId: String = "",
+    val senderId: String = "",
+    val discussionId: String = "",
     val read: Boolean = false,
     val type: NotificationType = NotificationType.FRIEND_REQUEST,
     val executed: Boolean = false,
