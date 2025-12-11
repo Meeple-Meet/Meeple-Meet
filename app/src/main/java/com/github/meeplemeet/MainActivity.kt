@@ -263,7 +263,6 @@ fun MeepleMeetApp(
     onDispose { FirebaseProvider.auth.removeAuthStateListener(listener) }
   }
 
-
   // Sync email from Firebase Auth to Firestore when user logs in
   // This is the optimal place to sync because:
   // 1. User has just logged in (possibly with new email after verification)
@@ -413,17 +412,17 @@ fun MeepleMeetApp(
               })
         }
 
-          composable(MeepleMeetScreen.PostsOverview.name) {
-            PostsOverviewScreen(
-                navigation = navigationActions,
-                account = account!!,
-                onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
-                unreadCount = viewModel.unreadCount.value,
-                onSelectPost = {
-                  postId = it.id
-                  navigationActions.navigateTo(MeepleMeetScreen.Post)
-                })
-          }
+        composable(MeepleMeetScreen.PostsOverview.name) {
+          PostsOverviewScreen(
+              navigation = navigationActions,
+              account = account!!,
+              onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
+              unreadCount = viewModel.unreadCount.value,
+              onSelectPost = {
+                postId = it.id
+                navigationActions.navigateTo(MeepleMeetScreen.Post)
+              })
+        }
 
         composable(MeepleMeetScreen.Post.name) {
           PostScreen(account = account!!, postId = postId, onBack = { navigationActions.goBack() })

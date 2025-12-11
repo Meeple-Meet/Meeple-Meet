@@ -95,14 +95,19 @@ class MainActivityViewModel(
               // When offline, use the loaded account from cache
               val account = if (isOnline) liveAccount else loadedAccount
               if (account != null) {
-                val filtered = account.notifications.filter { account.relationships[it.senderId] != RelationshipStatus.BLOCKED }
-            val toRemove = account.notifications.filterNot { filtered.contains(it) }
-            accountRepository.deleteNotifications(account.uid, toRemove.map{ it.uid})
-            account.copy(notifications = filtered)
+                val filtered =
+                    account.notifications.filter {
+                      account.relationships[it.senderId] != RelationshipStatus.BLOCKED
+                    }
+                val toRemove = account.notifications.filterNot { filtered.contains(it) }
+                accountRepository.deleteNotifications(account.uid, toRemove.map { it.uid })
+                account.copy(notifications = filtered)
 
-            val count = account.notifications.count { n -> !n.read }
+                val count = account.notifications.count { n -> !n.read }
                 _unreadCount.value = count
-              } else { _unreadCount.value = 0 }
+              } else {
+                _unreadCount.value = 0
+              }
 
               account
             }

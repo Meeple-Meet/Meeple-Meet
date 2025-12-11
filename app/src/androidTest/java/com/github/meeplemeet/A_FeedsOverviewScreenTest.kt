@@ -91,15 +91,15 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
   @Test
   fun full_smoke_all_cases() = runBlocking {
     compose.setContent {
-        AppTheme(themeMode = theme) {
-          PostsOverviewScreen(
-              viewModel = postVm,
-              navigation = nav,
-              account = me,
-              onClickAddPost = { fabClicked = true },
-              unreadCount = me.notifications.count {it -> !it.read},
-              onSelectPost = { clickedPost = it })
-        }
+      AppTheme(themeMode = theme) {
+        PostsOverviewScreen(
+            viewModel = postVm,
+            navigation = nav,
+            account = me,
+            onClickAddPost = { fabClicked = true },
+            unreadCount = me.notifications.count { it -> !it.read },
+            onSelectPost = { clickedPost = it })
+      }
     }
 
     /* 1  EMPTY STATE  ------------------------------------------------------ */
