@@ -417,7 +417,7 @@ fun MeepleMeetApp(
               navigation = navigationActions,
               account = account!!,
               onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
-              unreadCount = viewModel.unreadCount.value,
+              unreadCount = unreadCount,
               onSelectPost = {
                 postId = it.id
                 navigationActions.navigateTo(MeepleMeetScreen.Post)
