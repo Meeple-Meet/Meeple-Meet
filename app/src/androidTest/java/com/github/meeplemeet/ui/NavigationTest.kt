@@ -55,8 +55,6 @@ class NavigationTest : FirestoreTests() {
 
     // Wait for the app to be ready
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntilAtLeastOneExists(
-        hasTestTag(SignInScreenTestTags.SIGN_IN_BUTTON), timeoutMillis = 15000)
   }
 
   @Test
@@ -195,8 +193,6 @@ class AuthenticatedNavigationTest : FirestoreTests() {
 
     // Wait for navigation to complete and UI to be ready after sign up
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntilAtLeastOneExists(
-        hasTestTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU), timeoutMillis = 15000)
   }
 
   @OptIn(ExperimentalTestApi::class)

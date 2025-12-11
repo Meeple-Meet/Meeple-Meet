@@ -24,6 +24,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -139,6 +140,7 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
 
   @OptIn(ExperimentalTestApi::class)
   @Test
+  @noretry
   fun all_space_renter_details_tests() {
     val clipboard = FakeClipboardManager()
     var fired = false
