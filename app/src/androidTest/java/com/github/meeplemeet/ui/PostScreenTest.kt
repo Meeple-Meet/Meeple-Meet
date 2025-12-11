@@ -234,6 +234,7 @@ class PostScreenTest : FirestoreTests() {
             postId = postId,
             postViewModel = postVM,
             accountViewModel = postVM,
+            verified = true,
             onBack = {})
       }
     }
