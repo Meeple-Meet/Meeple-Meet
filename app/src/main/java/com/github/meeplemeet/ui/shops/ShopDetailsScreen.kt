@@ -27,7 +27,6 @@ import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
 import com.github.meeplemeet.ui.components.ConfirmationDialog
-import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GamePickerActions
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
