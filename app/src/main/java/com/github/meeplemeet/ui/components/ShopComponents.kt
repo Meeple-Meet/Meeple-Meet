@@ -5,6 +5,7 @@
 package com.github.meeplemeet.ui.components
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.util.Patterns
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -918,70 +919,6 @@ fun GameItem(
  * Games: editable item helper
  * ============================================================================= */
 
-/** Editable game row used in edit screen (inline quantity +/- and delete). */
-@Composable
-fun EditableGameItem(
-    game: Game,
-    count: Int,
-    onQuantityChange: (Game, Int) -> Unit,
-    onDelete: (Game) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-  Card(
-      modifier =
-          modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(
-            Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  game.name,
-                  style = MaterialTheme.typography.bodyLarge,
-                  modifier = Modifier.weight(1f))
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                    IconButton(
-                        onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
-                        enabled = count > 0,
-                        modifier =
-                            Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
-                          Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-                        }
-                    FocusableInputField(
-                        value = count.toString(),
-                        onValueChange = { newText ->
-                          val newValue = newText.toIntOrNull() ?: 0
-                          if (newValue >= 0) {
-                            onQuantityChange(game, newValue)
-                          }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        textStyle =
-                            MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                        modifier =
-                            Modifier.width(Dimensions.ComponentWidth.inputFieldWidth)
-                                .testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
-                    IconButton(
-                        onClick = { onQuantityChange(game, count + 1) },
-                        modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
-                          Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-                        }
-                  }
-              IconButton(
-                  onClick = { onDelete(game) },
-                  colors =
-                      IconButtonDefaults.iconButtonColors(
-                          contentColor = MaterialTheme.colorScheme.error),
-                  modifier =
-                      Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete game")
-                  }
-            }
-      }
-}
-
 /**
  * A composable function that displays a game item as an image card with an optional stock badge
  *
@@ -1004,6 +941,7 @@ fun GameItemImage(
     onDelete: (Game) -> Unit = {},
     imageHeight: Dp? = null,
 ) {
+    Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
   Box(modifier = modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")) {
     Column(
         modifier =

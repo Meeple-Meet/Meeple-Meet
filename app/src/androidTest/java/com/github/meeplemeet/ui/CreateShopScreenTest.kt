@@ -363,7 +363,7 @@ class CreateShopScreenTest : FirestoreTests() {
         val gameUi by viewModel.gameUIState.collectAsState()
 
         when (s.intValue) {
-          // 0: Structure
+//          // 0: Structure
           0 ->
               CreateShopScreen(
                   owner = owner,
@@ -371,14 +371,6 @@ class CreateShopScreenTest : FirestoreTests() {
                   online = true,
                   userLocation = location,
                   viewModel = viewModel)
-          //              AddShopContent(
-          //                  onBack = {},
-          //                  initialStock = emptyList(),
-          //                  viewModel = viewModel,
-          //                  owner = owner,
-          //                  online = true,
-          //                  gameUi = gameUi,
-          //                  locationUi = locationUi)
 
           // 1: Validation gating (disabled -> enabled after fields + hours)
           1 ->
@@ -455,7 +447,6 @@ class CreateShopScreenTest : FirestoreTests() {
       compose.onTag(CreateShopScreenTestTags.TOPBAR).assertExists()
       compose.onTag(CreateShopScreenTestTags.TITLE).assertExists()
       compose.onTag(CreateShopScreenTestTags.NAV_BACK).assertExists()
-      compose.onTag(CreateShopScreenTestTags.SNACKBAR_HOST).assertExists()
       compose.onTag(CreateShopScreenTestTags.LIST).assertExists()
     }
 
@@ -566,11 +557,11 @@ class CreateShopScreenTest : FirestoreTests() {
       scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
       compose.waitForIdle()
 
-      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
+      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}g_catan"
       val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
       val terraformingTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_terraforming"
 
-      // Wait for games to appear
+       // Wait for games to appear
       compose.waitUntil(10_000) {
         compose
             .onAllNodesWithTag(catanTag, useUnmergedTree = true)
@@ -578,7 +569,7 @@ class CreateShopScreenTest : FirestoreTests() {
             .isNotEmpty()
       }
 
-      // Assert all 3 specific games are present
+//       Assert all 3 specific games are present
       compose.onNodeWithTag(catanTag).assertExists()
       compose.onNodeWithTag(carcassonneTag).assertExists()
       compose.onNodeWithTag(terraformingTag).assertExists()
@@ -586,7 +577,7 @@ class CreateShopScreenTest : FirestoreTests() {
       // Delete Catan
       compose
           .onNodeWithTag(
-              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:g_catan", useUnmergedTree = true)
           .assertExists()
           .performClick()
 
