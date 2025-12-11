@@ -204,7 +204,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           // Switch back to testDiscussion
           currentDiscussionState.value = testDiscussion
           compose.waitForIdle()
-          Thread.sleep(300) // Allow recomposition
 
           // Profile picture should be displayed
           compose.waitUntil(3000) {
@@ -221,7 +220,6 @@ class DiscussionSettingScreenTest : FirestoreTests() {
           // Switch to discussion with picture
           currentDiscussionState.value = discussionWithPicture
           compose.waitForIdle()
-          Thread.sleep(300) // Allow recomposition
 
           // Profile picture should be displayed
           compose.waitUntil(3000) {
