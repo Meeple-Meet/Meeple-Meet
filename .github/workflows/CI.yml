@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -98,7 +98,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Decode secrets
         env:
@@ -153,7 +153,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -255,7 +255,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -351,7 +351,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
@@ -409,7 +409,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
 
       - name: Retrieve gradle cache
         uses: actions/cache@v4
