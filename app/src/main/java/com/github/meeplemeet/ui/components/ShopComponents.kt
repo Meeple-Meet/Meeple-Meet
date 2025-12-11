@@ -13,23 +13,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -115,6 +111,10 @@ object ShopFormTestTags {
 
   const val OPENING_HOURS_DIALOG_WRAPPER = "opening_hours_dialog_wrapper"
   const val GAME_STOCK_DIALOG_WRAPPER = "game_stock_dialog_wrapper"
+
+  fun gameTestTag(gameUid: String): String {
+    return "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${gameUid}"
+  }
 }
 
 /* ================================================================================================
@@ -127,9 +127,6 @@ object ShopFormUi {
     val sectionSpace = Dimensions.Padding.large
     val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
     val betweenControls = Dimensions.Padding.mediumSmall
-    val thumbSize = 30.dp
-    val bubbleSize = 100.dp
-    val imageSize = 200.dp
   }
 
   object Strings {
@@ -178,6 +175,10 @@ object TimeUi {
  * @receiver The LocalTime object to format.
  */
 fun LocalTime.hhmm(): String = "%02d:%02d".format(hour, minute)
+
+val thumbSize = 30.dp
+val bubbleSize = 100.dp
+val imageSize = 200.dp
 
 /**
  * Tries to parse a time string into a LocalTime object.
@@ -273,13 +274,6 @@ class CreateShopFormState(
 
   // Derived state for validation
   private val hasOpeningHours by derivedStateOf { week.any { it.hours.isNotEmpty() } }
-
-  fun isValid(selectedLocation: Location?): Boolean {
-    return shopName.isNotBlank() &&
-        isValidEmail(email) &&
-        selectedLocation != null &&
-        hasOpeningHours
-  }
 
   // ---- ShopFormActions implementation ----
   override fun onNameChange(name: String) {
@@ -539,8 +533,7 @@ fun GameStockImage(gameUIState: GameUIState) {
         model = game.imageURL,
         contentDescription = "Game image",
         modifier =
-            Modifier.sizeIn(
-                    maxWidth = ShopFormUi.Dim.imageSize, maxHeight = ShopFormUi.Dim.imageSize)
+            Modifier.sizeIn(maxWidth = imageSize, maxHeight = imageSize)
                 .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
                 .padding(vertical = Dimensions.Padding.medium),
         contentScale = ContentScale.Fit)
@@ -574,14 +567,14 @@ fun GameAddUI(
           var bubbleWidth by remember { mutableStateOf(0f) }
 
           val density = LocalDensity.current
-          val thumbDiameterPx = with(density) { ShopFormUi.Dim.thumbSize.toPx() }
+          val thumbDiameterPx = with(density) { thumbSize.toPx() }
           val thumbRadiusPx = thumbDiameterPx / 2f
 
           Box(
               modifier =
                   Modifier.weight(1f)
                       .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
-                      .height(ShopFormUi.Dim.bubbleSize)) {
+                      .height(bubbleSize)) {
                 Box(
                     modifier =
                         Modifier.onGloballyPositioned { coords ->
@@ -650,7 +643,7 @@ fun GameAddUI(
                     thumb = {
                       Box(
                           modifier =
-                              Modifier.size(ShopFormUi.Dim.thumbSize)
+                              Modifier.size(thumbSize)
                                   .shadow(Dimensions.Elevation.high, CircleShape)
                                   .background(AppColors.focus, CircleShape))
                     })
@@ -778,43 +771,43 @@ fun GameStockDialog(
  * @param onClick A callback function that is invoked when a game item is clicked.
  * @param onDelete A callback function that is invoked when a game item is deleted.
  */
-@Composable
-fun GameListSection(
-    games: List<Pair<Game, Int>>,
-    modifier: Modifier = Modifier,
-    clickableGames: Boolean = false,
-    title: String? = null,
-    showButtons: Boolean = false,
-    onClick: (Game) -> Unit = {},
-    onDelete: (Game) -> Unit = {},
-) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = modifier.fillMaxWidth()) {
-        if (title != null) {
-          Text(
-              title,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold,
-          )
-        }
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-            contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
-            modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
-              items(items = games, key = { it.first.uid }) { (game, count) ->
-                GameItem(
-                    game = game,
-                    count = count,
-                    clickable = clickableGames,
-                    onClick = onClick,
-                    showButtons = showButtons,
-                    onDelete = onDelete)
-              }
-            }
-      }
-}
+// @Composable
+// fun GameListSection(
+//    games: List<Pair<Game, Int>>,
+//    modifier: Modifier = Modifier,
+//    clickableGames: Boolean = false,
+//    title: String? = null,
+//    showButtons: Boolean = false,
+//    onClick: (Game) -> Unit = {},
+//    onDelete: (Game) -> Unit = {},
+// ) {
+//  Column(
+//      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+//      modifier = modifier.fillMaxWidth()) {
+//        if (title != null) {
+//          Text(
+//              title,
+//              style = MaterialTheme.typography.titleLarge,
+//              fontWeight = FontWeight.SemiBold,
+//          )
+//        }
+//
+//        LazyColumn(
+//            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+//            contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
+//            modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
+//              items(items = games, key = { it.first.uid }) { (game, count) ->
+//                GameItem(
+//                    game = game,
+//                    count = count,
+//                    clickable = clickableGames,
+//                    onClick = onClick,
+//                    showButtons = showButtons,
+//                    onDelete = onDelete)
+//              }
+//            }
+//      }
+// }
 
 /**
  * A composable function that displays a game item with its name, icon, quantity badge, and optional
@@ -829,87 +822,87 @@ fun GameListSection(
  * @param onDelete A callback function that is invoked when the delete button is clicked.
  * @param showButtons boolean to distinguish between viewer mode and editing mode
  */
-@Composable
-fun GameItem(
-    game: Game,
-    count: Int,
-    modifier: Modifier = Modifier,
-    clickable: Boolean = false,
-    onClick: (Game) -> Unit = {},
-    onEdit: (Game) -> Unit = {},
-    onDelete: (Game) -> Unit = {},
-    showButtons: Boolean = false,
-) {
-  Card(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-              .let { if (clickable) it.clickable { onClick(game) } else it },
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(
-            modifier = Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                  Icons.Filled.VideogameAsset,
-                  contentDescription = null,
-                  modifier = Modifier.size(Dimensions.IconSize.huge))
-
-              Spacer(Modifier.width(Dimensions.Spacing.medium))
-
-              Text(
-                  text = game.name,
-                  fontWeight = FontWeight.SemiBold,
-                  modifier = Modifier.weight(1f),
-                  textAlign = TextAlign.Center)
-
-              Column(
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-
-                    // Badge
-                    if (count > 0) {
-                      val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                      val label = if (count > max) "$max+" else count.toString()
-
-                      Badge(containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            modifier = Modifier.padding(horizontal = Dimensions.Spacing.small))
-                      }
-                    }
-
-                    if (showButtons) {
-                      IconButton(
-                          onClick = { onEdit(game) },
-                          modifier =
-                              Modifier.testTag(
-                                  "${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit ${game.name}")
-                          }
-                    }
-
-                    if (showButtons) {
-                      IconButton(
-                          onClick = { onDelete(game) },
-                          modifier =
-                              Modifier.testTag(
-                                  "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                          colors =
-                              IconButtonDefaults.iconButtonColors(
-                                  contentColor = MaterialTheme.colorScheme.error)) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Remove ${game.name} from list")
-                          }
-                    }
-                  }
-            }
-      }
-}
+// @Composable
+// fun GameItem(
+//    game: Game,
+//    count: Int,
+//    modifier: Modifier = Modifier,
+//    clickable: Boolean = false,
+//    onClick: (Game) -> Unit = {},
+//    onEdit: (Game) -> Unit = {},
+//    onDelete: (Game) -> Unit = {},
+//    showButtons: Boolean = false,
+// ) {
+//  Card(
+//      modifier =
+//          modifier
+//              .fillMaxWidth()
+//              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+//              .let { if (clickable) it.clickable { onClick(game) } else it },
+//      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+//        Row(
+//            modifier = Modifier.padding(Dimensions.Padding.medium),
+//            verticalAlignment = Alignment.CenterVertically) {
+//              Icon(
+//                  Icons.Filled.VideogameAsset,
+//                  contentDescription = null,
+//                  modifier = Modifier.size(Dimensions.IconSize.huge))
+//
+//              Spacer(Modifier.width(Dimensions.Spacing.medium))
+//
+//              Text(
+//                  text = game.name,
+//                  fontWeight = FontWeight.SemiBold,
+//                  modifier = Modifier.weight(1f),
+//                  textAlign = TextAlign.Center)
+//
+//              Column(
+//                  horizontalAlignment = Alignment.CenterHorizontally,
+//                  verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+//
+//                    // Badge
+//                    if (count > 0) {
+//                      val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
+//                      val label = if (count > max) "$max+" else count.toString()
+//
+//                      Badge(containerColor = MaterialTheme.colorScheme.inversePrimary) {
+//                        Text(
+//                            label,
+//                            style = MaterialTheme.typography.labelSmall,
+//                            maxLines = 1,
+//                            softWrap = false,
+//                            modifier = Modifier.padding(horizontal = Dimensions.Spacing.small))
+//                      }
+//                    }
+//
+//                    if (showButtons) {
+//                      IconButton(
+//                          onClick = { onEdit(game) },
+//                          modifier =
+//                              Modifier.testTag(
+//                                  "${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
+//                            Icon(Icons.Filled.Edit, contentDescription = "Edit ${game.name}")
+//                          }
+//                    }
+//
+//                    if (showButtons) {
+//                      IconButton(
+//                          onClick = { onDelete(game) },
+//                          modifier =
+//                              Modifier.testTag(
+//                                  "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
+//                          colors =
+//                              IconButtonDefaults.iconButtonColors(
+//                                  contentColor = MaterialTheme.colorScheme.error)) {
+//                            Icon(
+//                                Icons.Filled.Delete,
+//                                contentDescription = "Remove ${game.name} from list")
+//                          }
+//                    }
+//                  }
+//            }
+//      }
+// }
 
 /* =============================================================================
  * Games: editable item helper
@@ -938,8 +931,8 @@ fun GameItemImage(
     onDelete: (Game) -> Unit = {},
     imageHeight: Dp? = null,
 ) {
-  Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-  Box(modifier = modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")) {
+  Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
+  Box(modifier = modifier.testTag(ShopFormTestTags.gameTestTag(game.uid))) {
     Column(
         modifier =
             Modifier.padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
@@ -1015,9 +1008,7 @@ fun GameItemImage(
               IconButton(
                   onClick = {
                     onEdit(game)
-                    Log.d(
-                        "checkpoint testTag",
-                        "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
+                    Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
                   },
                   modifier =
                       Modifier.offset(
