@@ -24,17 +24,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -144,38 +140,18 @@ fun DiscussionsOverviewScreen(
         .forEach { OfflineModeManager.loadDiscussion(it.uid, context) {} }
   }
 
+  val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
   Scaffold(
-      floatingActionButton = {
-        if (verified)
-            FloatingActionButton(
-                onClick = onClickAddDiscussion,
-                contentColor = MessagingColors.messagingSurface,
-                containerColor = MessagingColors.whatsappGreen,
-                modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON),
-                shape = CircleShape) {
-                  Icon(
-                      Icons.Default.Add,
-                      contentDescription = "Create",
-                      modifier = Modifier.size(Dimensions.IconSize.large))
-                }
-      },
       topBar = {
-        Column(Modifier.fillMaxWidth()) {
-          CenterAlignedTopAppBar(
-              title = {
-                Text(
-                    text = MeepleMeetScreen.DiscussionsOverview.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = Dimensions.TextSize.heading,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-              })
-          DiscussionSearchBar(
-              query = searchQuery,
-              onQueryChange = { searchQuery = it },
-              onClearQuery = { searchQuery = "" })
-        }
+        DiscussionsTopBar(
+            title = MeepleMeetScreen.DiscussionsOverview.title,
+            showAddButton = verified,
+            onAddDiscussionClick = onClickAddDiscussion,
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onClearQuery = { searchQuery = "" },
+            focusManager = focusManager)
       },
       bottomBar = {
         BottomBarWithVerification(
@@ -185,15 +161,32 @@ fun DiscussionsOverviewScreen(
             onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
         if (discussionPreviewsSorted.isEmpty()) {
-          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            EmptyDiscussionsListText()
-          }
+          Box(
+              modifier =
+                  Modifier.fillMaxSize().padding(innerPadding).clickable(
+                      indication = null,
+                      interactionSource =
+                          remember {
+                            androidx.compose.foundation.interaction.MutableInteractionSource()
+                          }) {
+                        focusManager.clearFocus()
+                      }) {
+                EmptyDiscussionsListText()
+              }
         } else {
           LazyColumn(
               modifier =
                   Modifier.fillMaxSize()
                       .background(MaterialTheme.colorScheme.background)
-                      .padding(innerPadding)) {
+                      .padding(innerPadding)
+                      .clickable(
+                          indication = null,
+                          interactionSource =
+                              remember {
+                                androidx.compose.foundation.interaction.MutableInteractionSource()
+                              }) {
+                            focusManager.clearFocus()
+                          }) {
                 items(discussionPreviewsSorted, key = { it.uid }) { preview ->
                   val discussion = offline.discussions[preview.uid]?.first
                   val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME
@@ -404,63 +397,117 @@ fun RelativeTimestampText(timestamp: Timestamp, modifier: Modifier) {
 }
 
 /**
- * Composable function for the discussion search bar.
+ * Top bar for the discussions overview screen, styled to match ChatsTopBar.
  *
+ * @param title The title text shown in the top bar.
+ * @param showAddButton Whether to show the add discussion button.
+ * @param onAddDiscussionClick Callback when the add discussion button is clicked.
  * @param query The current search query.
  * @param onQueryChange Callback when the search query changes.
  * @param onClearQuery Callback to clear the search query.
+ * @param focusManager FocusManager to handle clearing focus.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DiscussionSearchBar(
+fun DiscussionsTopBar(
+    title: String,
+    showAddButton: Boolean,
+    onAddDiscussionClick: () -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit
+    onClearQuery: () -> Unit,
+    focusManager: FocusManager
 ) {
-  TextField(
-      value = query,
-      onValueChange = onQueryChange,
+  Column(
       modifier =
           Modifier.fillMaxWidth()
-              .height(Dimensions.ContainerSize.timeFieldHeight)
-              .testTag(DiscussionOverviewTestTags.SEARCH_TEXT_FIELD),
-      placeholder = {
-        Text(
-            "Search discussions...",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-      },
-      singleLine = true,
-      leadingIcon = {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search",
-        )
-      },
-      trailingIcon = {
-        if (query.isNotEmpty()) {
-          IconButton(
-              onClick = onClearQuery,
-              modifier = Modifier.testTag(DiscussionOverviewTestTags.SEARCH_CLEAR),
-          ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Clear search",
-            )
-          }
-        }
-      },
-      textStyle = MaterialTheme.typography.bodyMedium,
-      colors =
-          TextFieldDefaults.colors(
-              focusedTextColor = AppColors.textIcons,
-              unfocusedTextColor = AppColors.textIcons,
-              focusedContainerColor = AppColors.divider,
-              unfocusedContainerColor = AppColors.divider,
-              disabledContainerColor = AppColors.divider,
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              disabledIndicatorColor = Color.Transparent,
-          ),
-  )
+              .background(AppColors.primary)
+              .clickable(
+                  indication = null,
+                  interactionSource =
+                      remember {
+                        androidx.compose.foundation.interaction.MutableInteractionSource()
+                      }) {
+                    focusManager.clearFocus()
+                  }
+              .padding(
+                  horizontal = Dimensions.Padding.extraLarge,
+                  vertical = Dimensions.Spacing.large)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  text = title,
+                  color = AppColors.textIcons,
+                  fontSize = Dimensions.TextSize.extraLarge,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+
+              if (showAddButton)
+                  IconButton(
+                      onClick = onAddDiscussionClick,
+                      modifier =
+                          Modifier.background(MessagingColors.whatsappGreen, CircleShape)
+                              .size(Dimensions.AvatarSize.small)
+                              .testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON)) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "New discussion",
+                            tint = AppColors.textIcons)
+                      }
+            }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+        androidx.compose.foundation.text.BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(Dimensions.ContainerSize.searchFieldHeight)
+                    .background(
+                        AppColors.secondary,
+                        androidx.compose.foundation.shape.RoundedCornerShape(
+                            Dimensions.CornerRadius.round))
+                    .testTag(DiscussionOverviewTestTags.SEARCH_TEXT_FIELD),
+            singleLine = true,
+            textStyle =
+                androidx.compose.ui.text.TextStyle(
+                    color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
+            decorationBox = { innerTextField ->
+              Row(
+                  modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = AppColors.textIconsFade,
+                        modifier = Modifier.size(Dimensions.IconSize.standard))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                    Box(modifier = Modifier.weight(1f)) {
+                      if (query.isEmpty()) {
+                        Text(
+                            text = "Search",
+                            color = AppColors.textIconsFade,
+                            fontSize = Dimensions.TextSize.subtitle)
+                      }
+                      innerTextField()
+                    }
+                    if (query.isNotEmpty()) {
+                      IconButton(
+                          onClick = onClearQuery,
+                          modifier =
+                              Modifier.size(Dimensions.IconSize.large)
+                                  .testTag(DiscussionOverviewTestTags.SEARCH_CLEAR)) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = AppColors.textIconsFade,
+                                modifier = Modifier.size(Dimensions.IconSize.standard))
+                          }
+                    }
+                  }
+            })
+      }
 }

@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,8 +41,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -166,29 +164,20 @@ fun SessionsOverviewScreen(
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
 
+  val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
-          Column(Modifier.fillMaxWidth()) {
-            /* 1. original top-bar (kept) */
-            CenterAlignedTopAppBar(
-                title = {
-                  Text(
-                      text = MeepleMeetScreen.SessionsOverview.title,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onPrimary,
-                      modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-                })
-
-            SessionToggle(
-                showHistory = showHistory,
-                onNext = { showHistory = false },
-                onHistory = { showHistory = true })
-            SessionSearchBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                onClearQuery = { searchQuery = "" })
-          }
+          SessionsTopBar(
+              title = MeepleMeetScreen.SessionsOverview.title,
+              showHistory = showHistory,
+              onNext = { showHistory = false },
+              onHistory = { showHistory = true },
+              query = searchQuery,
+              onQueryChange = { searchQuery = it },
+              onClearQuery = { searchQuery = "" },
+              focusManager = focusManager)
         },
         bottomBar = {
           BottomBarWithVerification(
@@ -197,67 +186,77 @@ fun SessionsOverviewScreen(
               verified = verified,
               onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
         }) { innerPadding ->
-          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-              showHistory -> {
-                val filteredArchived =
-                    remember(archivedSessions, searchQuery) {
-                      if (searchQuery.isBlank()) {
-                        archivedSessions
-                      } else {
-                        val query = searchQuery.trim().lowercase()
-                        archivedSessions.filter { session ->
-                          session.name.lowercase().contains(query)
+          Box(
+              modifier =
+                  Modifier.fillMaxSize().padding(innerPadding).clickable(
+                      indication = null,
+                      interactionSource =
+                          remember {
+                            androidx.compose.foundation.interaction.MutableInteractionSource()
+                          }) {
+                        focusManager.clearFocus()
+                      }) {
+                when {
+                  showHistory -> {
+                    val filteredArchived =
+                        remember(archivedSessions, searchQuery) {
+                          if (searchQuery.isBlank()) {
+                            archivedSessions
+                          } else {
+                            val query = searchQuery.trim().lowercase()
+                            archivedSessions.filter { session ->
+                              session.name.lowercase().contains(query)
+                            }
+                          }
                         }
-                      }
-                    }
 
-                if (filteredArchived.isEmpty()) {
-                  EmptySessionsListText(isHistory = true)
-                } else {
-                  HistoryGrid(sessions = filteredArchived, onSessionClick = { popupSession = it })
+                    if (filteredArchived.isEmpty()) {
+                      EmptySessionsListText(isHistory = true)
+                    } else {
+                      HistoryGrid(
+                          sessions = filteredArchived, onSessionClick = { popupSession = it })
+                    }
+                  }
+                  sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
+                  else -> {
+                    // Show all active sessions (future + past < 24h)
+                    val activeSessions =
+                        sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
+
+                    val filteredActive =
+                        remember(activeSessions, searchQuery) {
+                          if (searchQuery.isBlank()) {
+                            activeSessions
+                          } else {
+                            val query = searchQuery.trim().lowercase()
+                            activeSessions.filter { (_, session) ->
+                              session.name.lowercase().contains(query)
+                            }
+                          }
+                        }
+
+                    if (filteredActive.isEmpty()) {
+                      EmptySessionsListText(isHistory = false)
+                    } else {
+                      /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+                      LazyColumn(
+                          modifier = Modifier.fillMaxSize(),
+                          verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                            items(filteredActive, key = { it.first }) { (id, session) ->
+                              SessionCard(
+                                  id = id,
+                                  session = session,
+                                  viewModel = viewModel,
+                                  currentUserId = account.uid,
+                                  currentTime = currentTime,
+                                  modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
+                                  onClick = { onSelectSession(id) })
+                            }
+                          }
+                    }
+                  }
                 }
               }
-              sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
-              else -> {
-                // Show all active sessions (future + past < 24h)
-                val activeSessions =
-                    sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
-
-                val filteredActive =
-                    remember(activeSessions, searchQuery) {
-                      if (searchQuery.isBlank()) {
-                        activeSessions
-                      } else {
-                        val query = searchQuery.trim().lowercase()
-                        activeSessions.filter { (_, session) ->
-                          session.name.lowercase().contains(query)
-                        }
-                      }
-                    }
-
-                if (filteredActive.isEmpty()) {
-                  EmptySessionsListText(isHistory = false)
-                } else {
-                  /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
-                  LazyColumn(
-                      modifier = Modifier.fillMaxSize(),
-                      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                        items(filteredActive, key = { it.first }) { (id, session) ->
-                          SessionCard(
-                              id = id,
-                              session = session,
-                              viewModel = viewModel,
-                              currentUserId = account.uid,
-                              currentTime = currentTime,
-                              modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
-                              onClick = { onSelectSession(id) })
-                        }
-                      }
-                }
-              }
-            }
-          }
         }
   }
   if (popupSession != null) {
@@ -716,13 +715,12 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
                     contentScale = ContentScale.Crop)
               } else {
                 Box(
-                    modifier =
-                        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black),
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
                     contentAlignment = Alignment.Center) {
                       Icon(
                           imageVector = Icons.Default.SentimentDissatisfied,
                           contentDescription = null,
-                          tint = androidx.compose.ui.graphics.Color.Gray,
+                          tint = Color.Gray,
                           modifier = Modifier.size(Dimensions.IconSize.large))
                     }
               }
@@ -753,63 +751,109 @@ private fun getSessionPicture(session: Session): String? {
 }
 
 /**
- * Composable function for the session search bar.
+ * Top bar for the sessions overview screen.
  *
+ * @param title The title text shown in the top bar.
+ * @param showHistory Whether to show the history toggle as active.
+ * @param onNext Callback when the "Next" toggle is clicked.
+ * @param onHistory Callback when the "History" toggle is clicked.
  * @param query The current search query.
  * @param onQueryChange Callback when the search query changes.
  * @param onClearQuery Callback to clear the search query.
+ * @param focusManager FocusManager to handle clearing focus.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SessionSearchBar(
+fun SessionsTopBar(
+    title: String,
+    showHistory: Boolean,
+    onNext: () -> Unit,
+    onHistory: () -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit
+    onClearQuery: () -> Unit,
+    focusManager: FocusManager
 ) {
-  TextField(
-      value = query,
-      onValueChange = onQueryChange,
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(Dimensions.ContainerSize.timeFieldHeight)
-              .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
-      placeholder = {
-        Text(
-            "Search sessions...",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-      },
-      singleLine = true,
-      leadingIcon = {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search",
-        )
-      },
-      trailingIcon = {
-        if (query.isNotEmpty()) {
-          IconButton(
-              onClick = onClearQuery,
-              modifier = Modifier.testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR),
-          ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Clear search",
-            )
-          }
+  Column(modifier = Modifier.fillMaxWidth()) {
+    // Top section with title and search
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(AppColors.primary)
+                .clickable(
+                    indication = null,
+                    interactionSource =
+                        remember {
+                          androidx.compose.foundation.interaction.MutableInteractionSource()
+                        }) {
+                      focusManager.clearFocus()
+                    }
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.large)) {
+          Text(
+              text = title,
+              color = AppColors.textIcons,
+              fontSize = Dimensions.TextSize.extraLarge,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+          androidx.compose.foundation.text.BasicTextField(
+              value = query,
+              onValueChange = onQueryChange,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(Dimensions.ContainerSize.searchFieldHeight)
+                      .background(
+                          AppColors.secondary,
+                          androidx.compose.foundation.shape.RoundedCornerShape(
+                              Dimensions.CornerRadius.round))
+                      .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
+              singleLine = true,
+              textStyle =
+                  androidx.compose.ui.text.TextStyle(
+                      color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
+              cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
+              decorationBox = { innerTextField ->
+                Row(
+                    modifier =
+                        Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                          imageVector = Icons.Default.Search,
+                          contentDescription = "Search",
+                          tint = AppColors.textIconsFade,
+                          modifier = Modifier.size(Dimensions.IconSize.standard))
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                      Box(modifier = Modifier.weight(1f)) {
+                        if (query.isEmpty()) {
+                          Text(
+                              text = "Search",
+                              color = AppColors.textIconsFade,
+                              fontSize = Dimensions.TextSize.subtitle)
+                        }
+                        innerTextField()
+                      }
+                      if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClearQuery,
+                            modifier =
+                                Modifier.size(Dimensions.IconSize.large)
+                                    .testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)) {
+                              Icon(
+                                  imageVector = Icons.Default.Close,
+                                  contentDescription = "Clear search",
+                                  tint = AppColors.textIconsFade,
+                                  modifier = Modifier.size(Dimensions.IconSize.standard))
+                            }
+                      }
+                    }
+              })
         }
-      },
-      textStyle = MaterialTheme.typography.bodyMedium,
-      colors =
-          TextFieldDefaults.colors(
-              focusedTextColor = AppColors.textIcons,
-              unfocusedTextColor = AppColors.textIcons,
-              focusedContainerColor = AppColors.secondary,
-              unfocusedContainerColor = AppColors.secondary,
-              disabledContainerColor = AppColors.secondary,
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              disabledIndicatorColor = Color.Transparent,
-          ),
-  )
+
+    // Toggle section below
+    SessionToggle(showHistory = showHistory, onNext = onNext, onHistory = onHistory)
+  }
 }

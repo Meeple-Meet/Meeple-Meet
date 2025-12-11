@@ -161,6 +161,7 @@ object Dimensions {
     val pageImageSize: Dp = 300.dp
     val mapHeight: Dp = 300.dp
     val dividerHorizontalPadding: Dp = 30.dp
+    val searchFieldHeight: Dp = 40.dp
   }
 
   // Map-specific dimensions
