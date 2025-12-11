@@ -83,10 +83,14 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
+import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.functions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
@@ -111,6 +115,9 @@ object FirebaseProvider {
 
   /** Lazily initialized Firebase Storage instance for storage operations. */
   val storage: FirebaseStorage by lazy { Firebase.storage }
+
+  /** Lazily initialized Firebase Functions instance for cloud functions operations. */
+  val functions: FirebaseFunctions by lazy { Firebase.functions }
 }
 
 /**
@@ -178,8 +185,22 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
     MapsInitializer.initialize(applicationContext)
+
+    // TODO: Switch to build-type based AppCheck provider once infra is ready.
+    // Currently using DebugAppCheckProviderFactory for all builds.
+    // Uncomment the conditional block below when Play Integrity infra is available:
+    //
+    // Firebase.appCheck.installAppCheckProviderFactory(
+    //     if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
+    //     else PlayIntegrityAppCheckProviderFactory.getInstance()
+    // )
+
+    Firebase.appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+
     OfflineModeManager.start(applicationContext)
+
     setContent { MeepleMeetApp() }
   }
 

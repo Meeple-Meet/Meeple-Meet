@@ -5,6 +5,7 @@ plugins {
   jacoco
   alias(libs.plugins.androidApplication)
   alias(libs.plugins.jetbrainsKotlinAndroid)
+  alias(libs.plugins.compose.compiler)
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.gms)
   alias(libs.plugins.sonar)
@@ -120,17 +121,11 @@ android {
       if (releaseSigning != null && releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
           signingConfig = releaseSigning
       }
-
-      // Host PROD
-      buildConfigField("String", "GAME_API_HOST", "\"us-central1-meeple-meet-36ecb.cloudfunctions.net\"")
     }
 
     getByName("debug") {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
-
-      // Placeholder host
-      buildConfigField("String", "GAME_API_HOST", "\"127.0.0.1\"")
     }
   }
 
@@ -144,9 +139,6 @@ android {
   buildFeatures {
     compose = true
     buildConfig = true
-  }
-  composeOptions {
-    kotlinCompilerExtensionVersion = "1.5.1"
   }
   packaging {
     resources {
@@ -195,7 +187,6 @@ android {
 dependencies {
 
   // Core
-  implementation(libs.core.ktx)
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
@@ -232,11 +223,15 @@ dependencies {
   implementation(libs.coil.compose)
 
   // Firebase
-  implementation(libs.firebase.database.ktx)
-  implementation(libs.firebase.firestore)
-  implementation(libs.firebase.auth.ktx)
+  implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.database)
+  implementation(libs.firebase.firestore)
+  implementation(libs.firebase.functions)
   implementation(libs.firebase.storage)
+  implementation(libs.firebase.appcheck)
+  implementation(libs.firebase.appcheck.debug)
+  implementation(libs.firebase.appcheck.playintegrity)
   implementation(libs.geofirestore)
 
   // Credential Manager (for Google Sign-In)
