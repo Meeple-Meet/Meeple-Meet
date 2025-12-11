@@ -264,9 +264,7 @@ fun AddShopContent(
       owner = owner, shop = null, viewModel = viewModel, gameUIState = gameUi, state = state)
 }
 
-/**
- * Reusable content for Create and Edit shop screens.
- */
+/** Reusable content for Create and Edit shop screens. */
 @Composable
 fun ShopFormContent(
     state: CreateShopFormState,
@@ -279,50 +277,46 @@ fun ShopFormContent(
     scaffoldTestTag: String = CreateShopScreenTestTags.SCAFFOLD,
     listTestTag: String = CreateShopScreenTestTags.LIST
 ) {
-  Scaffold(
-      topBar = topBar,
-      bottomBar = bottomBar,
-      modifier = Modifier.testTag(scaffoldTestTag)) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).testTag(listTestTag),
-            contentPadding =
-                PaddingValues(
-                    horizontal = AddShopUi.Dimensions.contentHPadding,
-                    vertical = AddShopUi.Dimensions.contentVPadding)) {
-              item {
-                if (online) {
-                  EditableImageCarousel(
-                      photoCollectionUrl = state.photoCollectionUrl,
-                      spacesCount = IMAGE_COUNT,
-                      setPhotoCollectionUrl = { state.photoCollectionUrl = it })
-                } else
-                    ImageCarousel(
-                        photoCollectionUrl = state.photoCollectionUrl,
-                        maxNumberOfImages = IMAGE_COUNT,
-                        editable = false)
-              }
-              item {
-                ShopInfoSection(
-                    state = state,
-                    viewModel = viewModel,
-                    owner = owner,
-                    online = online,
-                    locationUi = locationUi)
-              }
-              item { ShopAvailabilitySection(state) }
-              item { ShopGamesSection(state, online, viewModel) }
-              item {
-                Spacer(
-                    Modifier.height(AddShopUi.Dimensions.bottomSpacer)
-                        .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
-              }
-            }
-      }
+  Scaffold(topBar = topBar, bottomBar = bottomBar, modifier = Modifier.testTag(scaffoldTestTag)) {
+      padding ->
+    LazyColumn(
+        modifier = Modifier.padding(padding).testTag(listTestTag),
+        contentPadding =
+            PaddingValues(
+                horizontal = AddShopUi.Dimensions.contentHPadding,
+                vertical = AddShopUi.Dimensions.contentVPadding)) {
+          item {
+            if (online) {
+              EditableImageCarousel(
+                  photoCollectionUrl = state.photoCollectionUrl,
+                  spacesCount = IMAGE_COUNT,
+                  setPhotoCollectionUrl = { state.photoCollectionUrl = it })
+            } else
+                ImageCarousel(
+                    photoCollectionUrl = state.photoCollectionUrl,
+                    maxNumberOfImages = IMAGE_COUNT,
+                    editable = false)
+          }
+          item {
+            ShopInfoSection(
+                state = state,
+                viewModel = viewModel,
+                owner = owner,
+                online = online,
+                locationUi = locationUi)
+          }
+          item { ShopAvailabilitySection(state) }
+          item { ShopGamesSection(state, online, viewModel) }
+          item {
+            Spacer(
+                Modifier.height(AddShopUi.Dimensions.bottomSpacer)
+                    .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
+          }
+        }
+  }
 }
 
-/**
- * Handles the input fields in the screen
- */
+/** Handles the input fields in the screen */
 @Composable
 internal fun ShopInfoSection(
     state: CreateShopFormState,
@@ -359,9 +353,7 @@ internal fun ShopInfoSection(
       testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
 }
 
-/**
- * Availability section of the shop
- */
+/** Availability section of the shop */
 @Composable
 internal fun ShopAvailabilitySection(state: CreateShopFormState) {
   CollapsibleSection(
@@ -378,9 +370,7 @@ internal fun ShopAvailabilitySection(state: CreateShopFormState) {
       testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
 }
 
-/**
- * Handles the entirety of the games section
- */
+/** Handles the entirety of the games section */
 @Composable
 internal fun ShopGamesSection(
     state: CreateShopFormState,

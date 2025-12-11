@@ -1079,7 +1079,8 @@ private fun LocationSearchBar(
     val selectedName = results.selectedLocation?.name
     val query = results.locationQuery
     // Prefer the selected location name if available and query is empty or matches logic
-    // But mainly we want to ensure if query is updated from VM side (e.g. initialization), text reflects it.
+    // But mainly we want to ensure if query is updated from VM side (e.g. initialization), text
+    // reflects it.
     if (query.isNotBlank() && text != query) {
       text = query
     } else if (selectedName != null && selectedName != text) {

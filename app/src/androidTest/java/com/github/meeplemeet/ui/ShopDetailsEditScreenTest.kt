@@ -106,9 +106,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
     // Create Shop
     val openings =
-        (1..7).map { day ->
-          OpeningHours(day = day, hours = listOf(TimeSlot("09:00", "18:00")))
-        }
+        (1..7).map { day -> OpeningHours(day = day, hours = listOf(TimeSlot("09:00", "18:00"))) }
     val games = listOf(gameCatan to 5, gameCarcassonne to 10)
 
     shop =
@@ -239,188 +237,180 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
 
   @Test
   fun editShop_coreFlows_singleComposition(): Unit {
-      // Disable bottom bar hiding to ensure ActionBar is always visible in tests
-      UiBehaviorConfig.hideBottomBarWhenInputFocused = false
+    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
+    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
 
-      var savedCalled = false
-      var backCalled = false
+    var savedCalled = false
+    var backCalled = false
 
-      // We can use a stage integer to simulate steps if needed,
-      // though for Edit screen we mostly just interact sequentially.
-      lateinit var stage: MutableIntState
+    // We can use a stage integer to simulate steps if needed,
+    // though for Edit screen we mostly just interact sequentially.
+    lateinit var stage: MutableIntState
 
-      val viewModel = EditShopViewModel()
+    val viewModel = EditShopViewModel()
 
-      compose.setContent {
-          AppTheme {
-              stage = remember { mutableIntStateOf(0) }
-              // Force re-read of shop from repository/pass specific shop not needed as we pass 'shop'
-              // object
-              ShopDetailsScreen(
-                  owner = owner,
-                  shop = shop,
-                  onBack = { backCalled = true },
-                  onSaved = { savedCalled = true },
-                  onDelete = {},
-                  online = true,
-                  viewModel = viewModel
-              )
-          }
+    compose.setContent {
+      AppTheme {
+        stage = remember { mutableIntStateOf(0) }
+        // Force re-read of shop from repository/pass specific shop not needed as we pass 'shop'
+        // object
+        ShopDetailsScreen(
+            owner = owner,
+            shop = shop,
+            onBack = { backCalled = true },
+            onSaved = { savedCalled = true },
+            onDelete = {},
+            online = true,
+            viewModel = viewModel)
       }
+    }
 
-      // 0) Structure & Initial Data
-      checkpoint("Structure & Initial Data") {
-          compose.onTag(EditShopScreenTestTags.SCAFFOLD).assertExists()
-          compose.onTag(EditShopScreenTestTags.TOPBAR).assertExists()
-          compose.onTag(EditShopScreenTestTags.TITLE).assertExists()
+    // 0) Structure & Initial Data
+    checkpoint("Structure & Initial Data") {
+      compose.onTag(EditShopScreenTestTags.SCAFFOLD).assertExists()
+      compose.onTag(EditShopScreenTestTags.TOPBAR).assertExists()
+      compose.onTag(EditShopScreenTestTags.TITLE).assertExists()
 
-          // Expand Required Section
-          ensureSectionExpanded(EditShopScreenTestTags.SECTION_REQUIRED)
-          inputIn(EditShopScreenTestTags.FIELD_SHOP).assert(hasText("Meeple Mart"))
-          inputIn(EditShopScreenTestTags.FIELD_EMAIL).assert(hasText("shop@meeple.com"))
-          inputIn(EditShopScreenTestTags.FIELD_PHONE).assert(hasText("+41 79 000 00 00"))
+      // Expand Required Section
+      ensureSectionExpanded(EditShopScreenTestTags.SECTION_REQUIRED)
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).assert(hasText("Meeple Mart"))
+      inputIn(EditShopScreenTestTags.FIELD_EMAIL).assert(hasText("shop@meeple.com"))
+      inputIn(EditShopScreenTestTags.FIELD_PHONE).assert(hasText("+41 79 000 00 00"))
 
-          // Wait for validation to pass (e.g. location loaded async)
-          compose.waitUntil(5_000) {
-              try {
-                  compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
-                  true
-              } catch (e: AssertionError) {
-                  false
-              }
-          }
+      // Wait for validation to pass (e.g. location loaded async)
+      compose.waitUntil(5_000) {
+        try {
+          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
+          true
+        } catch (e: AssertionError) {
+          false
+        }
       }
+    }
 
-      // 1) Validation Gating
-      checkpoint("Validation gating") {
-          // Clear name -> Save should be disabled
-          inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextClearance()
-          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsNotEnabled()
+    // 1) Validation Gating
+    checkpoint("Validation gating") {
+      // Clear name -> Save should be disabled
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextClearance()
+      compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsNotEnabled()
 
-          // Restore name -> Save enabled
-          inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextInput("Meeple Mart Edited")
+      // Restore name -> Save enabled
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextInput("Meeple Mart Edited")
 
-          compose.waitUntil(5_000) {
-              try {
-                  compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
-                  true
-              } catch (e: AssertionError) {
-                  false
-              }
-          }
+      compose.waitUntil(5_000) {
+        try {
+          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
+          true
+        } catch (e: AssertionError) {
+          false
+        }
       }
+    }
 
+    // 3) Games modification
+    checkpoint("Games modification") {
+      // Scroll to games
+      scrollListToTag(
+          EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+      ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
-      // 3) Games modification
-      checkpoint("Games modification") {
-          // Scroll to games
-          scrollListToTag(
-              EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-          )
-          ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
+      scrollListToTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)
+      compose.waitForIdle()
 
-          scrollListToTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)
-          compose.waitForIdle()
+      // Verify Catan and Carcassonne exist
+      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
+      val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
 
-          // Verify Catan and Carcassonne exist
-          val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
-          val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
-
-          compose.waitUntil(10_000) {
-              compose.onAllNodesWithTag(catanTag, useUnmergedTree = true)
-                  .fetchSemanticsNodes()
-                  .isNotEmpty()
-          }
-
-          compose.onNodeWithTag(catanTag).assertExists()
-          compose.onNodeWithTag(carcassonneTag).assertExists()
-
-          // Add Pandemic
-          // this will actually be set to 19 with the slider, weirdly the function works for all values except the ones smallers than 20
-          addGameWithSlider("Pandemic", 20)
-
-//           Wait for Pandemic
-          val pandemicTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}g_pandemic"
       compose.waitUntil(10_000) {
-        compose.onAllNodesWithTag(pandemicTag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        compose
+            .onAllNodesWithTag(catanTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
+      compose.onNodeWithTag(catanTag).assertExists()
+      compose.onNodeWithTag(carcassonneTag).assertExists()
+
+      // Add Pandemic
+      // this will actually be set to 19 with the slider, weirdly the function works for all values
+      // except the ones smallers than 20
+      addGameWithSlider("Pandemic", 20)
+
+      //           Wait for Pandemic
+      val pandemicTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}g_pandemic"
+      compose.waitUntil(10_000) {
+        compose
+            .onAllNodesWithTag(pandemicTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
       }
       compose.onTag(pandemicTag).assertExists()
 
-          // Delete Catan
-          compose
-              .onNodeWithTag(
-                  "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true
-              )
-              .performClick()
-          compose.waitForIdle()
-          compose.onTag(catanTag).assertDoesNotExist()
+      // Delete Catan
+      compose
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+          .performClick()
+      compose.waitForIdle()
+      compose.onTag(catanTag).assertDoesNotExist()
 
-          // Edit Carcassonne count to 50
-          compose
-              .onNodeWithTag(
-                  "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_carcassonne",
-                  useUnmergedTree = true
-              )
-              .performClick()
-          compose.onTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertExists()
-          setSliderValue(50)
-          compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).performClick()
-          compose.waitForIdle()
-          // Check for updated text (fuzzy check for "50")
-          compose
-              .onNode(
-                  hasText(
-                      "50",
-                      substring = true
-                  ) and hasAnyAncestor(hasTestTag(carcassonneTag))
-              )
-              .assertExists()
+      // Edit Carcassonne count to 50
+      compose
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_carcassonne", useUnmergedTree = true)
+          .performClick()
+      compose.onTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertExists()
+      setSliderValue(50)
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).performClick()
+      compose.waitForIdle()
+      // Check for updated text (fuzzy check for "50")
+      compose
+          .onNode(hasText("50", substring = true) and hasAnyAncestor(hasTestTag(carcassonneTag)))
+          .assertExists()
+    }
+
+    // 3) Save Success
+    checkpoint("Save Success") {
+      compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      assertEquals(true, savedCalled)
+
+      // Verify persistence in Firestore
+      runBlocking {
+        val updated = shopRepository.getShop(shop.id)
+        assertEquals("Meeple Mart Edited", updated.name) // From step 1
+        val gamesMap = updated.gameCollection.associate { it.first.uid to it.second }
+        assertEquals(null, gamesMap["test_catan"]) // Deleted
+        assertEquals(50, gamesMap["test_carcassonne"]) // Edited
+        assertEquals(19, gamesMap["g_pandemic"]) // Added
       }
-
-      // 3) Save Success
-      checkpoint("Save Success") {
-          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
-          assertEquals(true, savedCalled)
-
-          // Verify persistence in Firestore
-          runBlocking {
-              val updated = shopRepository.getShop(shop.id)
-              assertEquals("Meeple Mart Edited", updated.name) // From step 1
-              val gamesMap = updated.gameCollection.associate { it.first.uid to it.second }
-              assertEquals(null, gamesMap["test_catan"]) // Deleted
-              assertEquals(50, gamesMap["test_carcassonne"]) // Edited
-              assertEquals(19, gamesMap["g_pandemic"]) // Added
-          }
-      }
+    }
   }
 
-      @Test
-      fun editShop_offlineUI_disablesFeatures() {
-          val viewModel = EditShopViewModel()
-          compose.setContent {
-              AppTheme {
-                  ShopDetailsScreen(
-                      owner = owner,
-                      shop = shop,
-                      onBack = {},
-                      onSaved = {},
-                      onDelete = {},
-                      online = false,
-                      viewModel = viewModel
-                  )
-              }
-          }
-
-          // Verify Image Carousel is not editable
-          compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
-
-          // Verify Games header message and no Add button
-          scrollListToTag(
-              EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-          )
-          ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
-
-          compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
-          compose.onTag(EditShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
+  @Test
+  fun editShop_offlineUI_disablesFeatures() {
+    val viewModel = EditShopViewModel()
+    compose.setContent {
+      AppTheme {
+        ShopDetailsScreen(
+            owner = owner,
+            shop = shop,
+            onBack = {},
+            onSaved = {},
+            onDelete = {},
+            online = false,
+            viewModel = viewModel)
       }
+    }
+
+    // Verify Image Carousel is not editable
+    compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
+
+    // Verify Games header message and no Add button
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
+
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    compose.onTag(EditShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
+}
