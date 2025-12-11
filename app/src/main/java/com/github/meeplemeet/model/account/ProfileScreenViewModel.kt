@@ -35,7 +35,8 @@ class ProfileScreenViewModel(
 
   companion object {
     private const val EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE =
-        "Verification email sent to %s. Please log back in with your new email for the changes to be effective."
+        "Verification email sent to %s. Please log back in once you verified your new email."
+    private const val COOLDOWN_TIME_MSG = 4000L
   }
 
   private val _uiState = MutableStateFlow(AuthUIState())
@@ -152,6 +153,10 @@ class ProfileScreenViewModel(
                   errorMsg = null,
                   successMsg = EMAIL_CHANGE_SUCCESS_MSG_TEMPLATE.format(newEmail))
             }
+            // Step 4: Add delay for user to read the success message
+            kotlinx.coroutines.delay(COOLDOWN_TIME_MSG)
+            // Step 5: Sign out the user after delay
+            signOut()
           }
           .onFailure { error ->
             // Firebase Auth failed (wrong password, email in use, etc.)
