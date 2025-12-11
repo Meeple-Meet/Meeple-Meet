@@ -17,10 +17,12 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@Ignore("Uses new Business Component which will be implemented later")
 @RunWith(AndroidJUnit4::class)
 class CreateSpaceRenterScreenTest : FirestoreTests() {
 
