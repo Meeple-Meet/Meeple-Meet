@@ -45,7 +45,8 @@ class EmailChangeUITest : FirestoreTests() {
           onEmailChange = {},
           onFocusChanged = {},
           onSendVerification = {},
-          onChangeEmail = { _, _ -> })
+          onChangeEmail = { _, _ -> },
+          online = true)
     }
 
     checkpoint("Title is displayed") {
@@ -86,7 +87,8 @@ class EmailChangeUITest : FirestoreTests() {
           onEmailChange = {},
           onFocusChanged = {},
           onSendVerification = {},
-          onChangeEmail = { _, _ -> })
+          onChangeEmail = { _, _ -> },
+          online = true)
     }
 
     checkpoint("Enter invalid email shows error") {
@@ -109,7 +111,8 @@ class EmailChangeUITest : FirestoreTests() {
           onEmailChange = {},
           onFocusChanged = {},
           onSendVerification = {},
-          onChangeEmail = { _, _ -> })
+          onChangeEmail = { _, _ -> },
+          online = true)
     }
 
     checkpoint("Enter valid email shows valid message") {
@@ -135,7 +138,8 @@ class EmailChangeUITest : FirestoreTests() {
           onEmailChange = {},
           onFocusChanged = {},
           onSendVerification = {},
-          onChangeEmail = { _, _ -> })
+          onChangeEmail = { _, _ -> },
+          online = true)
     }
 
     checkpoint("Emails don't match shows error") {
@@ -163,7 +167,8 @@ class EmailChangeUITest : FirestoreTests() {
           onEmailChange = {},
           onFocusChanged = {},
           onSendVerification = {},
-          onChangeEmail = { _, _ -> })
+          onChangeEmail = { _, _ -> },
+          online = true)
     }
 
     checkpoint("Fill all fields with valid data") {
@@ -203,7 +208,8 @@ class EmailChangeUITest : FirestoreTests() {
           onFocusChanged = {},
           onSendVerification = {},
           onChangeEmail = { _, _ -> },
-          errorMsg = errorMsg.value)
+          errorMsg = errorMsg.value,
+          online = true)
     }
 
     checkpoint("No error initially") {
@@ -232,7 +238,8 @@ class EmailChangeUITest : FirestoreTests() {
           onFocusChanged = {},
           onSendVerification = {},
           onChangeEmail = { _, _ -> },
-          successMsg = successMsg.value)
+          successMsg = successMsg.value,
+          online = true)
     }
 
     checkpoint("No success message initially") { compose.waitForIdle() }
@@ -257,7 +264,8 @@ class EmailChangeUITest : FirestoreTests() {
           onFocusChanged = {},
           onSendVerification = {},
           onChangeEmail = { _, _ -> },
-          isLoading = isLoading.value)
+          isLoading = isLoading.value,
+          online = true)
     }
 
     checkpoint("Fill all fields") {
