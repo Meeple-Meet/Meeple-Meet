@@ -29,7 +29,6 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
