@@ -17,6 +17,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import java.util.UUID
 import org.junit.Before
 import org.junit.Rule
@@ -197,6 +198,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
 
   @OptIn(ExperimentalTestApi::class)
   @Test
+  @noretry
   fun allAuthenticatedNavigationChecksInOnePass() =
       with(composeTestRule) {
         /* ----------------------------------------------------------
