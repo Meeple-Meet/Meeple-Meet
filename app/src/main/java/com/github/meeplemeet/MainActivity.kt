@@ -90,7 +90,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
-import com.google.firebase.initialize
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
@@ -188,10 +187,15 @@ class MainActivity : ComponentActivity() {
 
     MapsInitializer.initialize(applicationContext)
 
-    Firebase.initialize(context = this)
+    // TODO: Switch to build-type based AppCheck provider once infra is ready.
+    // Currently using DebugAppCheckProviderFactory for all builds.
+    // Uncomment the conditional block below when Play Integrity infra is available:
+    //
     // Firebase.appCheck.installAppCheckProviderFactory(
-    //    if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
-    //    else PlayIntegrityAppCheckProviderFactory.getInstance())
+    //     if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
+    //     else PlayIntegrityAppCheckProviderFactory.getInstance()
+    // )
+
     Firebase.appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
 
     OfflineModeManager.start(applicationContext)
