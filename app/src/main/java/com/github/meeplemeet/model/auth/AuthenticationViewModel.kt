@@ -33,6 +33,8 @@ import kotlinx.coroutines.launch
  *   user profile information from both Firebase Auth and Firestore.
  * @property errorMsg An error message to display to the user, or null if no error. This is shown in
  *   the UI when authentication operations fail.
+ *     @property successMsg A success message to display to the user, or null if no message. This is
+ *       shown in the UI when authentication operations succeed.
  * @property signedOut True if a sign-out operation has just completed. Used to reset UI state after
  *   logout.
  * @property isEmailVerified True if the current user's email is verified, false otherwise.
@@ -44,6 +46,7 @@ data class AuthUIState(
     val isLoading: Boolean = false,
     val account: Account? = null,
     val errorMsg: String? = null,
+    val successMsg: String? = null,
     val signedOut: Boolean = false,
     val isEmailVerified: Boolean = false,
     val lastVerificationEmailSentAtMillis: Long? = null
