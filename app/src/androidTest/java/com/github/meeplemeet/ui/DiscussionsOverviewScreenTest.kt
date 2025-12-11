@@ -282,8 +282,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
         me.copy(relationships = me.relationships + (bob.uid to RelationshipStatus.BLOCKED))
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav) }
+      AppTheme {
+        DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav, unreadCount = 0)
       }
     }
 
