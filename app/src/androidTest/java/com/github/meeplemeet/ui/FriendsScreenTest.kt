@@ -29,7 +29,6 @@ import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import io.mockk.mockk
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -575,9 +574,6 @@ class FriendsScreenTest : FirestoreTests() {
 
     /* 2  Repository relationship removed on both sides ---------------------- */
     checkpoint("Clicking remove-friend removes relationship in Firestore") {
-      // Give the ViewModel coroutine a moment to complete
-      runBlocking { delay(200) }
-
       val accounts = runBlocking {
         accountRepository.getAccounts(listOf(currentUser.uid, friend1.uid))
       }
@@ -653,8 +649,6 @@ class FriendsScreenTest : FirestoreTests() {
 
     /* 3  Repository now has BLOCKED relationship ---------------------------- */
     checkpoint("Clicking block sets BLOCKED relationship in Firestore") {
-      runBlocking { delay(200) }
-
       val updatedCurrent = runBlocking { accountRepository.getAccount(currentUser.uid) }
 
       assert(updatedCurrent.relationships[stranger.uid] == RelationshipStatus.BLOCKED) {
@@ -717,8 +711,6 @@ class FriendsScreenTest : FirestoreTests() {
 
     // 3. Repository is now neutral
     checkpoint("Clicking block on a BLOCKED user unblocks in Firestore") {
-      runBlocking { delay(200) }
-
       val updatedCurrent = runBlocking { accountRepository.getAccount(currentUser.uid) }
 
       assert(updatedCurrent.relationships[blockedUser.uid] == null) {

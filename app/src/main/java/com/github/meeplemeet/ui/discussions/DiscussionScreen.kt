@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
@@ -228,7 +229,6 @@ fun DiscussionScreen(
   val networkMonitorStarted by
       OfflineModeManager.networkMonitorStarted.collectAsStateWithLifecycle()
   val effectiveOnline = online || !networkMonitorStarted
-  val offlineMode by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   var selectedMessageForActions by remember { mutableStateOf<Message?>(null) }
   var messageBeingEdited by remember { mutableStateOf<Message?>(null) }
@@ -398,6 +398,10 @@ fun DiscussionScreen(
                           itemsIndexed(items = messages, key = { _, msg -> msg.uid }) {
                               index,
                               message ->
+                            if (account.relationships[message.senderId] ==
+                                RelationshipStatus.BLOCKED)
+                                return@itemsIndexed
+
                             val isMine = message.senderId == account.uid
                             val senderAccount = userCache[message.senderId]
                             val sender =

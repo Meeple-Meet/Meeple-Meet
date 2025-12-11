@@ -59,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
@@ -340,7 +339,7 @@ fun FriendsScreen(
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
   var blockedUsers by remember { mutableStateOf<List<Account>>(emptyList()) }
 
-  LaunchedEffect(account.uid) {
+  LaunchedEffect(account.relationships) {
     viewModel.getAccounts(account.relationships.keys.toList(), context) { list ->
       val f = mutableListOf<Account>()
       val s = mutableListOf<Account>()

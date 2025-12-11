@@ -97,11 +97,8 @@ class NotificationsTabCrashTest : FirestoreTests() {
       while (notificationExists && System.currentTimeMillis() - startTime < 5000) {
         val updatedUser = accountRepository.getAccount(currentUser.uid)
         notificationExists = updatedUser.notifications.any { it.uid == notificationId }
-        if (notificationExists) {
-          kotlinx.coroutines.delay(500)
-        }
       }
-      assert(!notificationExists) { "Notification should be deleted automatically" }
+      compose.waitUntil { !notificationExists }
     }
   }
 }

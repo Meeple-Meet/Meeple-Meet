@@ -57,7 +57,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.hamcrest.Matchers.allOf
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,7 +74,6 @@ private const val DEFAULT_TEST_KM = 10.0
  * - Zoom level effects on clustering
  * - Session filtering by participant
  */
-@Ignore
 @RunWith(AndroidJUnit4::class)
 class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
@@ -248,7 +246,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     //    checkpoint("scaleBar_hidesAfterDelay") {
     //      runBlocking {
     //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
-    //        delay(3500)
+    //        delay(3000)
     //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
     //      }
     //    }
@@ -273,11 +271,11 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     //      runBlocking {
     //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
     //
-    //        delay(3500)
+    //        delay(3000)
     //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertDoesNotExist()
     //
     //        viewModel.updateZoomLevel(16f)
-    //        delay(100)
+    //        delay(3000)
     //
     //        composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
     //      }
@@ -391,7 +389,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         viewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val initialClusters = viewModel.getClusters()
         assertTrue(initialClusters.size >= 2)
@@ -418,7 +416,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
    * Tests clustering display, single pin selection, and cluster interactions. Tests with both
    * single cluster strategy and no cluster strategy.
    */
-  @Ignore
   @Test
   fun test_clustering_and_singlePin_interactions() {
     // First part: test with no clustering (individual pins)
@@ -457,7 +454,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items.size == 1 && it.items[0].geoPin.uid == shop.id }
@@ -466,7 +463,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         // Click on the single pin
         noClusterViewModel.selectPin(cluster.items[0])
-        delay(1000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
@@ -495,18 +492,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).performClick()
-        delay(500)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertDoesNotExist()
 
@@ -527,7 +524,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
@@ -535,7 +532,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         // show preview sheet
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
+        delay(3000)
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
 
         // init Espresso-Intents to observe intents
@@ -571,14 +568,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(1000)
+        delay(3000)
 
         lastRedirect = null
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_VIEW_DETAILS_BUTTON).performClick()
@@ -603,7 +600,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
@@ -611,7 +608,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         // show preview sheet
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
+        delay(3000)
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
 
         // The title should include the pin name and the distance
@@ -658,14 +655,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val cluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
         assertNotNull(cluster)
 
         noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
         composeRule
@@ -715,7 +712,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         noClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = noClusterViewModel.getClusters()
         val sessionCluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
@@ -726,7 +723,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         val ownerViewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
         ownerViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val ownerClusters = ownerViewModel.getClusters()
         val ownerSessionCluster = ownerClusters.find { it.items[0].geoPin.uid == discussion.uid }
@@ -787,7 +784,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         assertEquals(1, clusters.size)
@@ -795,7 +792,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         // Select the cluster
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
 
@@ -832,13 +829,13 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         singleClusterViewModel.selectCluster(clusters[0])
 
         composeRule.waitForIdle()
-        delay(100)
+        delay(3000)
 
         val loadingState = singleClusterViewModel.uiState.value
         assertTrue(loadingState.isLoadingPreview || loadingState.selectedClusterPreviews != null)
@@ -868,14 +865,14 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         assertTrue(clusters.isNotEmpty())
 
         // Select the cluster and show the sheet
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(1500)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
 
@@ -915,11 +912,11 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
 
@@ -927,7 +924,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         composeRule
             .onNodeWithTag(MapScreenTestTags.getTestTagForClusterItem(shop1.id))
             .performClick()
-        delay(5000)
+        delay(3000)
 
         // Should now show single pin preview sheet
         composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertDoesNotExist()
@@ -962,13 +959,13 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         assertTrue(clusters[0].items.size >= 2)
 
         singleClusterViewModel.selectCluster(clusters[0])
-        delay(5000)
+        delay(3000)
 
         composeRule.onNodeWithTag(MapScreenTestTags.CLUSTER_SHEET).assertIsDisplayed()
         composeRule
@@ -1000,7 +997,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
+        delay(3000)
 
         val clusters = singleClusterViewModel.getClusters()
         assertEquals(1, clusters.size)
@@ -1031,7 +1028,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         singleClusterViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val allTypeClusters = singleClusterViewModel.getClusters()
         assertTrue(allTypeClusters[0].items.size >= 2)
@@ -1082,18 +1079,18 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         mapViewModel.startGeoQuery(
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(1500)
+        delay(3000)
 
         val initialZoom = 10f // Threshold = 5 km
         val newZoom = 18f // Threshold = 50 m
 
         mapViewModel.updateZoomLevel(initialZoom)
-        delay(500)
+        delay(3000)
         val clustersAtInitialZoom = mapViewModel.getClusters()
 
         // Change zoom level
         mapViewModel.updateZoomLevel(newZoom)
-        delay(500)
+        delay(3000)
         val clustersAtNewZoom = mapViewModel.getClusters()
 
         val state = mapViewModel.uiState.value

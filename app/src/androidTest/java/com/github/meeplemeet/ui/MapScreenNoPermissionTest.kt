@@ -7,7 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -72,6 +74,7 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
 
   override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {}
 
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun test_mapWithoutLocationPermission() {
     val cameraState = CameraPositionState()
@@ -95,22 +98,20 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
       }
     }
 
-    Thread.sleep(1500)
-
     checkpoint("mapScreen_displaysWithoutPermission") {
       composeRule.waitForIdle()
+      composeRule.waitUntilAtLeastOneExists(hasTestTag(MapScreenTestTags.GOOGLE_MAP_SCREEN))
       composeRule.onNodeWithTag(MapScreenTestTags.GOOGLE_MAP_SCREEN).assertIsDisplayed()
     }
 
     checkpoint("recenterButton_hiddenWithoutPermission") {
       composeRule.waitForIdle()
-      Thread.sleep(500)
       composeRule.onNodeWithTag(MapScreenTestTags.RECENTER_BUTTON).assertDoesNotExist()
     }
 
     checkpoint("scaleBar_displaysWithoutPermission") {
       composeRule.waitForIdle()
-      Thread.sleep(500)
+      composeRule.waitUntilAtLeastOneExists(hasTestTag(MapScreenTestTags.SCALE_BAR))
       composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR).assertIsDisplayed()
       composeRule.onNodeWithTag(MapScreenTestTags.SCALE_BAR_DISTANCE).assertIsDisplayed()
     }
