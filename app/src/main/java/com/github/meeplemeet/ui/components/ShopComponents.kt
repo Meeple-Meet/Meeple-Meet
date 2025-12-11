@@ -127,6 +127,9 @@ object ShopFormUi {
     val sectionSpace = Dimensions.Padding.large
     val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
     val betweenControls = Dimensions.Padding.mediumSmall
+    const val thumbSize = 30
+    const val bubbleSize = 100
+    const val imageSize = 200
   }
 
   object Strings {
@@ -175,10 +178,6 @@ object TimeUi {
  * @receiver The LocalTime object to format.
  */
 fun LocalTime.hhmm(): String = "%02d:%02d".format(hour, minute)
-
-val thumbSize = 30.dp
-val bubbleSize = 100.dp
-val imageSize = 200.dp
 
 /**
  * Tries to parse a time string into a LocalTime object.
@@ -533,7 +532,8 @@ fun GameStockImage(gameUIState: GameUIState) {
         model = game.imageURL,
         contentDescription = "Game image",
         modifier =
-            Modifier.sizeIn(maxWidth = imageSize, maxHeight = imageSize)
+            Modifier.sizeIn(
+                    maxWidth = ShopFormUi.Dim.imageSize.dp, maxHeight = ShopFormUi.Dim.imageSize.dp)
                 .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
                 .padding(vertical = Dimensions.Padding.medium),
         contentScale = ContentScale.Fit)
@@ -567,14 +567,14 @@ fun GameAddUI(
           var bubbleWidth by remember { mutableStateOf(0f) }
 
           val density = LocalDensity.current
-          val thumbDiameterPx = with(density) { thumbSize.toPx() }
+          val thumbDiameterPx = with(density) { ShopFormUi.Dim.thumbSize.dp.toPx() }
           val thumbRadiusPx = thumbDiameterPx / 2f
 
           Box(
               modifier =
                   Modifier.weight(1f)
                       .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
-                      .height(bubbleSize)) {
+                      .height(ShopFormUi.Dim.bubbleSize.dp)) {
                 Box(
                     modifier =
                         Modifier.onGloballyPositioned { coords ->
@@ -643,7 +643,7 @@ fun GameAddUI(
                     thumb = {
                       Box(
                           modifier =
-                              Modifier.size(thumbSize)
+                              Modifier.size(ShopFormUi.Dim.thumbSize.dp)
                                   .shadow(Dimensions.Elevation.high, CircleShape)
                                   .background(AppColors.focus, CircleShape))
                     })
