@@ -65,6 +65,7 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
  * @param navigation Actions for navigation events.
  * @param onClickAddPost Callback fired when the FAB is tapped.
  * @param onSelectPost Callback fired when a post card is tapped.
+ * @param account The currently logged in account
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
