@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui.account
-// AI was used for this file
+//AI was used in this file
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
