@@ -102,7 +102,7 @@ class CloudBggGameRepository(
    * Deprecated full search method that returns complete [Game] objects.
    *
    * This method remains available for backward compatibility but will be removed in the future. It
-   * now delegates to [searchGamesByNameLight], then resolves the returned IDs via [getGamesById].
+   * now delegates to [searchGamesByName], then resolves the returned IDs via [getGamesById].
    *
    * @param query The text query to match in game names.
    * @param maxResults Maximum number of results to return.
@@ -118,7 +118,7 @@ class CloudBggGameRepository(
       ignoreCase: Boolean
   ): List<Game> =
       withContext(ioDispatcher) {
-        val lightResults = searchGamesByNameLight(query, maxResults)
+        val lightResults = searchGamesByName(query, maxResults)
         if (lightResults.isEmpty()) return@withContext emptyList()
         return@withContext getGamesById(*lightResults.map { it.id }.toTypedArray())
       }
@@ -134,7 +134,7 @@ class CloudBggGameRepository(
    * @return A list of [GameSearchResult] objects containing minimal game info.
    * @throws GameSearchException If calling the Cloud Function fails or if JSON parsing fails.
    */
-  suspend fun searchGamesByNameLight(query: String, maxResults: Int): List<GameSearchResult> =
+  override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> =
       withContext(ioDispatcher) {
         val params = mapOf("query" to query, "maxResults" to maxResults)
 
