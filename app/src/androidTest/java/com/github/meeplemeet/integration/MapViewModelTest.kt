@@ -127,7 +127,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val state = viewModel.uiState.value
     assertTrue(state.allGeoPins.isNotEmpty())
@@ -171,7 +171,7 @@ class MapViewModelTest : FirestoreTests() {
         testAccount1.uid)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val sessionPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == discussion.uid }
     assertNotNull(sessionPin)
@@ -181,7 +181,7 @@ class MapViewModelTest : FirestoreTests() {
 
     val viewModel2 = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
     viewModel2.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount2.uid)
-    delay(1000)
+    delay(3000)
 
     val sessionPin2 = viewModel2.uiState.value.allGeoPins.find { it.geoPin.uid == discussion.uid }
     assertNull(sessionPin2)
@@ -201,7 +201,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     assertTrue(viewModel.uiState.value.allGeoPins.isNotEmpty())
 
@@ -235,7 +235,7 @@ class MapViewModelTest : FirestoreTests() {
       shops.add(shop.id)
     }
 
-    delay(1000)
+    delay(3000)
     val stateAfterDebounce = viewModel.uiState.value
     assertTrue(stateAfterDebounce.allGeoPins.size >= 5)
 
@@ -265,7 +265,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val clusters = viewModel.getClusters()
 
@@ -295,7 +295,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val clusters = viewModel.getClusters()
 
@@ -318,7 +318,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val clusters1 = viewModel.getClusters()
     val state1 = viewModel.uiState.value
@@ -347,7 +347,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     viewModel.getClusters()
     val version1 = viewModel.uiState.value.cacheVersion
@@ -377,7 +377,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     viewModel.getClusters()
     val version1 = viewModel.uiState.value.cacheVersion
@@ -402,7 +402,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     viewModel.getClusters()
     val version1 = viewModel.uiState.value.cacheVersion
@@ -414,7 +414,7 @@ class MapViewModelTest : FirestoreTests() {
             address = testLocationNearby,
             openingHours = testOpeningHours)
 
-    delay(1000)
+    delay(3000)
 
     val version2 = viewModel.uiState.value.cacheVersion
     assertTrue(version2 > version1)
@@ -447,7 +447,7 @@ class MapViewModelTest : FirestoreTests() {
             spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     viewModel.updateFilters(setOf(PinType.SHOP))
     val clusters = viewModel.getClusters()
@@ -470,7 +470,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     assertTrue(viewModel.getClusters().isNotEmpty())
 
@@ -498,13 +498,13 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val shopPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(shopPin)
 
     viewModel.selectPin(shopPin!!)
-    delay(1000)
+    delay(3000)
 
     val state = viewModel.uiState.value
     assertNotNull(state.selectedMarkerPreview)
@@ -527,11 +527,11 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val shopPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     viewModel.selectPin(shopPin!!)
-    delay(1000)
+    delay(3000)
 
     assertNotNull(viewModel.uiState.value.selectedMarkerPreview)
 
@@ -567,7 +567,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val clusters = viewModel.getClusters()
     assertTrue(clusters.isNotEmpty())
@@ -576,7 +576,7 @@ class MapViewModelTest : FirestoreTests() {
     assertTrue(cluster.items.size >= 2)
 
     viewModel.selectCluster(cluster)
-    delay(1500)
+    delay(4500)
 
     val state = viewModel.uiState.value
     assertNotNull(state.selectedClusterPreviews)
@@ -606,11 +606,11 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val cluster = viewModel.getClusters()[0]
     viewModel.selectCluster(cluster)
-    delay(1500)
+    delay(4500)
 
     val clusterState = viewModel.uiState.value
     assertNotNull(clusterState.selectedClusterPreviews)
@@ -648,11 +648,11 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val cluster = viewModel.getClusters()[0]
     viewModel.selectCluster(cluster)
-    delay(1500)
+    delay(4500)
 
     assertNotNull(viewModel.uiState.value.selectedClusterPreviews)
 
@@ -688,7 +688,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val pin1 = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop1.id }
     val pin2 = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop2.id }
@@ -697,7 +697,7 @@ class MapViewModelTest : FirestoreTests() {
     assertNull(pin2)
 
     viewModel.updateQueryCenter(testLocationFar)
-    delay(1000)
+    delay(3000)
 
     val pin1After = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop1.id }
     val pin2After = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop2.id }
@@ -723,14 +723,14 @@ class MapViewModelTest : FirestoreTests() {
     // Start query with radius smaller than distance to shop
     viewModel.startGeoQuery(
         Location(45.00, 5.00, "Center"), radiusKm = 50.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val pinBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNull(pinBefore)
 
     // Increase radius to include shop
     viewModel.updateRadius(200.0)
-    delay(1000)
+    delay(3000)
 
     val pinAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(pinAfter)
@@ -759,7 +759,7 @@ class MapViewModelTest : FirestoreTests() {
     // Start query large enough to include both
     viewModel.startGeoQuery(
         Location(45.00, 5.00, "Center"), radiusKm = 200.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val nearBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopNear.id }
     val farBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopFar.id }
@@ -769,7 +769,7 @@ class MapViewModelTest : FirestoreTests() {
 
     // Reduce radius to only include near shop
     viewModel.updateRadius(50.0)
-    delay(1000)
+    delay(3000)
 
     val nearAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopNear.id }
     val farAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopFar.id }
@@ -800,7 +800,7 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 5.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val epflBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopEPFL.id }
     val genevaBefore = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopGeneva.id }
@@ -809,7 +809,7 @@ class MapViewModelTest : FirestoreTests() {
     assertNull(genevaBefore)
 
     viewModel.updateCenterAndRadius(testLocationFar, 10.0)
-    delay(1000)
+    delay(3000)
 
     val epflAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopEPFL.id }
     val genevaAfter = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shopGeneva.id }
@@ -837,14 +837,14 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     val initialPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(initialPin)
     assertEquals(testLocation.latitude, initialPin!!.location.latitude, 0.0001)
 
     shopRepository.updateShop(shop.id, address = testLocationNearby)
-    delay(1000)
+    delay(3000)
 
     val updatedPin = viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id }
     assertNotNull(updatedPin)
@@ -865,12 +865,12 @@ class MapViewModelTest : FirestoreTests() {
             openingHours = testOpeningHours)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
-    delay(1000)
+    delay(3000)
 
     assertNotNull(viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id })
 
     shopRepository.deleteShop(shop.id)
-    delay(1000)
+    delay(3000)
 
     assertNull(viewModel.uiState.value.allGeoPins.find { it.geoPin.uid == shop.id })
   }

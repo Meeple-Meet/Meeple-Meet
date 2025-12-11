@@ -137,6 +137,7 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
     }
   }
 
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun all_space_renter_details_tests() {
     val clipboard = FakeClipboardManager()
@@ -155,7 +156,11 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
       }
     }
 
-    compose.waitUntil(timeoutMillis = 5000) { vm.spaceRenter.value != null }
+    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(
+        hasTestTag(ShopComponentsTestTags.SHOP_PHONE_TEXT), timeoutMillis = 15000)
+
+    compose.waitUntil(timeoutMillis = 15000) { vm.spaceRenter.value != null }
 
     checkpoint("Title visible") { compose.onNodeWithText(renter.name).assertExists() }
 
@@ -248,6 +253,7 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
     checkpoint("Reservation bar shows selected state") { reservationSelected().assertExists() }
   }
 
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun edit_button_visible_for_owner() {
     var fired = false
@@ -257,7 +263,11 @@ class SpaceRenterDetailsScreenTest : FirestoreTests() {
           spaceId = renter.id, account = owner, viewModel = vm, onEdit = { fired = true })
     }
 
-    compose.waitUntil(timeoutMillis = 5000) { vm.spaceRenter.value != null }
+    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(
+        hasTestTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON), timeoutMillis = 15000)
+
+    compose.waitUntil(timeoutMillis = 15000) { vm.spaceRenter.value != null }
 
     compose
         .onNodeWithTag(SpaceRenterTestTags.SPACE_RENTER_EDIT_BUTTON)

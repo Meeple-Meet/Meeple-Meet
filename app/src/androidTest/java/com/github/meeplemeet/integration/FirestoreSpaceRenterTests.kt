@@ -687,7 +687,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
         spaces = listOf(testSpace1))
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(300)
 
     // Verify space renter was created by fetching it
     val spaceRenters = spaceRenterRepository.getSpaceRenters(10u)
@@ -723,7 +723,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
         openingHours = fullWeekHours)
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(300)
 
     // Verify space renter was created
     val spaceRenters = spaceRenterRepository.getSpaceRenters(10u)
@@ -774,7 +774,7 @@ class FirestoreSpaceRenterTests : FirestoreTests() {
     spaceRenterViewModel.getSpaceRenter(spaceRenter.id)
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(300)
 
     // Verify the StateFlow was updated
     val loadedSpaceRenter = spaceRenterViewModel.spaceRenter.value

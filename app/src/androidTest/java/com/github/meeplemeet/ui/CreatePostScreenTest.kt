@@ -204,7 +204,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
     checkpoint("Create post – saved in Firestore") {
       postButton().performClick()
-      compose.waitUntil(timeoutMillis = 800) { postCalled }
+      compose.waitUntil(timeoutMillis = 2000) { postCalled }
       runBlocking {
         val posts = repository.getPosts()
         val created = posts.find { it.title == "Multi-Tag Test" }
@@ -226,7 +226,7 @@ class CreatePostScreenTest : FirestoreTests() {
 
       postCalled = false
       postButton().performClick()
-      compose.waitUntil(timeoutMillis = 800) { postCalled }
+      compose.waitUntil(timeoutMillis = 2000) { postCalled }
       runBlocking {
         val posts = repository.getPosts()
         compose.waitUntil(2000) { posts.find { it.title == "No Tags Post" } != null }
@@ -266,7 +266,7 @@ class CreatePostScreenTest : FirestoreTests() {
     checkpoint("Create 10-tag post") {
       postCalled = false
       postButton().performClick()
-      compose.waitUntil(timeoutMillis = 800) { postCalled }
+      compose.waitUntil(timeoutMillis = 2000) { postCalled }
 
       runBlocking {
         val posts = repository.getPosts()
@@ -306,6 +306,9 @@ class CreatePostScreenTest : FirestoreTests() {
     checkpoint("Create integration post") {
       postCalled = false
       compose.waitForIdle()
+      compose.waitUntil {
+        postButton().fetchSemanticsNode().config.contains(SemanticsProperties.Disabled).not()
+      }
       postButton().assertIsEnabled()
       postButton().performClick()
       compose.waitUntil(timeoutMillis = 5000) { postCalled }

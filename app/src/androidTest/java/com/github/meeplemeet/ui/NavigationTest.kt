@@ -34,6 +34,7 @@ class NavigationTest : FirestoreTests() {
   private lateinit var navController: NavHostController
   private lateinit var navigationActions: NavigationActions
 
+  @OptIn(ExperimentalTestApi::class)
   @Before
   fun setup() {
     // Call parent setup first to initialize Firebase emulators
@@ -54,6 +55,8 @@ class NavigationTest : FirestoreTests() {
 
     // Wait for the app to be ready
     composeTestRule.waitForIdle()
+    composeTestRule.waitUntilAtLeastOneExists(
+        hasTestTag(SignInScreenTestTags.SIGN_IN_BUTTON), timeoutMillis = 15000)
   }
 
   @Test
@@ -171,6 +174,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 60_000L)
 
+  @OptIn(ExperimentalTestApi::class)
   @Before
   fun setupAuthenticatedUser() {
     // Sign out any existing Firebase session before creating a new user
@@ -188,6 +192,11 @@ class AuthenticatedNavigationTest : FirestoreTests() {
     val testUsername = "Nav Test User"
 
     composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+
+    // Wait for navigation to complete and UI to be ready after sign up
+    composeTestRule.waitForIdle()
+    composeTestRule.waitUntilAtLeastOneExists(
+        hasTestTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU), timeoutMillis = 15000)
   }
 
   @OptIn(ExperimentalTestApi::class)
