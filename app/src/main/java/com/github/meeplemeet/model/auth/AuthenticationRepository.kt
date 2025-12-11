@@ -430,8 +430,7 @@ class AuthenticationRepository(
   suspend fun reauthenticateWithPassword(password: String): Result<Unit> {
     return try {
       val currentUser =
-          auth.currentUser
-              ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+          auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
 
       val email =
           currentUser.email
@@ -457,14 +456,12 @@ class AuthenticationRepository(
   suspend fun deleteAuthAccount(): Result<Unit> {
     return try {
       val currentUser =
-          auth.currentUser
-              ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
+          auth.currentUser ?: return Result.failure(IllegalStateException(ERROR_NO_LOGGED_IN_USER))
 
       currentUser.delete().await()
       Result.success(Unit)
     } catch (e: Exception) {
-      val errorMessage =
-          mapErrorMessage(e, "Failed to delete account. Please try again.")
+      val errorMessage = mapErrorMessage(e, "Failed to delete account. Please try again.")
       Result.failure(IllegalStateException(errorMessage))
     }
   }

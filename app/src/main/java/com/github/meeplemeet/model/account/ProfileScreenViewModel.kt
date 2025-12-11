@@ -342,8 +342,7 @@ class ProfileScreenViewModel(
           .onFailure { exception ->
             _uiState.update {
               it.copy(
-                  isLoading = false,
-                  errorMsg = exception.message ?: AUTH_FAILED_DEFAULT_MESSAGE)
+                  isLoading = false, errorMsg = exception.message ?: AUTH_FAILED_DEFAULT_MESSAGE)
             }
             onFailure(exception.message ?: AUTH_FAILED_DEFAULT_MESSAGE)
           }

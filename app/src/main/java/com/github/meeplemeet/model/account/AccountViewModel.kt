@@ -134,47 +134,45 @@ interface AccountViewModel : UserProfilePopupActions {
    * - Deletes all space rentals owned by the account
    * - Deletes the account document itself
    *
-   * Note: This does NOT delete the Firebase Authentication account or profile picture from
-   * storage. Those deletions are handled in ProfileScreenViewModel.deleteAccountWithReauth().
+   * Note: This does NOT delete the Firebase Authentication account or profile picture from storage.
+   * Those deletions are handled in ProfileScreenViewModel.deleteAccountWithReauth().
    *
-   * IMPORTANT: This must be called with `await()` or within a suspend context to ensure
-   * completion before Firebase Auth deletion, otherwise security rules will reject operations.
+   * IMPORTANT: This must be called with `await()` or within a suspend context to ensure completion
+   * before Firebase Auth deletion, otherwise security rules will reject operations.
    *
    * @param account The account to delete
    * @return Deferred that completes when all Firestore deletions finish
    */
-  fun deleteAccount(account: Account) = scope.async {
-    RepositoryProvider.handles.deleteAccountHandle(account.handle)
+  fun deleteAccount(account: Account) =
+      scope.async {
+        RepositoryProvider.handles.deleteAccountHandle(account.handle)
 
-    account.previews.forEach { (id, _) ->
-      val disc = RepositoryProvider.discussions.getDiscussion(id)
-      if (disc.session != null) {
-        RepositoryProvider.sessions.updateSession(
-            id, newParticipantList = disc.session.participants - account.uid)
+        account.previews.forEach { (id, _) ->
+          val disc = RepositoryProvider.discussions.getDiscussion(id)
+          if (disc.session != null) {
+            RepositoryProvider.sessions.updateSession(
+                id, newParticipantList = disc.session.participants - account.uid)
+          }
+          RepositoryProvider.discussions.removeUserFromDiscussion(
+              disc, account.uid, disc.creatorId == account.uid)
+        }
+
+        val (shops, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+        RepositoryProvider.shops.deleteShops(shops)
+        RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+
+        RepositoryProvider.accounts.deleteAccount(account.uid)
       }
-      RepositoryProvider.discussions.removeUserFromDiscussion(
-          disc, account.uid, disc.creatorId == account.uid)
-    }
-
-    val (shops, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
-    RepositoryProvider.shops.deleteShops(shops)
-    RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
-
-    RepositoryProvider.accounts.deleteAccount(account.uid)
-  }
 
   /**
    * Deletes the user's Firebase Authentication account with retry logic. This should be called
-   * AFTER deleting Firestore data, as auth is needed for Firestore deletion. Attempts to delete
-   * the account up to 3 times in case of transient network failures.
+   * AFTER deleting Firestore data, as auth is needed for Firestore deletion. Attempts to delete the
+   * account up to 3 times in case of transient network failures.
    *
    * @param onSuccess Callback invoked if account deletion succeeds
    * @param onFailure Callback invoked with error message if all retry attempts fail
    */
-  fun deleteFirebaseAuthAccount(
-      onSuccess: () -> Unit = {},
-      onFailure: (String) -> Unit = {}
-  ) {
+  fun deleteFirebaseAuthAccount(onSuccess: () -> Unit = {}, onFailure: (String) -> Unit = {}) {
     scope.launch {
       val maxRetries = MAX_NUMBER_ATTEMPT
       var attempt = 0
