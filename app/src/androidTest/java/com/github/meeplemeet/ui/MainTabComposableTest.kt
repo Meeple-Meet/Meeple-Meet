@@ -29,6 +29,7 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -234,6 +235,11 @@ class MainTabComposableTest : FirestoreTests() {
   private fun ComposeTestRule.delAccountPopupConfirm() = onTag(DeleteAccSectionTestTags.CONFIRM)
 
   private fun ComposeTestRule.delAccountPopupCancel() = onTag(DeleteAccSectionTestTags.CANCEL)
+
+  private fun ComposeTestRule.delAccountPasswordInput() =
+      onTag(DeleteAccSectionTestTags.PASSWORD_INPUT)
+
+  private fun ComposeTestRule.delAccountErrorText() = onTag(DeleteAccSectionTestTags.ERROR_TEXT)
 
   // =======================
   // NAVIGATION HELPERS
@@ -534,16 +540,73 @@ class MainTabComposableTest : FirestoreTests() {
     }
 
     checkpoint("Delete button user flow") {
+      delClicked = false
       scrollToTag(DeleteAccSectionTestTags.BUTTON)
 
+      // Open delete dialog
       compose.delAccountBtn().assertExists().performClick()
       compose.delAccountPopup().assertExists()
-      compose.delAccountPopupCancel().assertExists().performClick()
-      compose.delAccountPopup().assertDoesNotExist()
-      compose.delAccountBtn().performClick()
-      compose.delAccountPopupConfirm().assertExists().performClick()
-      assert(delClicked)
+
+      // Check initial state: password input empty, confirm disabled
+      compose.delAccountPopupConfirm().assertExists()
+      compose.delAccountPopupConfirm().assertIsNotEnabled()
+
+      // Enter password
+      inputText(DeleteAccSectionTestTags.PASSWORD_INPUT, "testpassword")
       compose.waitForIdle()
+
+      // Confirm should be enabled now
+      compose.delAccountPopupConfirm().assertIsEnabled()
+
+      // Click confirm — note: this launches reauthentication in the ViewModel, so the dialog
+      // does not necessarily close immediately. We check that the confirm action was triggered
+      // (by ensuring the dialog is still present while the async flow runs) and that the
+      // delete callback has not yet been invoked synchronously.
+      compose.delAccountPopupConfirm().performClick()
+      compose.waitForIdle()
+      // Dialog should still be visible while reauth occurs (app keeps it open on failure)
+      compose.delAccountPopup().assertExists()
+      assertFalse(delClicked)
+    }
+
+    checkpoint("Delete dialog cancel flow") {
+      scrollToTag(DeleteAccSectionTestTags.BUTTON)
+
+      // Open delete dialog
+      compose.delAccountBtn().performClick()
+      compose.delAccountPopup().assertExists()
+
+      // Cancel
+      compose.delAccountPopupCancel().performClick()
+      compose.delAccountPopup().assertDoesNotExist()
+      assertFalse(delClicked)
+    }
+
+    checkpoint("Delete dialog password validation") {
+      delClicked = false
+      scrollToTag(DeleteAccSectionTestTags.BUTTON)
+
+      // Open delete dialog
+      compose.delAccountBtn().performClick()
+      compose.delAccountPopup().assertExists()
+
+      // Confirm should be disabled with empty password
+      compose.delAccountPopupConfirm().assertIsNotEnabled()
+
+      // Try to click confirm without password - should have no effect
+      compose.delAccountPopupConfirm().performClick()
+      compose.waitForIdle()
+      assertFalse(delClicked)
+
+      // Enter password
+      inputText(DeleteAccSectionTestTags.PASSWORD_INPUT, "password")
+      compose.waitForIdle()
+      compose.delAccountPopupConfirm().assertIsEnabled()
+
+      // Click confirm — does not synchronously call onDelete (reauth happens first)
+      compose.delAccountPopupConfirm().performClick()
+      compose.waitForIdle()
+      assertFalse(delClicked)
     }
 
     checkpoint("Handle icon displays toast") {
