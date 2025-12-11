@@ -546,11 +546,11 @@ class SessionComponentsTest : FirestoreTests() {
     composeRule.onAllNodesWithTag(SessionComponentsTestTags.TIME_PICK_BUTTON).assertCountEquals(2)
 
     // Check initial time is displayed
-    composeRule.onNodeWithText("14:30").assertExists()
+    composeRule.onNodeWithText("02:30 PM").assertExists()
 
     // External value change
     composeRule.runOnUiThread { time = LocalTime.of(19, 45) }
-    composeRule.onNodeWithText("19:45").assertExists()
+    composeRule.onNodeWithText("07:45 PM").assertExists()
 
     // Open time picker
     composeRule.onAllNodesWithTag(SessionComponentsTestTags.TIME_PICK_BUTTON)[0].performClick()

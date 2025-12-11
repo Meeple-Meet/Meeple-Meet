@@ -35,7 +35,9 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -67,6 +69,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
@@ -747,10 +750,11 @@ fun TimePickerField(
     value: LocalTime?,
     onValueChange: (LocalTime?) -> Unit,
     label: String = LABEL_TIME,
-    is24Hour: Boolean = true,
-    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    is24Hour: Boolean = false,
+    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
 ) {
   var open by remember { mutableStateOf(false) }
+  var showingInput by remember { mutableStateOf(true) }
   val state =
       rememberTimePickerState(
           is24Hour = is24Hour,
@@ -761,7 +765,7 @@ fun TimePickerField(
   Box(modifier = Modifier.testTag(SessionComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = { /* read-only; picker controls it */},
+        onValueChange = {},
         placeholder = label,
         editable = false,
         leadingIcon = {
@@ -772,7 +776,7 @@ fun TimePickerField(
               Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIconsFade)
         },
         modifier =
-            Modifier.fillMaxWidth(1f)
+            Modifier.fillMaxWidth()
                 .clickable { open = true }
                 .testTag(SessionComponentsTestTags.TIME_PICK_BUTTON))
   }
@@ -782,101 +786,77 @@ fun TimePickerField(
         onDismissRequest = { open = false },
         containerColor = AppColors.primary,
         shape = RoundedCornerShape(Dimensions.Spacing.xxxLarge),
-        confirmButton = {
-          Row(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(
-                          horizontal = Dimensions.Spacing.xxLarge,
-                          vertical = Dimensions.Padding.medium),
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.large)) {
-                // Cancel button
-                Surface(
-                    shape = RoundedCornerShape(Dimensions.Spacing.large),
-                    color = AppColors.secondary,
-                    modifier = Modifier.weight(1f)) {
-                      TextButton(
-                          onClick = { open = false },
-                          modifier = Modifier.fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium)) {
-                            Text(
-                                BUTTON_CANCEL,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AppColors.textIconsFade)
-                          }
-                    }
-
-                // OK button
-                Surface(
-                    shape = RoundedCornerShape(Dimensions.Spacing.extraLarge),
-                    color = AppColors.neutral,
-                    modifier = Modifier.weight(1f)) {
-                      TextButton(
-                          modifier =
-                              Modifier.testTag(SessionComponentsTestTags.TIME_PICKER_OK_BUTTON)
-                                  .fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium),
-                          onClick = {
-                            onValueChange(LocalTime.of(state.hour, state.minute))
-                            open = false
-                          }) {
-                            Text(
-                                BUTTON_OK,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AppColors.primary)
-                          }
-                    }
-              }
-        },
-        dismissButton = {},
+        confirmButton = {},
         text = {
-          Column(
-              modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.medium),
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                // Header with icon and label
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Spacing.xxLarge),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center) {
-                      Icon(
-                          Icons.Default.Timer,
-                          contentDescription = null,
-                          tint = AppColors.neutral,
-                          modifier = Modifier.size(Dimensions.IconSize.extraLarge))
-                      Spacer(Modifier.width(Dimensions.Padding.large))
-                      Text(
-                          TITLE_SELECT_TIME,
-                          style = MaterialTheme.typography.titleLarge,
-                          color = AppColors.textIcons)
-                    }
+          Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                TITLE_SELECT_TIME,
+                style = MaterialTheme.typography.labelMedium,
+                color = AppColors.textIconsFade,
+                modifier = Modifier.padding(bottom = Dimensions.Spacing.large))
 
-                // Time input without background
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+              if (showingInput) {
                 TimeInput(
                     state = state,
-                    modifier =
-                        Modifier.testTag(SessionComponentsTestTags.TIME_PICKER)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraLarge,
-                                vertical = Dimensions.Padding.medium),
-                    TimePickerDefaults.colors(
-                        clockDialColor = AppColors.primary,
-                        clockDialSelectedContentColor = AppColors.primary,
-                        clockDialUnselectedContentColor = AppColors.textIconsFade,
-                        selectorColor = AppColors.neutral,
-                        periodSelectorBorderColor = AppColors.neutral,
-                        periodSelectorSelectedContainerColor = AppColors.neutral,
-                        periodSelectorSelectedContentColor = AppColors.primary,
-                        periodSelectorUnselectedContainerColor = AppColors.secondary,
-                        periodSelectorUnselectedContentColor = AppColors.textIconsFade,
-                        timeSelectorSelectedContainerColor = AppColors.neutral,
-                        timeSelectorUnselectedContainerColor = AppColors.secondary,
-                        timeSelectorSelectedContentColor = AppColors.primary,
-                        timeSelectorUnselectedContentColor = AppColors.textIcons,
-                    ))
+                    modifier = Modifier.testTag(SessionComponentsTestTags.TIME_PICKER),
+                    colors = timePickerColors())
+              } else {
+                TimePicker(
+                    state = state,
+                    modifier = Modifier.testTag(SessionComponentsTestTags.TIME_PICKER),
+                    colors = timePickerColors())
               }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.large),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                  IconButton(onClick = { showingInput = !showingInput }) {
+                    Icon(
+                        if (showingInput) Icons.Default.Schedule else Icons.Default.Keyboard,
+                        contentDescription = null,
+                        tint = AppColors.textIconsFade)
+                  }
+
+                  Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
+                    TextButton(onClick = { open = false }) {
+                      Text(BUTTON_CANCEL, color = AppColors.textIconsFade)
+                    }
+                    TextButton(
+                        onClick = {
+                          onValueChange(LocalTime.of(state.hour, state.minute))
+                          open = false
+                        },
+                        modifier =
+                            Modifier.testTag(SessionComponentsTestTags.TIME_PICKER_OK_BUTTON)) {
+                          Text(BUTTON_OK, color = AppColors.neutral)
+                        }
+                  }
+                }
+          }
         })
   }
 }
+
+@Composable
+private fun timePickerColors() =
+    TimePickerDefaults.colors(
+        clockDialColor = AppColors.secondary,
+        clockDialSelectedContentColor = AppColors.primary,
+        clockDialUnselectedContentColor = AppColors.textIcons,
+        selectorColor = AppColors.neutral,
+        periodSelectorBorderColor = AppColors.textIconsFade,
+        periodSelectorSelectedContainerColor = AppColors.neutral,
+        periodSelectorSelectedContentColor = AppColors.primary,
+        periodSelectorUnselectedContainerColor = AppColors.primary,
+        periodSelectorUnselectedContentColor = AppColors.textIcons,
+        timeSelectorSelectedContainerColor = AppColors.neutral,
+        timeSelectorUnselectedContainerColor = AppColors.secondary,
+        timeSelectorSelectedContentColor = AppColors.primary,
+        timeSelectorUnselectedContentColor = AppColors.textIcons,
+    )
 
 /**
  * A combined date and time picker component.
