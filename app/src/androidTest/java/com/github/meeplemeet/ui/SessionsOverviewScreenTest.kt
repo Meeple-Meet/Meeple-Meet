@@ -301,6 +301,62 @@ class SessionsOverviewScreenTest : FirestoreTests() {
     }
   }
 
+  @Test
+  fun search_functionality() = runBlocking {
+    checkpoint("Search bar is displayed") {
+      compose
+          .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+          .assertExists()
+          .assertIsDisplayed()
+    }
+
+    checkpoint("Search filters active sessions by name") {
+      runBlocking {
+        val discussion1 = discussionRepository.createDiscussion("Chess Club", "Chess", account.uid)
+        val discussion2 = discussionRepository.createDiscussion("Poker Night", "Cards", account.uid)
+        val game = gameRepository.getGameById(testGameId)
+        val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
+
+        sessionRepository.createSession(
+            discussion1.uid, "Chess Tournament", game.uid, futureDate, testLocation, account.uid)
+        sessionRepository.createSession(
+            discussion2.uid, "Poker Game", game.uid, futureDate, testLocation, account.uid)
+
+        compose.waitUntil(2000) { compose.onNodeWithText("Chess Tournament").isDisplayed() }
+
+        compose
+            .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+            .performTextInput("Chess")
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Chess Tournament").assertIsDisplayed()
+        compose.onNodeWithText("Poker Game").assertDoesNotExist()
+      }
+    }
+
+    checkpoint("Search is case-insensitive for sessions") {
+      compose.onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD).performTextClearance()
+      compose
+          .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+          .performTextInput("poker")
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Poker Game").assertIsDisplayed()
+      compose.onNodeWithText("Chess Tournament").assertDoesNotExist()
+    }
+
+    checkpoint("Clear button works for sessions") {
+      compose
+          .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)
+          .assertExists()
+          .performClick()
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Chess Tournament").assertIsDisplayed()
+      compose.onNodeWithText("Poker Game").assertIsDisplayed()
+    }
+  }
+
   @After
   fun tearDown(): Unit = runBlocking {
     db.collection(GAMES_COLLECTION_PATH).document(testGameId).delete().await()
