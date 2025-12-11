@@ -107,6 +107,7 @@ import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.discussions.CharacterCounter
 import com.github.meeplemeet.ui.discussions.ProfilePicture
+import com.github.meeplemeet.ui.navigation.EmailVerificationBanner
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import com.google.firebase.Timestamp
@@ -257,9 +258,11 @@ private fun PostTagsRow(tags: List<String>) {
 fun PostScreen(
     account: Account,
     postId: String,
+    verified: Boolean,
     postViewModel: PostViewModel = viewModel(),
     accountViewModel: AccountViewModel = postViewModel,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onVerifyClick: () -> Unit = {}
 ) {
   val post: Post? by postViewModel.postFlow(postId).collectAsState()
 
@@ -343,43 +346,47 @@ fun PostScreen(
       },
       bottomBar = {
         if (!isReplyingToComment) {
-          ComposerBar(
-              value = topComment,
-              onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) topComment = it },
-              onAttach = { /* TODO attachments */},
-              sendEnabled = !isSending && topComment.isNotBlank() && post != null,
-              onSend = {
-                val p = post ?: return@ComposerBar
+          if (!verified) {
+            EmailVerificationBanner(onVerifyClick = onVerifyClick)
+          } else {
+            ComposerBar(
+                value = topComment,
+                onValueChange = { if (it.length <= MAX_COMMENT_LENGTH) topComment = it },
+                onAttach = { /* TODO attachments */},
+                sendEnabled = !isSending && topComment.isNotBlank() && post != null,
+                onSend = {
+                  val p = post ?: return@ComposerBar
 
-                scope.launch {
-                  isSending = true
-                  val target = editTarget
+                  scope.launch {
+                    isSending = true
+                    val target = editTarget
 
-                  try {
-                    if (target != null) {
-                      val value = topComment.trim()
-                      when (target) {
-                        PostEditTarget.TITLE ->
-                            postViewModel.editPost(author = account, post = p, newTitle = value)
-                        PostEditTarget.BODY ->
-                            postViewModel.editPost(author = account, post = p, newBody = value)
+                    try {
+                      if (target != null) {
+                        val value = topComment.trim()
+                        when (target) {
+                          PostEditTarget.TITLE ->
+                              postViewModel.editPost(author = account, post = p, newTitle = value)
+                          PostEditTarget.BODY ->
+                              postViewModel.editPost(author = account, post = p, newBody = value)
+                        }
+                        editTarget = null
+                      } else {
+                        postViewModel.addComment(
+                            author = account, post = p, parentId = p.id, text = topComment.trim())
                       }
-                      editTarget = null
-                    } else {
-                      postViewModel.addComment(
-                          author = account, post = p, parentId = p.id, text = topComment.trim())
-                    }
 
-                    topComment = ""
-                    focusManager.clearFocus(force = true)
-                  } catch (_: Throwable) {
-                    snackbarHostState.showSnackbar(
-                        if (target != null) ERROR_NOT_EDITED_POST else ERROR_NOT_SENT_COMMENT)
-                  } finally {
-                    isSending = false
+                      topComment = ""
+                      focusManager.clearFocus(force = true)
+                    } catch (_: Throwable) {
+                      snackbarHostState.showSnackbar(
+                          if (target != null) ERROR_NOT_EDITED_POST else ERROR_NOT_SENT_COMMENT)
+                    } finally {
+                      isSending = false
+                    }
                   }
-                }
-              })
+                })
+          }
         }
       }) { padding ->
         if (post == null) {
@@ -393,6 +400,7 @@ fun PostScreen(
           PostContent(
               post = currentPost,
               currentUser = account,
+              verified = verified,
               onDeletePost = {
                 scope.launch {
                   deleted = true
@@ -580,6 +588,7 @@ private fun ComposerBar(
 private fun PostContent(
     post: Post,
     currentUser: Account,
+    verified: Boolean,
     onDeletePost: () -> Unit,
     onEditPostBody: () -> Unit,
     onEditPostTitle: () -> Unit,
@@ -622,6 +631,7 @@ private fun PostContent(
           ThreadCard(
               root = root,
               currentUser = currentUser,
+              verified = verified,
               resolveUser = resolveUser,
               onReply = onReply,
               onDelete = onDeleteComment,
@@ -848,6 +858,7 @@ private fun PostHeader(post: Post, author: Account?) {
 private fun ThreadCard(
     root: Comment,
     currentUser: Account,
+    verified: Boolean,
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
@@ -874,6 +885,7 @@ private fun ThreadCard(
                 CommentItem(
                     comment = root,
                     author = resolveUser(root.authorId),
+                    verified = verified,
                     currentUser = currentUser,
                     isMine = (root.authorId == currentUser.uid),
                     hasReplies = root.children.isNotEmpty(),
@@ -893,6 +905,7 @@ private fun ThreadCard(
                         CommentsTree(
                             comments = root.children,
                             currentUser = currentUser,
+                            verified = verified,
                             resolveUser = resolveUser,
                             onReply = onReply,
                             onDelete = onDelete,
@@ -926,6 +939,7 @@ private fun ThreadCard(
 private fun CommentsTree(
     comments: List<Comment>,
     currentUser: Account,
+    verified: Boolean,
     resolveUser: ResolveUser,
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
@@ -951,6 +965,7 @@ private fun CommentsTree(
               CommentItem(
                   comment = c,
                   author = resolveUser(c.authorId),
+                  verified = verified,
                   currentUser = currentUser,
                   isMine = (c.authorId == currentUser.uid),
                   hasReplies = c.children.isNotEmpty(),
@@ -973,6 +988,7 @@ private fun CommentsTree(
                           comments = c.children,
                           currentUser = currentUser,
                           resolveUser = resolveUser,
+                          verified = verified,
                           onReply = onReply,
                           onDelete = onDelete,
                           onReplyingStateChanged = onReplyingStateChanged,
@@ -994,6 +1010,7 @@ private fun CommentsTree(
             CommentItem(
                 comment = c,
                 author = resolveUser(c.authorId),
+                verified = verified,
                 currentUser = currentUser,
                 isMine = (c.authorId == currentUser.uid),
                 hasReplies = c.children.isNotEmpty(),
@@ -1011,6 +1028,7 @@ private fun CommentsTree(
                     CommentsTree(
                         comments = c.children,
                         currentUser = currentUser,
+                        verified = verified,
                         resolveUser = resolveUser,
                         onReply = onReply,
                         onDelete = onDelete,
@@ -1078,6 +1096,7 @@ private fun CommentItem(
     author: Account?,
     currentUser: Account,
     isMine: Boolean,
+    verified: Boolean,
     hasReplies: Boolean = false,
     isExpanded: Boolean = false,
     onReply: (String) -> Unit,
@@ -1136,7 +1155,7 @@ private fun CommentItem(
                       modifier = Modifier.size(Dimensions.IconSize.medium))
                 }
           }
-          if (!isBlocked)
+          if (verified && !isBlocked)
               IconButton(
                   onClick = { replying = !replying },
                   modifier =

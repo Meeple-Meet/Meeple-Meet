@@ -23,10 +23,12 @@ import com.github.meeplemeet.model.navigation.LocalNavigationVM
 import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -54,11 +56,13 @@ class FriendsScreenTest : FirestoreTests() {
 
   private lateinit var stranger: Account
   private lateinit var blockedUser: Account
+  private lateinit var mockNavigation: NavigationActions
 
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
     navViewModel = NavigationViewModel(accountRepository)
+    mockNavigation = mockk(relaxed = true)
 
     runBlocking {
       val suffix = System.currentTimeMillis()
@@ -201,6 +205,8 @@ class FriendsScreenTest : FirestoreTests() {
           FriendsScreen(
               account = currentUser,
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }
@@ -374,6 +380,8 @@ class FriendsScreenTest : FirestoreTests() {
           FriendsScreen(
               account = currentUser,
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }
@@ -527,6 +535,8 @@ class FriendsScreenTest : FirestoreTests() {
           FriendsScreen(
               account = currentUser,
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }
@@ -596,6 +606,8 @@ class FriendsScreenTest : FirestoreTests() {
                   currentUser.copy( // ensure we start without relationship to stranger
                       relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }
@@ -656,6 +668,8 @@ class FriendsScreenTest : FirestoreTests() {
           FriendsScreen(
               account = currentUser,
               viewModel = viewModel,
+              verified = true,
+              navigationActions = mockNavigation,
               onBack = {},
           )
         }

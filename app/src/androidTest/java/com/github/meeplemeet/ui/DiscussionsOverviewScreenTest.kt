@@ -201,7 +201,13 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
     // Set content once at the beginning
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        AppTheme {
+          DiscussionsOverviewScreen(
+              account = me,
+              navigation = nav,
+              verified = true,
+          )
+        }
       }
     }
 
@@ -281,7 +287,9 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav) }
+        AppTheme {
+          DiscussionsOverviewScreen(account = meWithBlockedBob, verified = true, navigation = nav)
+        }
       }
     }
 

@@ -51,7 +51,7 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.DiscussionsOverviewViewModel
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -93,6 +93,7 @@ object DiscussionOverviewTestTags {
 @Composable
 fun DiscussionsOverviewScreen(
     account: Account,
+    verified: Boolean,
     navigation: NavigationActions,
     viewModel: DiscussionsOverviewViewModel = viewModel(),
     onClickAddDiscussion: () -> Unit = {},
@@ -119,17 +120,18 @@ fun DiscussionsOverviewScreen(
 
   Scaffold(
       floatingActionButton = {
-        FloatingActionButton(
-            onClick = onClickAddDiscussion,
-            contentColor = MessagingColors.messagingSurface,
-            containerColor = MessagingColors.whatsappGreen,
-            modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON),
-            shape = CircleShape) {
-              Icon(
-                  Icons.Default.Add,
-                  contentDescription = "Create",
-                  modifier = Modifier.size(Dimensions.IconSize.large))
-            }
+        if (verified)
+            FloatingActionButton(
+                onClick = onClickAddDiscussion,
+                contentColor = MessagingColors.messagingSurface,
+                containerColor = MessagingColors.whatsappGreen,
+                modifier = Modifier.testTag(DiscussionOverviewTestTags.ADD_DISCUSSION_BUTTON),
+                shape = CircleShape) {
+                  Icon(
+                      Icons.Default.Add,
+                      contentDescription = "Create",
+                      modifier = Modifier.size(Dimensions.IconSize.large))
+                }
       },
       topBar = {
         CenterAlignedTopAppBar(
@@ -144,9 +146,11 @@ fun DiscussionsOverviewScreen(
             })
       },
       bottomBar = {
-        BottomNavigationMenu(
+        BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.DiscussionsOverview,
-            onTabSelected = { screen -> navigation.navigateTo(screen) })
+            verified = verified,
+            onTabSelected = { screen -> navigation.navigateTo(screen) },
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
         if (discussionPreviewsSorted.isEmpty()) {
           Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {

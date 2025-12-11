@@ -87,6 +87,7 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
             MapScreen(
                 viewModel = MapViewModel(),
                 navigation = mockNavigation,
+                verified = true,
                 account = currentAccountState.value,
                 onFABCLick = {},
                 onRedirect = {},

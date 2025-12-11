@@ -246,6 +246,7 @@ fun MeepleMeetApp(
   }
 
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
   // Track previous online state and sync when it changes from false to true
   var wasOnline by remember { mutableStateOf(online) }
@@ -330,6 +331,7 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.DiscussionsOverview.name) {
             DiscussionsOverviewScreen(
                 account!!,
+                uiState.isEmailVerified,
                 navigationActions,
                 onClickAddDiscussion = {
                   navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
@@ -354,6 +356,7 @@ fun MeepleMeetApp(
                   DiscussionScreen(
                       account!!,
                       discussion!!,
+                      uiState.isEmailVerified,
                       onBack = {
                         navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
                       },
@@ -366,7 +369,7 @@ fun MeepleMeetApp(
                             if (it.session != null) MeepleMeetScreen.SessionViewer
                             else MeepleMeetScreen.CreateSession)
                       },
-                  )
+                      onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
               else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
             } else LoadingScreen()
           }
@@ -412,7 +415,8 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.SessionsOverview.name) {
             SessionsOverviewScreen(
                 navigation = navigationActions,
-                account = account,
+                account = account!!,
+                verified = uiState.isEmailVerified,
                 onSelectSession = {
                   discussionId = it
                   navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
@@ -421,6 +425,7 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.PostsOverview.name) {
             PostsOverviewScreen(
+                verified = uiState.isEmailVerified,
                 navigation = navigationActions,
                 account = account!!,
                 onClickAddPost = { navigationActions.navigateTo(MeepleMeetScreen.CreatePost) },
@@ -432,7 +437,11 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.Post.name) {
             PostScreen(
-                account = account!!, postId = postId, onBack = { navigationActions.goBack() })
+                account = account!!,
+                postId = postId,
+                verified = uiState.isEmailVerified,
+                onBack = { navigationActions.goBack() },
+                onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
           }
 
           composable(MeepleMeetScreen.CreatePost.name) {
@@ -445,8 +454,9 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.Map.name) {
             MapScreen(
-                navigation = navigationActions,
                 account = account!!,
+                verified = uiState.isEmailVerified,
+                navigation = navigationActions,
                 onFABCLick = { geoPin ->
                   when (geoPin) {
                     PinType.SHOP -> {
@@ -482,6 +492,7 @@ fun MeepleMeetApp(
               ProfileScreen(
                   navigation = navigationActions,
                   account = account!!,
+                  verified = uiState.isEmailVerified,
                   onSignOutOrDel = {
                     navigationActions.navigateTo(MeepleMeetScreen.SignIn)
                     signedOut = true
@@ -500,7 +511,11 @@ fun MeepleMeetApp(
 
           composable(MeepleMeetScreen.NotificationsTab.name) {
             account?.let {
-              NotificationsTab(account = account!!, onBack = { navigationActions.goBack() })
+              NotificationsTab(
+                  account = account!!,
+                  verified = uiState.isEmailVerified,
+                  navigationActions,
+                  onBack = { navigationActions.goBack() })
             }
           }
 
@@ -608,8 +623,9 @@ fun MeepleMeetApp(
             account?.let { currentAccount ->
               FriendsScreen(
                   account = currentAccount,
-                  onBack = { navigationActions.goBack() },
-                  onNavigate = { navigationActions.navigateTo(it) })
+                  verified = uiState.isEmailVerified,
+                  navigationActions = navigationActions,
+                  onBack = { navigationActions.goBack() })
             } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           }
 

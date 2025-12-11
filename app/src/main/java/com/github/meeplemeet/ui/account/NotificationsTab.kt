@@ -79,8 +79,9 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -304,15 +305,15 @@ data class NotificationSheetState(
  * @param account The current user
  * @param viewModel VM used by this screen
  * @param onBack callback upon click of the back button
- * @param onNavigate callback upon navigation to another screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsTab(
     account: Account,
-    viewModel: NotificationsViewModel = viewModel(),
+    verified: Boolean,
+    navigationActions: NavigationActions,
     onBack: () -> Unit,
-    onNavigate: (MeepleMeetScreen) -> Unit = {}
+    viewModel: NotificationsViewModel = viewModel(),
 ) {
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
@@ -377,8 +378,11 @@ fun NotificationsTab(
             })
       },
       bottomBar = {
-        BottomNavigationMenu(
-            currentScreen = MeepleMeetScreen.Profile, onTabSelected = { onNavigate(it) })
+        BottomBarWithVerification(
+            currentScreen = MeepleMeetScreen.Profile,
+            onTabSelected = { navigationActions.navigateTo(it) },
+            verified = verified,
+            onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
       }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
           FilterRow(
