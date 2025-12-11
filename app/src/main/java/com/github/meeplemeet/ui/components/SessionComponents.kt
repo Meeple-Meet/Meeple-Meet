@@ -1022,6 +1022,16 @@ fun SessionLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a shop location.
+ *
+ * @param account The user's account.
+ * @param shop The shop for which the location is being searched (optional).
+ * @param viewModel The ShopSearchViewModel for managing shop search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun ShopLocationSearchBar(
     account: Account,
@@ -1049,6 +1059,16 @@ fun ShopLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a space renter location.
+ *
+ * @param account The user's account.
+ * @param spaceRenter The space renter for which the location is being searched (optional).
+ * @param viewModel The SpaceRenterSearchViewModel for managing space renter search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun SpaceRenterLocationSearchBar(
     account: Account,
@@ -1074,6 +1094,17 @@ fun SpaceRenterLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a location.
+ *
+ * @param setLocation Callback function to set the selected location.
+ * @param setLocationQuery Callback function to set the location query.
+ * @param initial The initial location to display in the search bar.
+ * @param viewModel The SearchViewModel for managing location search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LocationSearchBar(
@@ -1133,6 +1164,16 @@ private fun LocationSearchBar(
       }
 }
 
+/**
+ * A search bar for selecting a session game.
+ *
+ * @param account The user's account.
+ * @param discussion The discussion associated with the session.
+ * @param viewModel The CreateSessionViewModel for managing session state.
+ * @param initial The initial game to display in the search bar.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun SessionGameSearchBar(
     account: Account,
@@ -1152,6 +1193,17 @@ fun SessionGameSearchBar(
       dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a shop game.
+ *
+ * @param account The user's account.
+ * @param shop The shop for which the game is being searched (optional).
+ * @param viewModel The ShopSearchViewModel for managing shop search state.
+ * @param initial The initial game to display in the search bar.
+ * @param existing Set of existing game UIDs to exclude from suggestions.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun ShopGameSearchBar(
     account: Account,
@@ -1178,6 +1230,17 @@ fun ShopGameSearchBar(
       dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a space renter game.
+ *
+ * @param account The user's account.
+ * @param spaceRenter The space renter for which the game is being searched (optional).
+ * @param viewModel The SpaceRenterSearchViewModel for managing space renter search state.
+ * @param initial The initial game to display in the search bar.
+ * @param existing Set of existing game UIDs to exclude from suggestions.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameSearchBar(
@@ -1286,7 +1349,7 @@ fun UserChipsGrid(
 
   Column(
       modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState),
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none),
   ) {
     participants.forEach { user ->
       val isSelected = user.uid in selectedIds
@@ -1332,7 +1395,7 @@ fun UserChip(
       tonalElevation = Dimensions.Elevation.minimal,
   ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
+        modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.tiny),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
