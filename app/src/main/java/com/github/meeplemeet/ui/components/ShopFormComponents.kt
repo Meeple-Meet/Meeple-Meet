@@ -26,7 +26,6 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.DateFormatSymbols
 import java.time.LocalTime
@@ -257,8 +256,8 @@ fun RequiredInfoSection(
         owner,
         shop,
         viewModel,
-        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+        inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
   }
 }
 

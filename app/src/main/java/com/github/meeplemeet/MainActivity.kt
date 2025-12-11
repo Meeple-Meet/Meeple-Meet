@@ -69,7 +69,7 @@ import com.github.meeplemeet.ui.posts.CreatePostScreen
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostsOverviewScreen
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
-import com.github.meeplemeet.ui.sessions.SessionDetailsScreen
+import com.github.meeplemeet.ui.sessions.SessionEditScreen
 import com.github.meeplemeet.ui.sessions.SessionScreen
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreen
 import com.github.meeplemeet.ui.shops.CreateShopScreen
@@ -400,7 +400,7 @@ fun MeepleMeetApp(
               LoadingScreen()
             } else if (discussion!!.session != null &&
                 discussion!!.session!!.participants.contains(account!!.uid)) {
-              SessionDetailsScreen(
+              SessionEditScreen(
                   account = account!!,
                   discussion = discussion!!,
                   onBack = { navigationActions.goBack() })
