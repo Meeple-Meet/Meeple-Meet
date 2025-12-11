@@ -778,7 +778,7 @@ fun PublicInfoActions(
 
         // Logout Button
         Button(
-            onClick = { viewModel.signOut() },
+            onClick = { onSignOut() },
             modifier =
                 Modifier.width(MainTabUi.LOGOUT_BUTTON_W)
                     .height(MainTabUi.LOGOUT_BUTTON_H)
@@ -1575,16 +1575,15 @@ fun DeleteAccountDialog(
                 trailingIcon = {
                   IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
-                        imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        imageVector =
+                            if (passwordVisible) Icons.Filled.VisibilityOff
+                            else Icons.Filled.Visibility,
                         contentDescription =
                             if (passwordVisible) MainTabUi.Misc.DIALOG_HIDE_PASSWORD
-                            else MainTabUi.Misc.DIALOG_SHOW_PASSWORD
-                    )
+                            else MainTabUi.Misc.DIALOG_SHOW_PASSWORD)
                   }
                 },
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .testTag(DeleteAccSectionTestTags.PASSWORD_INPUT))
+                modifier = Modifier.fillMaxWidth().testTag(DeleteAccSectionTestTags.PASSWORD_INPUT))
 
             errorMessage?.let { error ->
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
@@ -1608,10 +1607,14 @@ fun DeleteAccountDialog(
               colors =
                   ButtonColors(
                       containerColor = AppColors.negative,
-                      disabledContentColor = AppColors.textIcons.copy(alpha = MainTabUi.DISABLED_ALPHA),
+                      disabledContentColor =
+                          AppColors.textIcons.copy(alpha = MainTabUi.DISABLED_ALPHA),
                       contentColor = AppColors.textIcons,
-                      disabledContainerColor = AppColors.negative.copy(alpha = MainTabUi.DISABLED_ALPHA))) {
-                Text(if (isLoading) MainTabUi.Misc.DIALOG_DELETING else MainTabUi.Misc.DIALOG_CONFIRM)
+                      disabledContainerColor =
+                          AppColors.negative.copy(alpha = MainTabUi.DISABLED_ALPHA))) {
+                Text(
+                    if (isLoading) MainTabUi.Misc.DIALOG_DELETING
+                    else MainTabUi.Misc.DIALOG_CONFIRM)
               }
         },
         dismissButton = {
