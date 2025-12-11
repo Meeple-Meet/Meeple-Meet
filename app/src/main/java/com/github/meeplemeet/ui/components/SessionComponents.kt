@@ -1091,7 +1091,6 @@ private fun LocationSearchBar(
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         FocusableInputField(
-            maxLines = 3,
             value = text,
             maxLines = MAX_LINES,
             enabled = enabled,
