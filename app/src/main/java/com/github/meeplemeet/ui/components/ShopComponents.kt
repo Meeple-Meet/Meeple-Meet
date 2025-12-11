@@ -1016,7 +1016,9 @@ fun GameItemImage(
                   }
 
               IconButton(
-                  onClick = { onEdit(game) },
+                  onClick = { onEdit(game)
+                      Log.d("checkpoint testTag", "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")},
+
                   modifier =
                       Modifier.offset(
                               x = Dimensions.Padding.large, y = -Dimensions.Padding.extraMedium)
