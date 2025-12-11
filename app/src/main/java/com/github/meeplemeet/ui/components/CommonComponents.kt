@@ -3,7 +3,6 @@ package com.github.meeplemeet.ui.components
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -60,6 +59,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -149,8 +149,6 @@ fun ImageCarousel(
       rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
           cameraLauncher.launch(null)
-        } else {
-          Log.w("ImageCarousel", "Camera permission denied")
         }
       }
 
@@ -208,7 +206,10 @@ fun ImageCarousel(
                         modifier =
                             Modifier.fillMaxSize()
                                 .clickable { showImageSourceMenu = true }
-                                .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE))
+                                .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE),
+                        placeholder =
+                            androidx.compose.ui.res.painterResource(R.drawable.ic_storefront),
+                        error = androidx.compose.ui.res.painterResource(R.drawable.ic_storefront))
                     if (page < photoCollectionUrl.size && editable) {
                       Box(
                           modifier =

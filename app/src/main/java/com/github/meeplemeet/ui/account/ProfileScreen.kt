@@ -20,16 +20,6 @@ import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
-import com.github.meeplemeet.ui.theme.Dimensions
-
-object ProfileTestTags {
-  const val LOG_OUT_BUTTON = "Logout Button"
-}
-
-object ProfileScreenUi {
-  val extraLargeSpacing = Dimensions.Spacing.extraLarge
-  val xxLargePadding = Dimensions.Padding.xxLarge
-}
 
 /**
  * Composable function to display the Profile Screen. The screen displays information about your

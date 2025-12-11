@@ -12,6 +12,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.shops.AddShopContent
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
@@ -20,6 +21,7 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -198,7 +200,7 @@ class CreateShopScreenTest : FirestoreTests() {
   }
 
   /** Make sure the Games header (and thus the toggle) is actually composed. */
-  private fun bringGamesHeaderIntoView() {
+  fun bringGamesHeaderIntoView() {
     val headerTag =
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX
     scrollListToTag(headerTag)
@@ -457,6 +459,40 @@ class CreateShopScreenTest : FirestoreTests() {
 
     // Reset config to default for other tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = true
+  }
+
+  @Ignore
+  @Test
+  fun addShop_offlineUI_disablesFeatures() {
+    val viewModel = CreateShopViewModel()
+    compose.setContent {
+      AppTheme {
+        val locationUi by viewModel.locationUIState.collectAsState()
+        val gameUi by viewModel.gameUIState.collectAsState()
+
+        AddShopContent(
+            onBack = {},
+            onCreated = {},
+            onCreate = { _, _, _, _, _ -> "" },
+            gameQuery = "",
+            gameSuggestions = emptyList(),
+            isSearching = false,
+            onSetGameQuery = {},
+            onSetGame = {},
+            initialStock = emptyList(),
+            viewModel = viewModel,
+            owner = owner,
+            gameUi = gameUi,
+            locationUi = locationUi,
+        )
+      }
+    }
+    // Verify Image Carousel is not editable (Add button missing)
+    compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
+
+    bringGamesHeaderIntoView()
+
+    compose.onTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
   /* ─────────────────────────────── SMOKE ─────────────────────────────────── */
 }

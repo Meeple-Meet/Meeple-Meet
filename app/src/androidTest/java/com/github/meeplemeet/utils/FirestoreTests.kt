@@ -10,6 +10,7 @@ import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
@@ -68,6 +69,8 @@ open class FirestoreTests {
         storageEmulatorLaunched = true
         FirebaseStorage.getInstance().useEmulator("10.0.2.2", 9199)
       }
+      // Ensure we start with a signed out user
+      FirebaseAuth.getInstance().signOut()
     }
   }
 
@@ -166,5 +169,12 @@ open class FirestoreTests {
       deleteAllCollectionsOnce(db)
       deleteAllStorageFiles(storage)
     }
+
+    OfflineModeManager.setNetworkStatusForTesting(true)
+  }
+
+  @org.junit.After
+  fun testsTearDown() {
+    FirebaseProvider.auth.signOut()
   }
 }

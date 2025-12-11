@@ -232,6 +232,28 @@ class AccountRepository :
   }
 
   /**
+   * Safely retrieves an account and its associated data by ID, returning null on failure.
+   *
+   * This is a safe wrapper around [getAccount] that catches any exceptions (including
+   * [AccountNotFoundException]) and returns null instead of throwing. This is useful for scenarios
+   * where an account might not exist or the fetch might fail due to network issues, and you want to
+   * handle the absence gracefully.
+   *
+   * @param id The account ID to retrieve
+   * @param getAllData If true, fetches all subcollections (previews, relationships, notifications).
+   *   If false, returns account with empty subcollections. Defaults to true.
+   * @return The Account object with populated data, or null if the account doesn't exist or an
+   *   error occurs
+   */
+  suspend fun getAccountSafe(id: String, getAllData: Boolean = true): Account? {
+    return try {
+      getAccount(id, getAllData)
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  /**
    * Retrieves multiple accounts and their discussion previews, relationships, and notifications
    * concurrently.
    *
@@ -248,6 +270,28 @@ class AccountRepository :
   suspend fun getAccounts(ids: List<String>, getAllData: Boolean = true): List<Account> =
       coroutineScope {
         ids.map { id -> async { getAccount(id, getAllData) } }.awaitAll()
+      }
+
+  /**
+   * Safely retrieves multiple accounts concurrently, returning null for any that fail to load.
+   *
+   * This is a safe wrapper around [getAccounts] that uses [getAccountSafe] for each account,
+   * ensuring that if any account fails to load (doesn't exist, network error, etc.), the operation
+   * continues and returns null for that specific account rather than throwing an exception for the
+   * entire batch.
+   *
+   * The result list will always have the same size and order as the input IDs list, with null
+   * values in positions where accounts couldn't be retrieved.
+   *
+   * @param ids List of account IDs to retrieve
+   * @param getAllData If true, fetches all subcollections (previews, relationships, notifications)
+   *   for each account. If false, returns accounts with empty subcollections. Defaults to true.
+   * @return List of Account objects (or null for failed retrievals) in the same order as the input
+   *   IDs
+   */
+  suspend fun getAccountsSafe(ids: List<String>, getAllData: Boolean = true): List<Account?> =
+      coroutineScope {
+        ids.map { id -> async { getAccountSafe(id, getAllData) } }.awaitAll()
       }
 
   /**
@@ -341,6 +385,16 @@ class AccountRepository :
    */
   suspend fun deleteAccount(id: String) {
     fullyDeleteDocument(collection.document(id))
+  }
+
+  /**
+   * Updates an account document from it's offline changes.
+   *
+   * @param id The account ID to update
+   * @param changes The changes made offline
+   */
+  suspend fun updateAccount(id: String, changes: Map<String, Any>) {
+    collection.document(id).update(changes).await()
   }
 
   /**

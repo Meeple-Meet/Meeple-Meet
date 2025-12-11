@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.model.discussions.Message
 import com.github.meeplemeet.utils.FirestoreTests
 import java.io.File
 import java.io.FileOutputStream
@@ -569,31 +570,6 @@ class FirestoreDiscussionTests : FirestoreTests() {
     assertEquals("Hello everyone!", acc3Updated.previews[discussion.uid]?.lastMessage)
     assertEquals(account1.uid, acc2Updated.previews[discussion.uid]?.lastMessageSender)
     assertEquals(account1.uid, acc3Updated.previews[discussion.uid]?.lastMessageSender)
-  }
-
-  @Test
-  fun viewModelMessagesFlowUpdatesInRealTime() = runBlocking {
-    val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "First message")
-
-    val messagesFlow = discussionViewModel.messagesFlow(discussion.uid)
-    var receivedMessages = listOf<com.github.meeplemeet.model.discussions.Message>()
-
-    val job = launch { messagesFlow.collect { messages -> receivedMessages = messages } }
-
-    delay(500)
-
-    assertEquals(1, receivedMessages.size)
-    assertEquals("First message", receivedMessages[0].content)
-
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "Second message")
-    delay(500)
-
-    assertEquals(2, receivedMessages.size)
-    assertEquals("Second message", receivedMessages[1].content)
-
-    job.cancel()
   }
 
   @Test

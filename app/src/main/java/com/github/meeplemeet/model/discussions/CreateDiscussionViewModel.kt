@@ -1,6 +1,7 @@
 // Docs generated with Claude Code.
 package com.github.meeplemeet.model.discussions
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
@@ -8,6 +9,7 @@ import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.RelationshipStatus
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.launch
 
 /**
@@ -38,6 +40,7 @@ class CreateDiscussionViewModel(
    * @param participants Accounts to add as participants (vararg)
    */
   fun createDiscussion(
+      context: Context,
       name: String,
       description: String,
       creator: Account,
@@ -58,6 +61,8 @@ class CreateDiscussionViewModel(
               description,
               creator.uid,
               participantsToAdd.map { it.uid })
+
+      OfflineModeManager.addDiscussionToCache(disc, context)
 
       // Send a join request to the rest
       participants

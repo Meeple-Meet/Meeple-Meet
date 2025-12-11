@@ -1,5 +1,6 @@
 package com.github.meeplemeet.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -16,6 +17,8 @@ import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.navigation.LocalNavigationVM
+import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -40,6 +43,7 @@ class NotificationsTabTest : FirestoreTests() {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var viewModel: NotificationsViewModel
+  private lateinit var navViewModel: NavigationViewModel
   private lateinit var currentUser: Account
   private lateinit var otherUser: Account
   private lateinit var discussion: Discussion
@@ -85,6 +89,7 @@ class NotificationsTabTest : FirestoreTests() {
             imageRepository = imageRepository,
             discussionRepository = discussionRepository,
             gameRepository = gameRepository)
+    navViewModel = NavigationViewModel(accountRepository)
 
     runBlocking {
       // Create current user
@@ -207,7 +212,9 @@ class NotificationsTabTest : FirestoreTests() {
   @Test
   fun smoke_all_notifications_tests() {
     compose.setContent {
-      AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {}) }
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme { NotificationsTab(account = currentUser, viewModel = viewModel, onBack = {}) }
+      }
     }
 
     checkpoint("Initial State") {
@@ -375,7 +382,9 @@ class NotificationsTabTest : FirestoreTests() {
     val emptyAccount = currentUser.copy(notifications = emptyList())
 
     compose.setContent {
-      AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {}) }
+      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
+        AppTheme { NotificationsTab(account = emptyAccount, viewModel = viewModel, onBack = {}) }
+      }
     }
 
     checkpoint("Empty State Displayed") {

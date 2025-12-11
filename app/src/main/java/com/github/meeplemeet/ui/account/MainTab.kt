@@ -75,12 +75,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
+import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -341,6 +343,8 @@ fun MainTab(
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var currentPage by remember { mutableStateOf<ProfilePage>(ProfilePage.Main) }
+  val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
+  val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   when (currentPage) {
     ProfilePage.Main ->
@@ -352,22 +356,45 @@ fun MainTab(
             onSignOutOrDel = onSignOutOrDel,
             onDelete = onDelete,
             onNavigate = { page -> currentPage = page },
-            onInputFocusChanged = onInputFocusChanged)
+            onInputFocusChanged = onInputFocusChanged,
+            online = online)
     ProfilePage.Preferences ->
         SubPageScaffold("Preferences", onBack = { currentPage = ProfilePage.Main }) {
           PreferencesPage(
-              preference = account.themeMode,
-              onPreferenceChange = { viewModel.setAccountTheme(account, it) })
+              preference =
+                  if (online) {
+                    account.themeMode
+                  } else {
+                    offlineData.accounts[account.uid]?.second?.get(Account::themeMode.name)
+                        as? ThemeMode ?: account.themeMode
+                  },
+              onPreferenceChange = {
+                if (online) viewModel.setAccountTheme(account, it)
+                else OfflineModeManager.setAccountChange(account, Account::themeMode.name, it)
+              })
         }
     ProfilePage.NotificationSettings ->
         SubPageScaffold("Notifications", onBack = { currentPage = ProfilePage.Main }) {
           NotificationSettingsSection(
-              preference = account.notificationSettings,
-              onPreferenceChange = { viewModel.setAccountNotificationSettings(account, it) })
+              preference =
+                  if (online) {
+                    account.notificationSettings
+                  } else {
+                    offlineData.accounts[account.uid]
+                        ?.second
+                        ?.get(Account::notificationSettings.name) as? NotificationSettings
+                        ?: account.notificationSettings
+                  },
+              onPreferenceChange = {
+                if (online) viewModel.setAccountNotificationSettings(account, it)
+                else
+                    OfflineModeManager.setAccountChange(
+                        account, Account::notificationSettings.name, it)
+              })
         }
     ProfilePage.Businesses ->
         SubPageScaffold("Your Businesses", onBack = { currentPage = ProfilePage.Main }) {
-          ManageBusinessesPage(viewModel, account)
+          ManageBusinessesPage(viewModel, account, online)
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
@@ -379,6 +406,7 @@ fun MainTab(
           EmailSection(
               email = email,
               isVerified = isVerified,
+              online = online,
               onEmailChange = { newEmail -> email = newEmail },
               onFocusChanged = { focused ->
                 onInputFocusChanged(focused)
@@ -429,8 +457,8 @@ fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Un
 }
 
 @Composable
-fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account) {
-  RolesSection(account = account, viewModel = viewModel)
+fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account, online: Boolean) {
+  RolesSection(account = account, viewModel = viewModel, online = online)
   Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
@@ -474,6 +502,7 @@ private fun hasNoRoles(account: Account): Boolean {
 fun MainTabContent(
     viewModel: ProfileScreenViewModel = viewModel(),
     account: Account,
+    online: Boolean,
     onFriendsClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
@@ -523,6 +552,7 @@ fun MainTabContent(
                 PublicInfoInputs(
                     account = account,
                     viewModel = viewModel,
+                    online = online,
                     onInputFocusChanged = onInputFocusChanged)
               }
         }
@@ -807,6 +837,7 @@ fun PublicInfoActions(
 fun PublicInfoInputs(
     account: Account,
     viewModel: ProfileScreenViewModel,
+    online: Boolean,
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
   var name by remember { mutableStateOf(account.name) }
@@ -823,6 +854,7 @@ fun PublicInfoInputs(
         val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
 
         FocusableInputField(
+            enabled = online,
             value = handle,
             modifier =
                 Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
@@ -941,18 +973,11 @@ fun DisplayAvatar(viewModel: ProfileScreenViewModel, account: Account) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var showChooser by remember { mutableStateOf(false) }
-  var isSending by remember { mutableStateOf(false) }
   var showPermissionDenied by remember { mutableStateOf(false) }
 
   // --- Upload function ---
   val setPhoto: suspend (String) -> Unit = { path ->
-    isSending = true
-    try {
-
-      viewModel.setAccountPhoto(account, context, path)
-    } finally {
-      isSending = false
-    }
+    runCatching { viewModel.setAccountPhoto(account, context, path) }
   }
 
   // --- Camera launcher ---
@@ -1153,6 +1178,7 @@ fun AvatarChooserDialog(
 fun EmailSection(
     email: String,
     isVerified: Boolean,
+    online: Boolean,
     onEmailChange: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     onSendVerification: () -> Unit
@@ -1170,6 +1196,7 @@ fun EmailSection(
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically) {
             FocusableInputField(
+                enabled = online,
                 label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
                 value = email,
                 onValueChange = { new ->
@@ -1217,6 +1244,7 @@ fun EmailSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally) {
               Button(
+                  enabled = online,
                   modifier =
                       Modifier.padding(top = Dimensions.Padding.medium)
                           .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
@@ -1226,7 +1254,7 @@ fun EmailSection(
                           containerColor = AppColors.affirmative,
                           disabledContainerColor = AppColors.affirmative,
                           contentColor = AppColors.textIcons,
-                          disabledContentColor = AppColors.textIcons),
+                          disabledContentColor = AppColors.negative),
                   onClick = {
                     onSendVerification()
                     toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
@@ -1307,9 +1335,9 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
+fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
 
-  var expanded by remember { mutableStateOf(hasNoRoles(account)) }
+  var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
@@ -1351,7 +1379,8 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
             },
             label = MainTabUi.PrivateInfo.SELL_ITEMS_LABEL,
             description = MainTabUi.PrivateInfo.SELL_ITEMS_DESC,
-            testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX)
+            testTag = PrivateInfoTestTags.ROLE_SHOP_CHECKBOX,
+            online = online)
 
         RoleCheckBox(
             isChecked = isSpaceRented,
@@ -1366,7 +1395,8 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel) {
             },
             label = MainTabUi.PrivateInfo.RENT_SPACES_LABEL,
             description = MainTabUi.PrivateInfo.RENT_SPACES_DESC,
-            testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
+            testTag = PrivateInfoTestTags.ROLE_SPACE_CHECKBOX,
+            online = online)
       }
     }
   }

@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
@@ -175,14 +176,15 @@ fun CreateSessionScreen(
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
   var isInputFocused by remember { mutableStateOf(false) }
   // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
 
   // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
-    viewModel.getAccounts(discussion.participants) { fetched ->
-      allDiscussionMembers = (fetched + account).distinctBy { it.uid }
+    viewModel.getAccounts(discussion.participants, context) { fetched ->
+      allDiscussionMembers = (fetched.filterNotNull() + account).distinctBy { it.uid }
       form = form.copy(participants = allDiscussionMembers)
     }
 
