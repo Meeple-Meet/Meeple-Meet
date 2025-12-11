@@ -238,6 +238,7 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test(expected = PermissionDeniedException::class)
+  @noretry
   fun testRemoveCommentAsNonAuthor() = runTest {
     val postVM = PostViewModel()
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)
