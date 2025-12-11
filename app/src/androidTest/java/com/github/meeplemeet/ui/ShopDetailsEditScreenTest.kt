@@ -66,7 +66,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Catan",
                 description = "Settlers of Catan",
-                imageURL = "https://example.com/catan.jpg",
+                imageURL = "",
                 minPlayers = 3,
                 maxPlayers = 4,
                 recommendedPlayers = 4,
@@ -81,7 +81,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Carcassonne",
                 description = "Tile-laying game",
-                imageURL = "https://example.com/carcassonne.jpg",
+                imageURL = "",
                 minPlayers = 2,
                 maxPlayers = 5,
                 recommendedPlayers = 4,
@@ -96,7 +96,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Pandemic",
                 description = "Cooperative game",
-                imageURL = "https://example.com/pandemic.jpg",
+                imageURL = "",
                 minPlayers = 2,
                 maxPlayers = 4,
                 recommendedPlayers = 4,
@@ -337,7 +337,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
       addGameWithSlider("Pandemic", 20)
 
       //           Wait for Pandemic
-      val pandemicTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}g_pandemic"
+      val pandemicTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_pandemic"
       compose.waitUntil(10_000) {
         compose
             .onAllNodesWithTag(pandemicTag, useUnmergedTree = true)
@@ -381,7 +381,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
         val gamesMap = updated.gameCollection.associate { it.first.uid to it.second }
         assertEquals(null, gamesMap["test_catan"]) // Deleted
         assertEquals(50, gamesMap["test_carcassonne"]) // Edited
-        assertEquals(19, gamesMap["g_pandemic"]) // Added
+        assertEquals(19, gamesMap["test_pandemic"]) // Added
       }
     }
   }

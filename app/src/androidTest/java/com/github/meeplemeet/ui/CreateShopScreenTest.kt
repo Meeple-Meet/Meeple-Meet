@@ -62,7 +62,7 @@ class CreateShopScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Catan",
                 description = "Settlers of Catan",
-                imageURL = "https://example.com/catan.jpg",
+                imageURL = "",
                 minPlayers = 3,
                 maxPlayers = 4,
                 recommendedPlayers = 4,
@@ -76,7 +76,7 @@ class CreateShopScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Carcassonne",
                 description = "Tile-laying game",
-                imageURL = "https://example.com/carcassonne.jpg",
+                imageURL = "",
                 minPlayers = 2,
                 maxPlayers = 5,
                 recommendedPlayers = 4,
@@ -90,7 +90,7 @@ class CreateShopScreenTest : FirestoreTests() {
             GameNoUid(
                 name = "Terraforming Mars",
                 description = "Mars colonization game",
-                imageURL = "https://example.com/terraforming.jpg",
+                imageURL = "",
                 minPlayers = 1,
                 maxPlayers = 5,
                 recommendedPlayers = 3,
@@ -557,7 +557,7 @@ class CreateShopScreenTest : FirestoreTests() {
       scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
       compose.waitForIdle()
 
-      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}g_catan"
+      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
       val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
       val terraformingTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_terraforming"
 
@@ -577,7 +577,7 @@ class CreateShopScreenTest : FirestoreTests() {
       // Delete Catan
       compose
           .onNodeWithTag(
-              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:g_catan", useUnmergedTree = true)
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
           .assertExists()
           .performClick()
 
