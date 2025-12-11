@@ -82,20 +82,10 @@ private object EditShopUi {
     val contentVPadding = ShopFormUi.Dim.contentVPadding
     val sectionSpace = ShopFormUi.Dim.sectionSpace
     val bottomSpacer = ShopFormUi.Dim.bottomSpacer
-    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {
     const val SCREEN_TITLE = "Edit Shop"
-    const val SECTION_REQUIRED = "Required Info"
-    const val SECTION_AVAILABILITY = "Availability"
-    const val SECTION_GAMES = "Games in stock"
-
-    const val BTN_ADD_GAME = "Add game"
-    const val EMPTY_GAMES = "No games selected yet."
-    const val ERROR_VALIDATION = "Validation error"
-    const val ERROR_SAVE = "Failed to save shop"
-
     const val DELETE_DIALOG_TITLE = "Delete Shop"
     const val DELETE_DIALOG_MESSAGE =
         "Are you sure you want to delete this shop? This action cannot be undone."

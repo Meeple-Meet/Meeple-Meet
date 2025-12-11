@@ -930,6 +930,7 @@ fun GameItemImage(
     game: Game,
     count: Int,
     modifier: Modifier = Modifier,
+    online: Boolean,
     editable: Boolean = false,
     clickable: Boolean = true,
     onClick: (Game) -> Unit = {},
@@ -999,7 +1000,7 @@ fun GameItemImage(
                       color = MaterialTheme.colorScheme.onPrimary)
                 }
 
-            if (editable) {
+            if (editable && online) {
               IconButton(
                   onClick = { onDelete(game) },
                   modifier =
@@ -1052,6 +1053,7 @@ fun GameImageListSection(
     clickableGames: Boolean = false,
     title: String,
     editable: Boolean = false,
+    online: Boolean,
     onClick: (Game) -> Unit = {},
     onEdit: (Game) -> Unit = {},
     onDelete: (Game) -> Unit = {}
@@ -1107,6 +1109,7 @@ fun GameImageListSection(
                             onDelete = onDelete,
                             onEdit = onEdit,
                             imageHeight = imageHeight,
+                            online = online,
                             modifier = Modifier.height(rowHeight))
                       }
                     }

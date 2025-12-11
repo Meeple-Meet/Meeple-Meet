@@ -214,6 +214,10 @@ fun ShopDetails(
               games = shop.gameCollection,
               modifier = Modifier.fillMaxWidth(),
               clickableGames = true,
+              editable = false,
+              online =
+                  false, // Does not matter what the value is set as since the user cannot interact
+                         // with the games either way
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
               onClick = onGameClick)
         }

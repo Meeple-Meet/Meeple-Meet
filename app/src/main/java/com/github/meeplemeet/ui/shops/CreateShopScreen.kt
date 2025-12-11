@@ -97,7 +97,7 @@ private object AddShopUi {
 
     const val BTN_ADD_GAME = "Add game"
     const val EMPTY_GAMES = "No games selected yet."
-    const val OFFLINE_GAMES_MSG = "Go online to be able to add games."
+    const val OFFLINE_GAMES_MSG = "Go online to be able to add and edit games."
   }
 }
 
@@ -407,6 +407,7 @@ internal fun ShopGamesSection(
             games = state.stock,
             clickableGames = true,
             editable = true,
+            online = online,
             title = "",
             onDelete = { state.removeFromStock(it) },
             onEdit = { game ->
