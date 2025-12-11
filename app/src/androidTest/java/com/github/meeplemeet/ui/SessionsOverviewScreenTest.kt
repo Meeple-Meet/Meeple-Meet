@@ -23,7 +23,6 @@ import com.google.firebase.Timestamp
 import io.mockk.mockk
 import java.util.UUID
 import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.*
@@ -93,8 +92,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
               discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
-          delay(100)
-          emptyText().assertDoesNotExist()
+          compose.waitUntil { emptyText().isNotDisplayed() }
           sessionCard(discussion.uid).assertIsDisplayed()
         }
       }
@@ -108,7 +106,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
               discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
-          delay(100)
+          compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
           sessionCard(discussion.uid).performClick()
           assertEquals(discussion.uid, capturedDiscussionId)
         }
@@ -123,12 +121,10 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
           sessionRepository.createSession(
               discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
-          delay(100)
-          sessionCard(discussion.uid).assertIsDisplayed()
+          compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
 
           sessionRepository.deleteSession(discussion.uid)
-          delay(100)
-          sessionCard(discussion.uid).assertDoesNotExist()
+          compose.waitUntil { sessionCard(discussion.uid).isNotDisplayed() }
         }
       }
 
@@ -138,7 +134,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           compose
               .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS)
               .performClick()
-          delay(100)
 
           val pastDate =
               Timestamp(java.util.Date(System.currentTimeMillis() - 25 * 60 * 60 * 1000L))
