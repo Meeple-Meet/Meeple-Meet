@@ -4,6 +4,7 @@ package com.github.meeplemeet.model.account
 // AI was used for this file
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.auth.AuthUIState
@@ -235,12 +236,12 @@ class ProfileScreenViewModel(
    */
   fun deleteAccountShops(account: Account) {
     viewModelScope.launch {
-      val (shops, _) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      val (shops, _) = accountRepository.getBusinessIds(account.uid)
       _businesses.update { it.copy(first = emptyList()) }
       try {
-        RepositoryProvider.shops.deleteShops(shops)
+        shopRepository.deleteShops(shops, account.uid)
       } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("ProfileScreenViewModel", "Error deleting shops for account ${account.uid}", e)
       }
     }
   }
@@ -252,19 +253,20 @@ class ProfileScreenViewModel(
    */
   fun deleteAccountSpaceRenters(account: Account) {
     viewModelScope.launch {
-      val (_, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      val (_, spaces) = accountRepository.getBusinessIds(account.uid)
       _businesses.update { it.copy(second = emptyList()) }
       try {
-        RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+        spaceRenterRepository.deleteSpaceRenters(spaces, account.uid)
       } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e(
+            "ProfileScreenViewModel", "Error deleting space renters for account ${account.uid}", e)
       }
     }
   }
 
   fun loadAccountBusinesses(account: Account) {
     viewModelScope.launch {
-      val (shopIds, spaceRenterIds) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+      val (shopIds, spaceRenterIds) = accountRepository.getBusinessIds(account.uid)
 
       val shops =
           shopIds.mapNotNull { id ->
