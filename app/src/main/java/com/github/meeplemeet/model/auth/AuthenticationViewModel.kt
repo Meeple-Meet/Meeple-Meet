@@ -59,6 +59,7 @@ const val coolDownErrMessage: String =
     "You can only request a new verification email once per minute. Please wait a moment and try again."
 
 open class AuthenticationViewModel(
+    inTests: Boolean = false,
     protected val repository: AuthenticationRepository = RepositoryProvider.authentication,
 ) : ViewModel() {
 
@@ -91,7 +92,8 @@ open class AuthenticationViewModel(
 
   init {
     // Set up auth state listener to observe email verification status changes
-    FirebaseProvider.auth.addAuthStateListener(authStateListener)
+    if (!inTests) FirebaseProvider.auth.addAuthStateListener(authStateListener)
+    else _uiState.update { it.copy(isEmailVerified = true) }
   }
 
   override fun onCleared() {

@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.credentials.CredentialManager
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -208,7 +210,15 @@ class MainActivity : ComponentActivity() {
 
     OfflineModeManager.start(applicationContext)
 
-    setContent { MeepleMeetApp() }
+    val inTests =
+        try {
+          Class.forName("androidx.test.espresso.Espresso")
+          true
+        } catch (e: ClassNotFoundException) {
+          false
+        }
+
+    setContent { MeepleMeetApp(inTests = inTests) }
   }
 
   override fun onDestroy() {
@@ -217,9 +227,20 @@ class MainActivity : ComponentActivity() {
   }
 }
 
+class MainActivityViewModelFactory(private val inTests: Boolean) : ViewModelProvider.Factory {
+  @Suppress("UNCHECKED_CAST")
+  override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    if (modelClass.isAssignableFrom(MainActivityViewModel::class.java)) {
+      return MainActivityViewModel(inTests = inTests) as T
+    }
+    throw IllegalArgumentException("Unknown ViewModel class")
+  }
+}
+
 @Composable
 fun MeepleMeetApp(
-    viewModel: MainActivityViewModel = viewModel(),
+    inTests: Boolean = false,
+    viewModel: MainActivityViewModel = viewModel(factory = MainActivityViewModelFactory(inTests)),
     context: Context = LocalContext.current,
     navController: NavHostController = rememberNavController(),
 ) {

@@ -30,9 +30,10 @@ import kotlinx.coroutines.launch
  * @property discussionRepository Repository for discussion operations
  */
 class MainActivityViewModel(
+    inTests: Boolean = false,
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-) : AuthenticationViewModel() {
+) : AuthenticationViewModel(inTests) {
   /**
    * Returns a real-time flow of account data for the specified account ID.
    *

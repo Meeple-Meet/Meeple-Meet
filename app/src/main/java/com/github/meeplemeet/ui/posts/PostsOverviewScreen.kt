@@ -114,7 +114,6 @@ fun PostsOverviewScreen(
       bottomBar = {
         BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.PostsOverview,
-            modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
             onTabSelected = { screen -> navigation.navigateTo(screen) },
             verified = verified,
             onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
