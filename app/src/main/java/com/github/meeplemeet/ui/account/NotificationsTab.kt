@@ -691,16 +691,16 @@ private fun NotificationRowContent(
     when (notif.type) {
       NotificationType.FRIEND_REQUEST -> {
         viewModel.getOtherAccountData(
-            notif.senderOrDiscussionId,
+            notif.senderId,
             onResult = { acc ->
               friend = acc
-              viewModel.loadAccountImage(notif.senderOrDiscussionId, context) { avatarBytes = it }
+              viewModel.loadAccountImage(notif.senderId, context) { avatarBytes = it }
             },
             onDeleted = { viewModel.deleteNotification(account, notif) })
       }
       NotificationType.JOIN_DISCUSSION -> {
         viewModel.getDiscussion(
-            notif.senderOrDiscussionId,
+            notif.discussionId,
             onResult = { disc ->
               discussionName = disc.name
               viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatarBytes = bytes }
@@ -709,7 +709,7 @@ private fun NotificationRowContent(
       }
       NotificationType.JOIN_SESSION -> {
         viewModel.getDiscussion(
-            notif.senderOrDiscussionId,
+            notif.discussionId,
             onResult = { disc ->
               val session = disc.session
               if (session != null) {
@@ -863,11 +863,9 @@ fun NotificationSheet(
     when (notification.type) {
       NotificationType.FRIEND_REQUEST -> {
         viewModel.getOtherAccountData(
-            notification.senderOrDiscussionId,
+            notification.senderId,
             onResult = { acc ->
-              viewModel.loadAccountImage(notification.senderOrDiscussionId, context) { bytes ->
-                avatar = bytes
-              }
+              viewModel.loadAccountImage(notification.senderId, context) { bytes -> avatar = bytes }
 
               loadedData =
                   NotificationPopupData.FriendRequest(
@@ -881,7 +879,7 @@ fun NotificationSheet(
       }
       NotificationType.JOIN_DISCUSSION -> {
         viewModel.getDiscussion(
-            notification.senderOrDiscussionId,
+            notification.discussionId,
             onResult = { disc ->
               viewModel.loadDiscussionImage(disc.uid, context) { bytes -> icon = bytes }
 
@@ -907,7 +905,7 @@ fun NotificationSheet(
       }
       NotificationType.JOIN_SESSION -> {
         viewModel.getDiscussion(
-            notification.senderOrDiscussionId,
+            notification.discussionId,
             onResult = { disc ->
               viewModel.loadDiscussionImage(disc.uid, context) { bytes -> avatar = bytes }
 

@@ -192,7 +192,7 @@ class NotificationsViewModel(
     when (notif.type) {
       NotificationType.FRIEND_REQUEST -> {
         getOtherAccountData(
-            notif.senderOrDiscussionId,
+            notif.senderId,
             onResult = { acc ->
               loadAccountImage(acc.uid, context) { bytes ->
                 onReady(
@@ -207,7 +207,7 @@ class NotificationsViewModel(
       }
       NotificationType.JOIN_DISCUSSION -> {
         getDiscussion(
-            notif.senderOrDiscussionId,
+            notif.discussionId,
             onResult = { disc ->
               loadDiscussionImage(disc.uid, context) { bytes ->
                 onReady(
@@ -230,7 +230,7 @@ class NotificationsViewModel(
       }
       NotificationType.JOIN_SESSION -> {
         getDiscussion(
-            notif.senderOrDiscussionId,
+            notif.discussionId,
             onResult = { disc ->
               loadDiscussionImage(disc.uid, context) { bytes ->
                 val session = disc.session

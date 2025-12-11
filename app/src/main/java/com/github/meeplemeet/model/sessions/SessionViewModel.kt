@@ -99,7 +99,7 @@ class SessionViewModel(
         val updatedParticipants = (currentParticipants + user.uid).toSet().toList()
         sessionRepository.updateSession(discussion.uid, null, null, null, null, updatedParticipants)
       } else {
-        accountRepository.sendJoinSessionNotification(user.uid, discussion)
+        accountRepository.sendJoinSessionNotification(changeRequester.uid, user.uid, discussion)
       }
     }
   }
