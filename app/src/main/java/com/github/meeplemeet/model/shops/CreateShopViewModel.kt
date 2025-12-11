@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.launch
@@ -55,7 +54,7 @@ class CreateShopViewModel(
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
-      gameCollection: List<Pair<Game, Int>> = emptyList(),
+      gameCollection: List<GameItem> = emptyList(),
       photoCollectionUrl: List<String> = emptyList()
   ): Shop {
     if (name.isBlank()) throw IllegalArgumentException("Shop name cannot be blank")
