@@ -387,19 +387,19 @@ fun MeepleMeetApp(
               onBack = { navigationActions.goBack() })
         }
 
-          composable(MeepleMeetScreen.Session.name) {
-            if (discussion == null) {
-              LoadingScreen()
-            } else if (discussion!!.session != null &&
-                discussion!!.session!!.participants.contains(account!!.uid)) {
-              SessionEditScreen(
-                  account = account!!,
-                  discussion = discussion!!,
-                  onBack = { navigationActions.goBack() })
-            } else {
-              navigationActions.navigateTo(MeepleMeetScreen.Discussion)
-            }
+        composable(MeepleMeetScreen.Session.name) {
+          if (discussion == null) {
+            LoadingScreen()
+          } else if (discussion!!.session != null &&
+              discussion!!.session!!.participants.contains(account!!.uid)) {
+            SessionEditScreen(
+                account = account!!,
+                discussion = discussion!!,
+                onBack = { navigationActions.goBack() })
+          } else {
+            navigationActions.navigateTo(MeepleMeetScreen.Discussion)
           }
+        }
 
         composable(MeepleMeetScreen.SessionsOverview.name) {
           SessionsOverviewScreen(
