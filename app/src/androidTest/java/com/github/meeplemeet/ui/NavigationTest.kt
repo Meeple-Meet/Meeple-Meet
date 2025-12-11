@@ -1,13 +1,11 @@
 package com.github.meeplemeet.ui
 
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.MeepleMeetApp
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
@@ -167,7 +165,7 @@ class NavigationTest : FirestoreTests() {
 @RunWith(AndroidJUnit4::class)
 class AuthenticatedNavigationTest : FirestoreTests() {
 
-  @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
+  @get:Rule val composeTestRule = createComposeRule()
   @get:Rule val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 60_000L)
