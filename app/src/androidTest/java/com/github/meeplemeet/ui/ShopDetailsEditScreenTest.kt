@@ -411,6 +411,16 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
     compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    compose
+        .onNodeWithTag(
+            "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+        .assertDoesNotExist()
+    compose.waitForIdle()
+
+    compose
+        .onNodeWithTag(
+            "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_carcassonne", useUnmergedTree = true)
+        .assertDoesNotExist()
     compose.onTag(EditShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
 }
