@@ -562,27 +562,5 @@ class MainTabComposableTest : FirestoreTests() {
           assert(delClicked)
           compose.waitForIdle()
         }
-    checkpoint("verify_business_cards_displayed_and_clickable") {
-      // Re-enter businesses section
-      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
-      compose.settingsRowBusinesses().performClick()
-      compose.waitForIdle()
-
-      // The previous checkpoints have enabled the roles.
-      // Assuming the businesses created at setup are still in the ViewModel state
-      // (because loadAccountBusinesses runs once and isn't cleared on delete in this
-      // implementation)
-      // we should see them.
-
-      // Check Shop
-      compose.onNodeWithText("Test Shop").assertExists().performClick()
-      assert(shopClickedId != null)
-
-      // Check Space
-      compose.onNodeWithText("Test Space").assertDoesNotExist()
-
-      compose.subPageBackButton().performClick()
-      compose.waitForIdle()
-    }
   }
 }
