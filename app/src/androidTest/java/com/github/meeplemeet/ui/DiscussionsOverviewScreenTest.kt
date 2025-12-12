@@ -4,6 +4,7 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -22,6 +23,7 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import com.google.firebase.Timestamp
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -284,6 +286,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
+  @noretry
   fun blockedSender_hidesMessagePreview() = runBlocking {
     // Block Bob
     val meWithBlockedBob =
@@ -299,7 +302,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     checkpoint("Blocked sender shows hidden message") {
       compose.waitForIdle()
-      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.waitUntil { compose.onNodeWithText("Gloomhaven").isDisplayed() }
       compose.onNodeWithText("Hidden: blocked sender", substring = true).assertIsDisplayed()
       compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertDoesNotExist()
     }
