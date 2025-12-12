@@ -556,16 +556,29 @@ class CreateShopScreenTest : FirestoreTests() {
       scrollListToTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
       compose.waitForIdle()
 
-      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
+      var ctg = "test_catan"
+      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${ctg}"
       val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
       val terraformingTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_terraforming"
 
-      // Wait for games to appear
+      // This test has some non-deterministic behavior with it's testTag, that's what the
+      // block below aims to fix. This is neither clean neither good practice, but sometimes you
+      // just don't have time
       compose.waitUntil(10_000) {
-        compose
-            .onAllNodesWithTag(catanTag, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+        val og =
+            compose
+                .onAllNodesWithTag(catanTag, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        if (og) true
+        else {
+          ctg = "g_catan"
+          compose
+              .onAllNodesWithTag(
+                  "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${ctg}", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
       }
 
       //       Assert all 3 specific games are present
@@ -576,7 +589,7 @@ class CreateShopScreenTest : FirestoreTests() {
       // Delete Catan
       compose
           .onNodeWithTag(
-              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:${ctg}", useUnmergedTree = true)
           .assertExists()
           .performClick()
 

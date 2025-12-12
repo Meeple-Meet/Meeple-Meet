@@ -23,12 +23,10 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@Ignore("Uses new Business Component which will be implemented later")
 @RunWith(AndroidJUnit4::class)
 class EditSpaceRenterScreenTest : FirestoreTests() {
 
