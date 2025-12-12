@@ -496,6 +496,8 @@ fun GameStockPicker(
   if (!state.showGameDialog) return
 
   val existing = remember(state.stock) { state.stock.map { it.gameId }.toSet() }
+  val isEditMode = state.overwriteStock && state.editingGame != null
+
   Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
     GameStockDialog(
         owner,
@@ -507,14 +509,24 @@ fun GameStockPicker(
         onQuantityChange = state::onQtyChange,
         existingIds = existing,
         ignoreId = state.editingGame?.id,
+        isEditMode = isEditMode,
         onDismiss = {
           state.onDismiss()
           state.onQtyChange(1)
           state.onSetGameQuery("")
         },
         onSave = {
-          gameUIState.selectedGameSearchResult?.let { g ->
-            state.addOrUpdateStock(GameItem(g.id, g.name), state.qty)
+          if (isEditMode) {
+            state.editingGame?.let { editGame ->
+              val gameItem = state.stock.find { it.gameId == editGame.id }
+              if (gameItem != null) {
+                state.updateStockQuantity(gameItem, state.qty)
+              }
+            }
+          } else {
+            gameUIState.selectedGameSearchResult?.let { g ->
+              state.addOrUpdateStock(GameItem(g.id, g.name), state.qty)
+            }
           }
           state.onQtyChange(1)
           state.onSetGameQuery("")
@@ -687,6 +699,7 @@ fun GameStockDialog(
     onQuantityChange: (Int) -> Unit,
     existingIds: Set<String> = emptySet(),
     ignoreId: String? = null,
+    isEditMode: Boolean = false,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
@@ -705,7 +718,8 @@ fun GameStockDialog(
                 .background(AppColors.primary),
             contentAlignment = Alignment.Center) {
               Text(
-                  ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
+                  if (isEditMode) ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_EDIT_TITLE
+                  else ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
                   style = MaterialTheme.typography.headlineSmall)
             }
       },
@@ -719,10 +733,20 @@ fun GameStockDialog(
                   viewModel,
                   gameUIState.selectedGameSearchResult,
                   existingIds,
+                  enabled = !isEditMode,
                   inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
                   dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
-              if (isDuplicate) {
+              if (isEditMode) {
+                Spacer(Modifier.height(Dimensions.Padding.small))
+                Text(
+                    ShopUiDefaults.StringsMagicNumbers.quantityUpdateDialog(selectedGame?.name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textIconsFade,
+                    textAlign = TextAlign.Center)
+              }
+
+              if (isDuplicate && !isEditMode) {
                 Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
                 Text(
                     ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
@@ -752,7 +776,9 @@ fun GameStockDialog(
       confirmButton = {
         TextButton(
             onClick = onSave,
-            enabled = gameUIState.selectedGameSearchResult != null && !isDuplicate && quantity > 0,
+            enabled =
+                (isEditMode || (gameUIState.selectedGameSearchResult != null && !isDuplicate)) &&
+                    quantity > 0,
             modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }

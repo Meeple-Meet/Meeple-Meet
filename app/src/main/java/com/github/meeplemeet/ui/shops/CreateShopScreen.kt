@@ -422,6 +422,7 @@ internal fun ShopGamesSection(
               onClick = {
                 state.onSetGameQuery("")
                 state.overwriteStock = false
+                state.editingGame = null
                 state.showGameDialog = true
               },
               buttonText = AddShopUi.Strings.BTN_ADD_GAME,

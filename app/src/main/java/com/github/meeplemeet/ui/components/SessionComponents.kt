@@ -1204,11 +1204,11 @@ fun SessionGameSearchBar(
   GameSearchBar(
       setGame = { viewModel.setGame(account, discussion, it) },
       setGameQuery = { viewModel.setGameQuery(account, discussion, it) },
-      viewModel,
-      initial,
-      emptySet(),
-      inputFieldTestTag,
-      dropdownItemTestTag)
+      viewModel = viewModel,
+      initial = initial,
+      existing = emptySet(),
+      inputFieldTestTag = inputFieldTestTag,
+      dropdownItemTestTag = dropdownItemTestTag)
 }
 
 /**
@@ -1229,6 +1229,7 @@ fun ShopGameSearchBar(
     viewModel: ShopSearchViewModel,
     initial: GameSearchResult? = null,
     existing: Set<String> = emptySet(),
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -1244,6 +1245,7 @@ fun ShopGameSearchBar(
       viewModel,
       initial,
       existing,
+      enabled,
       inputFieldTestTag,
       dropdownItemTestTag)
 }
@@ -1267,6 +1269,7 @@ private fun GameSearchBar(
     viewModel: SearchViewModel,
     initial: GameSearchResult? = null,
     existing: Set<String> = emptySet(),
+    enabled: Boolean = true,
     inputFieldTestTag: String = "",
     dropdownItemTestTag: String = ""
 ) {
@@ -1287,14 +1290,18 @@ private fun GameSearchBar(
 
   Column {
     ExposedDropdownMenuBox(
-        expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
+        expanded = menuOpen && hasSuggestions && enabled,
+        onExpandedChange = { if (enabled) menuOpen = it }) {
           FocusableInputField(
               value = text,
               onValueChange = {
-                menuOpen = true
-                text = it
-                setGameQuery(it)
+                if (enabled) {
+                  menuOpen = true
+                  text = it
+                  setGameQuery(it)
+                }
               },
+              enabled = enabled,
               label = { Text(LABEL_GAME) },
               placeholder = { Text(PLACEHOLDER_SEARCH_GAMES) },
               modifier =
@@ -1305,7 +1312,7 @@ private fun GameSearchBar(
               isError = results.gameSearchError != null)
 
           ExposedDropdownMenu(
-              expanded = menuOpen && hasSuggestions,
+              expanded = menuOpen && hasSuggestions && enabled,
               onDismissRequest = { menuOpen = false },
               modifier = Modifier.background(AppColors.primary)) {
                 results.gameSuggestions
