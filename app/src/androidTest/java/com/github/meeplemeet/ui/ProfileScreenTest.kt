@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.ui.account.*
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.Timestamp
 import kotlin.random.Random
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -214,5 +215,129 @@ class ProfileScreenTest : FirestoreTests() {
             .isEmpty()
       }
     }
+  }
+
+  @Test
+  fun testNotificationCount_zero() {
+    val userNoNotif = user.copy(notifications = emptyList())
+    composeTestRule.setContent {
+      MainTab(
+          viewModel = viewModel,
+          account = userNoNotif,
+          onFriendsClick = {},
+          onNotificationClick = {},
+          onSignOutOrDel = {},
+          onDelete = {},
+          onSpaceRenterClick = {},
+          onShopClick = {})
+    }
+
+    composeTestRule.onNodeWithTag(PublicInfoTestTags.NOTIF_COUNT).assertDoesNotExist()
+  }
+
+  @Test
+  fun testNotificationCount_five() {
+    val notifList =
+        List(5) {
+          com.github.meeplemeet.model.account.Notification(
+              senderId = "sender",
+              sentAt = Timestamp.now(),
+              type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST,
+              read = false)
+        }
+    val user5Notif = user.copy(notifications = notifList)
+    composeTestRule.setContent {
+      MainTab(
+          viewModel = viewModel,
+          account = user5Notif,
+          onFriendsClick = {},
+          onNotificationClick = {},
+          onSignOutOrDel = {},
+          onDelete = {},
+          onSpaceRenterClick = {},
+          onShopClick = {})
+    }
+
+    composeTestRule.onNodeWithTag(PublicInfoTestTags.NOTIF_COUNT).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(PublicInfoTestTags.NOTIF_COUNT)
+        .onChildren()
+        .onFirst()
+        .assertTextEquals("5")
+  }
+
+  @Test
+  fun testNotificationCount_overflow() {
+    val notifList10 =
+        List(10) {
+          com.github.meeplemeet.model.account.Notification(
+              senderId = "sender",
+              sentAt = Timestamp.now(),
+              type = com.github.meeplemeet.model.account.NotificationType.FRIEND_REQUEST,
+              read = false)
+        }
+    val user10Notif = user.copy(notifications = notifList10)
+    composeTestRule.setContent {
+      MainTab(
+          viewModel = viewModel,
+          account = user10Notif,
+          onFriendsClick = {},
+          onNotificationClick = {},
+          onSignOutOrDel = {},
+          onDelete = {},
+          onSpaceRenterClick = {},
+          onShopClick = {})
+    }
+
+    composeTestRule.onNodeWithTag(PublicInfoTestTags.NOTIF_COUNT).assertIsDisplayed()
+    composeTestRule
+        .onNodeWithTag(PublicInfoTestTags.NOTIF_COUNT)
+        .onChildren()
+        .onFirst()
+        .assertTextEquals("9+")
+  }
+
+  @Test
+  fun testEmailPage_navigation_and_content() {
+    composeTestRule.setContent {
+      MainTab(
+          viewModel = viewModel,
+          account = user,
+          onFriendsClick = {},
+          onNotificationClick = {},
+          onSignOutOrDel = {},
+          onDelete = {},
+          onSpaceRenterClick = {},
+          onShopClick = {})
+    }
+
+    // Scroll to Email settings
+    composeTestRule
+        .onNodeWithTag(MainTabTestTags.CONTENT_SCROLL)
+        .performScrollToNode(hasTestTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL))
+
+    // Click Email settings
+    composeTestRule.onNodeWithTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL).performClick()
+
+    // Verify Email Page Content
+    composeTestRule.waitUntil(3000) {
+      composeTestRule
+          .onAllNodesWithTag(PrivateInfoTestTags.EMAIL_SECTION)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+    composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_SECTION).assertIsDisplayed()
+
+    // Verify Email Input displays user email (mocked user has tester@example.com)
+    // Note: The Email page logic fetches currentUser?.email ?: account.email
+    // Since Firebase Auth mock might return null or something else, we check if it displays
+    // *something* or the account email.
+    // In this test setup, `user` is passed to MainTab. The `ProfilePage.Email` block uses
+    // `viewModel.uiState` and `FirebaseProvider.auth.currentUser`.
+    // We should ensure `Auth` is set up or expect `account.email` to be used if currentUser is
+    // null.
+    // However, MainTab uses `account.email` as fallback.
+
+    composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_INPUT).assertTextContains(user.email)
   }
 }
