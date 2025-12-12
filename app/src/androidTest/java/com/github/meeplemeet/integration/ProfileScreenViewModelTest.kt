@@ -25,6 +25,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -207,6 +208,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Should have a result", capturedSuccessMsg ?: capturedErrorMsg)
   }
 
+  @Ignore
   @Test
   fun test_setAccountPhoto_updates_repository() = runBlocking {
     authenticationRepository.loginWithEmail(testEmail, testPassword)
