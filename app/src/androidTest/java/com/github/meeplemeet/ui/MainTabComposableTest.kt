@@ -11,6 +11,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountNoUid
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
+import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
 import com.github.meeplemeet.ui.account.MainTab
 import com.github.meeplemeet.ui.account.MainTabTestTags
@@ -272,6 +275,23 @@ class MainTabComposableTest : FirestoreTests() {
     var notifClicked = false
     var logoutClicked = false
     var delClicked = false
+    var shopClickedId: String? = null
+    var spaceClickedId: String? = null
+
+    // Pre-populate businesses for checking later
+    runBlocking {
+      shopRepository.createShop(
+          owner = user,
+          name = "Test Shop",
+          address = Location(0.0, 0.0, "Test Address"),
+          openingHours = listOf(OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "17:00")))))
+
+      spaceRenterRepository.createSpaceRenter(
+          owner = user,
+          name = "Test Space",
+          address = Location(0.0, 0.0, "Test Address"),
+          openingHours = listOf(OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "17:00")))))
+    }
 
     compose.setContent {
       val accountState by accountRepository.listenAccount(user.uid).collectAsState(initial = user)
@@ -282,7 +302,9 @@ class MainTabComposableTest : FirestoreTests() {
             onFriendsClick = { friendsClicked = true },
             onNotificationClick = { notifClicked = true },
             onDelete = { delClicked = true },
-            onSignOutOrDel = { logoutClicked = true })
+            onSignOutOrDel = { logoutClicked = true },
+            onShopClick = { shopClickedId = it },
+            onSpaceRenterClick = { spaceClickedId = it })
       }
     }
 

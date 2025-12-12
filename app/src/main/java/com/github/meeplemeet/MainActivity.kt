@@ -534,6 +534,14 @@ fun MeepleMeetApp(
                   onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
                   onNotificationClick = {
                     navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
+                  },
+                  onShopClick = {
+                    shopId = it
+                    navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
+                  },
+                  onSpaceRenterClick = {
+                    spaceId = it
+                    navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
                   })
             } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
           }
