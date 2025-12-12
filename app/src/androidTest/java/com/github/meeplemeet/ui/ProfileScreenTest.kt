@@ -351,8 +351,7 @@ class ProfileScreenTest : FirestoreTests() {
           name = "Test Space",
           address = com.github.meeplemeet.model.shared.location.Location(0.0, 0.0, "Loc"),
           openingHours = emptyList(),
-          spaces = emptyList()
-      )
+          spaces = emptyList())
       // Update user to be space renter
       accountRepository.setAccountRole(user.uid, isShopOwner = false, isSpaceRenter = true)
       user = accountRepository.getAccount(user.uid)
@@ -386,10 +385,14 @@ class ProfileScreenTest : FirestoreTests() {
             .fetchSemanticsNodes()
             .isNotEmpty()
       }
-      val isExpanded = runCatching {
-        composeTestRule.onNodeWithTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX).assertIsDisplayed()
-        true
-      }.getOrDefault(false)
+      val isExpanded =
+          runCatching {
+                composeTestRule
+                    .onNodeWithTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
+                    .assertIsDisplayed()
+                true
+              }
+              .getOrDefault(false)
 
       if (!isExpanded) {
         composeTestRule
