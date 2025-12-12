@@ -45,6 +45,7 @@ import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
+import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
@@ -484,7 +485,6 @@ fun MeepleMeetApp(
                 account = account!!,
                 verified = uiState.isEmailVerified,
                 navigation = navigationActions,
-                account = account!!,
                 onUserLocationChange = { userLocation = it },
                 onFABCLick = { geoPin ->
                   when (geoPin) {

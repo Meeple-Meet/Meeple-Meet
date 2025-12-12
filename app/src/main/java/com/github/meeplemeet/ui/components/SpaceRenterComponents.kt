@@ -28,7 +28,6 @@ import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import kotlin.math.max
@@ -226,8 +225,8 @@ fun SpaceRenterRequiredInfoSection(
         spaceRenter = spaceRenter,
         viewModel = viewModel,
         enabled = online,
-        inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-        dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+        inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+        dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
   }
   Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
   Text(

@@ -55,7 +55,6 @@ import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.shops.ShopScreenDefaults
 import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -407,8 +406,8 @@ fun RequiredInfoSection(
             shop = shop,
             enabled = online,
             viewModel = viewModel,
-            inputFieldTestTag = SessionTestTags.LOCATION_FIELD,
-            dropdownItemTestTag = SessionTestTags.LOCATION_FIELD_ITEM)
+            inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+            dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
       }
 
   Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
