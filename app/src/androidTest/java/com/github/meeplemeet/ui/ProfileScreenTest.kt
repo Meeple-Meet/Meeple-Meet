@@ -340,4 +340,96 @@ class ProfileScreenTest : FirestoreTests() {
 
     composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_INPUT).assertTextContains(user.email)
   }
+
+  @Test
+  fun testRolesSection_spaceRenter_dialogFlow() {
+    // Setup: User with a space renter
+    runBlocking {
+      // Create a space renter
+      spaceRenterRepository.createSpaceRenter(
+          owner = user,
+          name = "Test Space",
+          address = com.github.meeplemeet.model.shared.location.Location(0.0, 0.0, "Loc"),
+          openingHours = emptyList(),
+          spaces = emptyList()
+      )
+      // Update user to be space renter
+      accountRepository.setAccountRole(user.uid, isShopOwner = false, isSpaceRenter = true)
+      user = accountRepository.getAccount(user.uid)
+    }
+
+    composeTestRule.setContent {
+      MainTab(
+          viewModel = viewModel,
+          account = user,
+          onFriendsClick = {},
+          onNotificationClick = {},
+          onSignOutOrDel = {},
+          onDelete = {},
+          onShopClick = {},
+          onSpaceRenterClick = {})
+    }
+
+    // 1. Navigate to Businesses Section and open roles
+    checkpoint("Navigate to Businesses and Open Roles") {
+      composeTestRule
+          .onNodeWithTag(MainTabTestTags.CONTENT_SCROLL)
+          .performScrollToNode(hasTestTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES))
+      composeTestRule
+          .onNodeWithTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
+          .performClick()
+
+      // Expand roles
+      composeTestRule.waitUntil(5000) {
+        composeTestRule
+            .onAllNodesWithTag(PrivateInfoTestTags.COLLAPSABLE, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+      val isExpanded = runCatching {
+        composeTestRule.onNodeWithTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX).assertIsDisplayed()
+        true
+      }.getOrDefault(false)
+
+      if (!isExpanded) {
+        composeTestRule
+            .onNodeWithTag(PrivateInfoTestTags.COLLAPSABLE, useUnmergedTree = true)
+            .performClick()
+      }
+    }
+
+    // 2. Uncheck Space Renter Role -> Should trigger Dialog
+    checkpoint("Uncheck Space Renter Role Triggers Dialog") {
+      composeTestRule
+          .onNodeWithTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX)
+          .assertIsDisplayed()
+          .performClick()
+
+      // Wait for dialog
+      composeTestRule.waitUntil(3000) {
+        composeTestRule
+            .onAllNodesWithTag(PrivateInfoTestTags.ROLE_DIALOG)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+      composeTestRule
+          .onNodeWithTag(PrivateInfoTestTags.ROLE_DIALOG_TEXT)
+          .assertTextEquals(MainTabUi.PrivateInfo.ROLE_ACTION_SPACE)
+    }
+
+    // 3. Confirm Dialog
+    checkpoint("Confirm Dialog and Verify Role Removed") {
+      composeTestRule.onNodeWithTag(PrivateInfoTestTags.ROLE_DIALOG_CONFIRM).performClick()
+
+      composeTestRule.waitUntil(3000) {
+        composeTestRule
+            .onAllNodesWithTag(PrivateInfoTestTags.ROLE_DIALOG)
+            .fetchSemanticsNodes()
+            .isEmpty()
+      }
+
+      // Verify checkbox is unchecked
+      composeTestRule.onNodeWithTag(PrivateInfoTestTags.ROLE_SPACE_CHECKBOX).assertIsOff()
+    }
+  }
 }
