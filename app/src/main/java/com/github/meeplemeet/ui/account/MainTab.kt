@@ -47,6 +47,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,6 +59,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,6 +77,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -82,11 +86,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.ProfileScreenViewModel
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -144,6 +151,11 @@ object PublicInfoTestTags {
 
   // DESCRIPTION
   const val INPUT_DESCRIPTION = "input_description"
+
+  // ------------------------------------------------------------
+  // SECTION 4 — Businesses
+  // ------------------------------------------------------------
+  const val BUSINESS_CARD = "businesses_section"
 }
 
 object PrivateInfoTestTags {
@@ -366,12 +378,28 @@ fun MainTab(
     onNotificationClick: () -> Unit,
     onSignOutOrDel: () -> Unit,
     onDelete: () -> Unit,
-    onInputFocusChanged: (Boolean) -> Unit = {}
+    onInputFocusChanged: (Boolean) -> Unit = {},
+    onSpaceRenterClick: (String) -> Unit,
+    onShopClick: (String) -> Unit
 ) {
   var currentPage by remember { mutableStateOf<ProfilePage>(ProfilePage.Main) }
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
   val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
+  val businesses by viewModel.businesses.collectAsState()
+
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+  DisposableEffect(lifecycleOwner) {
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.loadAccountBusinesses(account)
+          }
+        }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
   when (currentPage) {
     ProfilePage.Main ->
         MainTabContent(
@@ -420,7 +448,8 @@ fun MainTab(
         }
     ProfilePage.Businesses ->
         SubPageScaffold("Your Businesses", onBack = { currentPage = ProfilePage.Main }) {
-          ManageBusinessesPage(viewModel, account, online)
+          ManageBusinessesPage(
+              viewModel, account, businesses, onSpaceRenterClick, onShopClick, online)
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
@@ -492,9 +521,25 @@ fun PreferencesPage(preference: ThemeMode, onPreferenceChange: (ThemeMode) -> Un
   }
 }
 
+/**
+ * Handles the content of the manage businesses sub-page
+ *
+ * @param viewModel VM used by this screen
+ * @param account current user
+ * @param businesses pair of shops and space renters owned by the user
+ * @param onSpaceRenterClick callback upon clicking on a space renter card
+ * @param onShopClick callback upon clicking on a shop card
+ */
 @Composable
-fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account, online: Boolean) {
-  RolesSection(account = account, viewModel = viewModel, online = online)
+fun ManageBusinessesPage(
+    viewModel: ProfileScreenViewModel,
+    account: Account,
+    businesses: Pair<List<Shop>, List<SpaceRenter>> = viewModel.businesses.collectAsState().value,
+    onSpaceRenterClick: (String) -> Unit,
+    onShopClick: (String) -> Unit,
+    online: Boolean
+) {
+  RolesSection(account = account, viewModel = viewModel, businesses = businesses, online = online)
   Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.small),
@@ -507,8 +552,21 @@ fun ManageBusinessesPage(viewModel: ProfileScreenViewModel, account: Account, on
         }
 
     if (hasNoRoles(account)) Text(text = MainTabUi.Businesses.TEXT_NO_ROLES)
-    else Text(text = MainTabUi.Businesses.TEXT_ROLES_NO_BUSINESS)
-    // TODO: Implement business management HERE
+    else if (businesses.second.isEmpty() && businesses.first.isEmpty())
+        Text(text = MainTabUi.Businesses.TEXT_ROLES_NO_BUSINESS)
+    else {
+      Column(verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+        // show all shops first
+        businesses.first.forEach { shop ->
+          ShopCard(shop = shop, onClick = { onShopClick(shop.id) })
+        }
+        // then show all space renters
+        businesses.second.forEach { spaceRenter ->
+          SpaceRenterCard(
+              spaceRenter = spaceRenter, onClick = { onSpaceRenterClick(spaceRenter.id) })
+        }
+      }
+    }
   }
 }
 
@@ -1532,7 +1590,12 @@ fun ToastHost(toast: ToastData?, duration: Long = 1500L, onToastFinished: () -> 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Boolean) {
+fun RolesSection(
+    account: Account,
+    viewModel: ProfileScreenViewModel,
+    businesses: Pair<List<Shop>, List<SpaceRenter>> = viewModel.businesses.collectAsState().value,
+    online: Boolean
+) {
 
   var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
 
@@ -1567,8 +1630,14 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             isChecked = isShopChecked,
             onCheckedChange = { checked ->
               if (!checked) {
-                pendingAction = RoleAction.ShopOff
-                showDialog = true
+                if (businesses.first.isNotEmpty()) {
+                  pendingAction = RoleAction.ShopOff
+                  showDialog = true
+                } else {
+                  isShopChecked = false
+                  viewModel.setAccountRole(
+                      account, isShopOwner = false, isSpaceRenter = isSpaceRented)
+                }
               } else {
                 isShopChecked = true
                 viewModel.setAccountRole(account, isShopOwner = true, isSpaceRenter = isSpaceRented)
@@ -1583,8 +1652,14 @@ fun RolesSection(account: Account, viewModel: ProfileScreenViewModel, online: Bo
             isChecked = isSpaceRented,
             onCheckedChange = { checked ->
               if (!checked) {
-                pendingAction = RoleAction.SpaceOff
-                showDialog = true
+                if (businesses.second.isNotEmpty()) {
+                  pendingAction = RoleAction.SpaceOff
+                  showDialog = true
+                } else {
+                  isSpaceRented = false
+                  viewModel.setAccountRole(
+                      account, isShopOwner = isShopChecked, isSpaceRenter = false)
+                }
               } else {
                 isSpaceRented = true
                 viewModel.setAccountRole(account, isShopOwner = isShopChecked, isSpaceRenter = true)
@@ -1859,4 +1934,71 @@ fun DeleteAccountDialog(
               }
         })
   }
+}
+
+/**
+ * Generic business card used for both shops and space renters
+ *
+ * @param icon Icon to display on the left
+ * @param label Label to display
+ * @param onClick Callback upon clicking the card
+ */
+@Composable
+fun BusinessCard(icon: Int, label: String, onClick: () -> Unit) {
+  Card(
+      modifier =
+          Modifier.fillMaxWidth()
+              .clickable(onClick = onClick)
+              .testTag(PublicInfoTestTags.BUSINESS_CARD),
+      colors = CardDefaults.cardColors(containerColor = AppColors.primary)) {
+        Row(
+            modifier = Modifier.padding(Dimensions.Padding.large).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  painter = painterResource(id = icon),
+                  contentDescription = null,
+                  tint = AppColors.neutral,
+                  modifier = Modifier.size(Dimensions.IconSize.xxLarge),
+              )
+
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+
+              Text(
+                  text = label,
+                  style = MaterialTheme.typography.bodyLarge,
+                  fontSize = Dimensions.TextSize.largeHeading,
+                  modifier = Modifier.weight(1f) // <-- makes label take remaining space
+                  )
+
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+
+              Icon(
+                  imageVector = Icons.Default.ChevronRight,
+                  contentDescription = null,
+                  tint = AppColors.textIcons,
+                  modifier = Modifier.size(Dimensions.IconSize.large))
+            }
+      }
+}
+
+/**
+ * Composable for displaying a shop card
+ *
+ * @param shop The shop to display
+ * @param onClick Callback upon clicking the card
+ */
+@Composable
+fun ShopCard(shop: Shop, onClick: () -> Unit) {
+  BusinessCard(icon = R.drawable.ic_storefront, label = shop.name, onClick = onClick)
+}
+
+/**
+ * Composable for displaying a space renter card
+ *
+ * @param spaceRenter The space renter to display
+ * @param onClick Callback upon clicking the card
+ */
+@Composable
+fun SpaceRenterCard(spaceRenter: SpaceRenter, onClick: () -> Unit) {
+  BusinessCard(icon = R.drawable.ic_table, label = spaceRenter.name, onClick = onClick)
 }

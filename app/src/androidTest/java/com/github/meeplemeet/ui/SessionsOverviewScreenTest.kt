@@ -19,6 +19,7 @@ import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import com.google.firebase.Timestamp
 import io.mockk.mockk
 import java.util.UUID
@@ -70,6 +71,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               viewModel = viewModel,
               navigation = nav,
               account = account,
+              verified = true,
               onSelectSession = { session -> capturedDiscussionId = session })
         }
       }
@@ -77,6 +79,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
+  @noretry
   fun full_smoke_all_cases() {
     runBlocking {
 
@@ -91,7 +94,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
-              discussion.uid, "Chess Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Chess Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { emptyText().isNotDisplayed() }
           sessionCard(discussion.uid).assertIsDisplayed()
         }
@@ -105,7 +114,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
           sessionRepository.createSession(
-              discussion.uid, "Tap Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Tap Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
           sessionCard(discussion.uid).performClick()
           assertEquals(discussion.uid, capturedDiscussionId)
@@ -120,7 +135,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val game = gameRepository.getGameById(testGameId)
           val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 10000000))
           sessionRepository.createSession(
-              discussion.uid, "Vanish Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Vanish Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
 
           sessionRepository.deleteSession(discussion.uid)
@@ -141,7 +162,13 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussionRepository.createDiscussion("Past Session", "Old times", account.uid)
           val game = gameRepository.getGameById(testGameId)
           sessionRepository.createSession(
-              discussion.uid, "Past Night", game.uid, pastDate, testLocation, account.uid)
+              discussion.uid,
+              "Past Night",
+              game.uid,
+              game.name,
+              pastDate,
+              testLocation,
+              account.uid)
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
           compose.waitUntil(4000) { compose.onNodeWithText("Past Night").isDisplayed() }
@@ -159,6 +186,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
+  @noretry
   fun archive_flow_comprehensive() {
     runBlocking {
       /* 1. Archive with confirmation (no photo) --------------------------------- */
@@ -170,10 +198,19 @@ class SessionsOverviewScreenTest : FirestoreTests() {
 
           val pastDate = Timestamp(java.util.Date(System.currentTimeMillis() - (90 * 60 * 1000L)))
           sessionRepository.createSession(
-              discussion.uid, "Archive Night", game.uid, pastDate, testLocation, account.uid)
+              discussion.uid,
+              "Archive Night",
+              game.uid,
+              game.name,
+              pastDate,
+              testLocation,
+              account.uid)
 
           compose.waitUntil(2000) {
-            compose.onNodeWithText("Automatically archives in", substring = true).isDisplayed()
+            compose
+                .onAllNodesWithText("Automatically archives in", substring = true)
+                .get(0)
+                .isDisplayed()
           }
 
           sessionCard(discussion.uid).assertIsDisplayed()
@@ -228,6 +265,7 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               discussion.uid,
               "User Night",
               game.uid,
+              game.name,
               withinTwoHours,
               testLocation,
               otherUid,
@@ -251,13 +289,95 @@ class SessionsOverviewScreenTest : FirestoreTests() {
           val futureDate =
               Timestamp(java.util.Date(System.currentTimeMillis() + (3 * 60 * 60 * 1000L)))
           sessionRepository.createSession(
-              discussion.uid, "Future Night", game.uid, futureDate, testLocation, account.uid)
+              discussion.uid,
+              "Future Night",
+              game.uid,
+              game.name,
+              futureDate,
+              testLocation,
+              account.uid)
 
           compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
 
           compose
               .onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_ARCHIVE_BUTTON)
               .assertDoesNotExist()
+        }
+      }
+    }
+  }
+
+  @Test
+  fun search_functionality() = runBlocking {
+    checkpoint("Search bar is displayed") {
+      compose
+          .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+          .assertExists()
+          .assertIsDisplayed()
+    }
+    runBlocking {
+      val discussion1 = discussionRepository.createDiscussion("Chess Club", "Chess", account.uid)
+      val discussion2 = discussionRepository.createDiscussion("Poker Night", "Cards", account.uid)
+
+      checkpoint("Search filters active sessions by name") {
+        runBlocking {
+          val game = gameRepository.getGameById(testGameId)
+          val futureDate = Timestamp(java.util.Date(System.currentTimeMillis() + 86400000))
+
+          sessionRepository.createSession(
+              discussion1.uid,
+              "Chess Tournament",
+              game.uid,
+              gameName = "Chess",
+              futureDate,
+              testLocation,
+              account.uid)
+          sessionRepository.createSession(
+              discussion2.uid,
+              "Poker Game",
+              game.uid,
+              gameName = "Cards",
+              futureDate,
+              testLocation,
+              account.uid)
+
+          compose.waitUntil(2000) { compose.onNodeWithText("Chess Tournament").isDisplayed() }
+
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+              .performTextInput("Chess")
+          compose.waitForIdle()
+
+          compose.onNodeWithText("Chess Tournament").assertIsDisplayed()
+          compose.onNodeWithText("Poker Game").assertDoesNotExist()
+        }
+      }
+
+      checkpoint("Search is case-insensitive for sessions") {
+        compose
+            .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+            .performTextClearance()
+        compose
+            .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD)
+            .performTextInput("poker")
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Poker Game").assertIsDisplayed()
+        compose.onNodeWithText("Chess Tournament").assertDoesNotExist()
+      }
+
+      checkpoint("Clear button works for sessions") {
+        runBlocking {
+          compose
+              .onNodeWithTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)
+              .assertExists()
+              .performClick()
+          compose.waitForIdle()
+
+          compose.onNodeWithText("Chess Tournament").assertIsDisplayed()
+          compose.onNodeWithText("Poker Game").assertIsDisplayed()
+          sessionRepository.deleteSession(discussion1.uid)
+          sessionRepository.deleteSession(discussion2.uid)
         }
       }
     }

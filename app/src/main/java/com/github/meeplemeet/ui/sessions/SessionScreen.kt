@@ -91,6 +91,8 @@ import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.ui.components.GameDetailsCard
+import com.github.meeplemeet.ui.components.SessionParticipantAvatar
+import com.github.meeplemeet.ui.components.timestampToLocal
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalDate
@@ -147,7 +149,7 @@ object SessionDefaults {
   const val MEMBER_TEXT = "Member"
   const val USER_NAME_MISSING_AVATAR_PLACEHOLDER = "?"
 
-  const val ARCHIVE_THRESHOLD = 2 * 60 * 60 * 1000L // 2 hours in milliseconds
+  const val ARCHIVE_THRESHOLD = 2 * 60 * 60 * 1000L
 
   object Image {
     const val IMAGE_SCREEN_RATIO = 0.8f
@@ -274,7 +276,7 @@ fun SessionScreen(
 
   val isAdmin = discussion.admins.contains(account.uid)
 
-  // Check if we should show archive button (within 2 hours of session start)
+  // Check if we should show archive button
   val context = LocalContext.current
   val scope = androidx.compose.runtime.rememberCoroutineScope()
   val nowMs = System.currentTimeMillis()
@@ -656,7 +658,7 @@ private fun SessionBasicInfoSection(
                 maxLines = SessionDefaults.Location.MAX_LINES,
             )
           }
-        } // end Column
+        }
 
         // Photo upload box - show if there's a photo OR if admin within 2 hours of session start
         val shouldShowPhotoBox = photoUrl != null || shouldShowArchive
@@ -667,7 +669,7 @@ private fun SessionBasicInfoSection(
               onClick = onPhotoBoxClick,
               isUploading = isUploading)
         }
-      } // end Row
+      }
 }
 
 /**
@@ -685,7 +687,7 @@ private fun SessionPhotoUploadBox(
     onClick: () -> Unit,
     isUploading: Boolean = false
 ) {
-  val selfieRatio = 3f / 4f // Portrait ratio
+  val selfieRatio = 3f / 4f
 
   Box(
       modifier =
@@ -861,7 +863,8 @@ private fun SessionParticipantRow(
                   vertical = Dimensions.Padding.mediumSmall),
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    SessionParticipantAvatar(account = account)
+    SessionParticipantAvatar(
+        account = account, modifier = Modifier.size(Dimensions.AvatarSize.medium))
 
     Spacer(Modifier.width(Dimensions.Spacing.xxLarge))
 
@@ -881,44 +884,6 @@ private fun SessionParticipantRow(
           overflow = TextOverflow.Ellipsis)
     }
   }
-}
-
-/**
- * Composable function to display a participant's avatar.
- *
- * @param account The participant's account.
- */
-@Composable
-private fun SessionParticipantAvatar(account: Account) {
-  val initial =
-      remember(account.name) {
-        account.name.trim().firstOrNull()?.uppercase()
-            ?: SessionDefaults.USER_NAME_MISSING_AVATAR_PLACEHOLDER
-      }
-
-  val hasPhoto = !account.photoUrl.isNullOrBlank()
-
-  Box(
-      modifier =
-          Modifier.size(Dimensions.AvatarSize.medium)
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.surface),
-      contentAlignment = Alignment.Center) {
-        if (hasPhoto) {
-          AsyncImage(
-              model = account.photoUrl,
-              contentDescription = "Profile picture of ${account.name}",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize(),
-          )
-        } else {
-          Text(
-              text = initial,
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.tertiary)
-        }
-      }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

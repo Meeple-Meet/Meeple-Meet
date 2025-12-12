@@ -72,7 +72,8 @@ fun FocusableInputField(
     interactionSource: MutableInteractionSource? = null,
     shape: Shape = OutlinedTextFieldDefaults.shape,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(),
-    onFocusChanged: (Boolean) -> Unit = {}
+    onFocusChanged: (Boolean) -> Unit = {},
+    scrollToStartOnFocusLost: Boolean = false
 ) {
   var hasFocus by remember { mutableStateOf(false) }
   val latestHasFocus by rememberUpdatedState(hasFocus)
@@ -80,6 +81,21 @@ fun FocusableInputField(
   val globalObserver = LocalFocusableFieldObserver.current
   val focusToken = remember { Any() }
   val activity = LocalContext.current.findActivity()
+
+  // Internal state to manage selection/scroll
+  var textFieldValue by remember {
+    mutableStateOf(
+        androidx.compose.ui.text.input.TextFieldValue(
+            text = value, selection = androidx.compose.ui.text.TextRange(value.length)))
+  }
+
+  // If the value passed in is different from our internal state's text, update internal state.
+  // This handles external updates (e.g. formatting, resetting)
+  if (value != textFieldValue.text) {
+    textFieldValue =
+        textFieldValue.copy(
+            text = value, selection = androidx.compose.ui.text.TextRange(value.length))
+  }
 
   DisposableEffect(focusManager, UiBehaviorConfig.clearFocusOnKeyboardHide) {
     if (!UiBehaviorConfig.clearFocusOnKeyboardHide) return@DisposableEffect onDispose {}
@@ -95,14 +111,25 @@ fun FocusableInputField(
   DisposableEffect(focusToken) { onDispose { globalObserver(focusToken, false) } }
 
   OutlinedTextField(
-      value = value,
-      onValueChange = onValueChange,
+      value = textFieldValue,
+      onValueChange = { newTfv ->
+        textFieldValue = newTfv
+        if (value != newTfv.text) {
+          onValueChange(newTfv.text)
+        }
+      },
       modifier =
           modifier.onFocusChanged {
-            if (hasFocus == it.isFocused) return@onFocusChanged
-            hasFocus = it.isFocused
-            onFocusChanged(it.isFocused)
-            globalObserver(focusToken, it.isFocused)
+            if (hasFocus != it.isFocused) {
+              hasFocus = it.isFocused
+              onFocusChanged(it.isFocused)
+              globalObserver(focusToken, it.isFocused)
+
+              if (!it.isFocused && scrollToStartOnFocusLost) {
+                textFieldValue =
+                    textFieldValue.copy(selection = androidx.compose.ui.text.TextRange(0))
+              }
+            }
           },
       enabled = enabled,
       readOnly = readOnly,

@@ -4,8 +4,13 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
@@ -18,6 +23,7 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import com.google.firebase.Timestamp
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
@@ -201,7 +207,13 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
     // Set content once at the beginning
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        AppTheme {
+          DiscussionsOverviewScreen(
+              account = me,
+              navigation = nav,
+              verified = true,
+          )
+        }
       }
     }
 
@@ -274,6 +286,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   }
 
   @Test
+  @noretry
   fun blockedSender_hidesMessagePreview() = runBlocking {
     // Block Bob
     val meWithBlockedBob =
@@ -281,13 +294,15 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav) }
+        AppTheme {
+          DiscussionsOverviewScreen(account = meWithBlockedBob, verified = true, navigation = nav)
+        }
       }
     }
 
     checkpoint("Blocked sender shows hidden message") {
       compose.waitForIdle()
-      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.waitUntil { compose.onNodeWithText("Gloomhaven").isDisplayed() }
       compose.onNodeWithText("Hidden: blocked sender", substring = true).assertIsDisplayed()
       compose.onNodeWithText("Bob: Ready at 7?", substring = true).assertDoesNotExist()
     }
@@ -295,6 +310,63 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
     checkpoint("Non-blocked messages still display") {
       compose.onNodeWithText("Catan Crew").assertIsDisplayed()
       compose.onNodeWithText("You: Bring snacks", substring = true).assertIsDisplayed()
+    }
+  }
+
+  @Test
+  fun search_functionality() = runBlocking {
+    compose.setContent {
+      CompositionLocalProvider(LocalNavigationVM provides navVM) {
+        AppTheme { DiscussionsOverviewScreen(account = me, verified = true, navigation = nav) }
+      }
+    }
+
+    checkpoint("Search bar is displayed") {
+      compose
+          .onNodeWithTag(
+              com.github.meeplemeet.ui.discussions.DiscussionOverviewTestTags.SEARCH_TEXT_FIELD)
+          .assertExists()
+          .assertIsDisplayed()
+    }
+
+    checkpoint("Search filters discussions by name") {
+      compose
+          .onNodeWithTag(
+              com.github.meeplemeet.ui.discussions.DiscussionOverviewTestTags.SEARCH_TEXT_FIELD)
+          .performTextInput("Catan")
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("Gloomhaven").assertDoesNotExist()
+      compose.onNodeWithText("Weekend Plan").assertDoesNotExist()
+    }
+
+    checkpoint("Search is case-insensitive") {
+      compose
+          .onNodeWithTag(
+              com.github.meeplemeet.ui.discussions.DiscussionOverviewTestTags.SEARCH_TEXT_FIELD)
+          .performTextClearance()
+      compose
+          .onNodeWithTag(
+              com.github.meeplemeet.ui.discussions.DiscussionOverviewTestTags.SEARCH_TEXT_FIELD)
+          .performTextInput("gloom")
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.onNodeWithText("Catan Crew").assertDoesNotExist()
+    }
+
+    checkpoint("Clear button works") {
+      compose
+          .onNodeWithTag(
+              com.github.meeplemeet.ui.discussions.DiscussionOverviewTestTags.SEARCH_CLEAR)
+          .assertExists()
+          .performClick()
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Catan Crew").assertIsDisplayed()
+      compose.onNodeWithText("Gloomhaven").assertIsDisplayed()
+      compose.onNodeWithText("Weekend Plan").assertIsDisplayed()
     }
   }
 }

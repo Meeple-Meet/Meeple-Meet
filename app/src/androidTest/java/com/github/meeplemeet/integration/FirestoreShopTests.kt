@@ -734,7 +734,7 @@ class FirestoreShopTests : FirestoreTests() {
         gameCollection = listOf(testGame1 to 10))
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(300)
 
     // Verify shop was created by fetching it
     val shops = shopRepository.getShops(10u)
@@ -771,7 +771,7 @@ class FirestoreShopTests : FirestoreTests() {
         email = "test@test.com")
 
     // Give it time to complete the async operation
-    delay(100)
+    delay(300)
 
     // Verify shop was created
     val shops = shopRepository.getShops(10u)
@@ -1242,7 +1242,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.deleteShop(shop, testAccount1)
-    delay(100)
+    delay(500)
 
     // Verify shop is deleted
     try {

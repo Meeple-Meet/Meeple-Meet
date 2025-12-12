@@ -1,0 +1,1424 @@
+// This file was initially done by hand and
+// then improved and refactored using ChatGPT-5 Extend Thinking
+// Docstrings were generated using copilot from Android studio
+@file:Suppress("FunctionName")
+
+package com.github.meeplemeet.ui.components
+
+import android.app.TimePickerDialog
+import android.content.Context
+import android.text.format.DateFormat
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.TimeSlot
+import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
+import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.Locale
+
+/* =============================================================================
+ * Test tags
+ * ============================================================================= */
+
+object ShopComponentsTestTags {
+  // Section header
+  const val SECTION_HEADER = "shop_section_header"
+  const val SECTION_HEADER_LABEL = "shop_section_header_label"
+  const val SECTION_HEADER_DIVIDER = "shop_section_header_divider"
+
+  fun sectionHeader(title: String) = "$SECTION_HEADER:$title"
+
+  // LabeledField
+  const val LABELED_FIELD_CONTAINER = "shop_labeled_field"
+  const val LABELED_FIELD_INPUT = "shop_labeled_field_input"
+
+  fun labeledField(label: String) = "$LABELED_FIELD_CONTAINER:$label"
+
+  // TimeField
+  const val TIME_FIELD_CONTAINER = "shop_time_field"
+  const val TIME_FIELD_CARD = "shop_time_field_card"
+  const val TIME_FIELD_LABEL = "shop_time_field_label"
+  const val TIME_FIELD_VALUE = "shop_time_field_value"
+
+  fun timeField(label: String) = "$TIME_FIELD_CONTAINER:$label"
+
+  // Day row
+  const val DAY_ROW = "shop_day_row"
+  const val DAY_ROW_NAME = "shop_day_row_name"
+  const val DAY_ROW_VALUE = "shop_day_row_value"
+  const val DAY_ROW_EDIT = "shop_day_row_edit"
+
+  fun dayRow(name: String) = "$DAY_ROW:$name"
+
+  // Hour row
+  const val HOUR_ROW = "shop_hour_row"
+  const val HOUR_ROW_REMOVE = "shop_hour_row_remove"
+  const val HOUR_ROW_OPEN_FIELD = "shop_hour_row_open_field"
+  const val HOUR_ROW_CLOSE_FIELD = "shop_hour_row_close_field"
+
+  fun hourRow(index: Int) = "$HOUR_ROW:$index"
+
+  // Days selector
+  const val DAYS_SELECTOR = "shop_days_selector"
+  const val DAY_CHIP = "shop_day_chip"
+
+  fun dayChip(index: Int) = "$DAY_CHIP:$index"
+
+  // Opening hours dialog
+  const val DIALOG = "shop_opening_hours_dialog"
+  const val DIALOG_TITLE = "shop_opening_hours_title"
+  const val DIALOG_DAYS = "shop_opening_hours_days"
+  const val DIALOG_OPEN24_CHECKBOX = "shop_open_24_checkbox"
+  const val DIALOG_CLOSED_CHECKBOX = "shop_closed_checkbox"
+  const val DIALOG_OPEN24_ROW = "shop_open_24_row"
+  const val DIALOG_CLOSED_ROW = "shop_closed_row"
+  const val DIALOG_INTERVALS = "shop_intervals"
+  const val DIALOG_ADD_HOURS = "shop_add_hours_button"
+  const val DIALOG_ERROR = "shop_dialog_error"
+  const val DIALOG_SAVE = "shop_dialog_save"
+  const val DIALOG_CANCEL = "shop_dialog_cancel"
+
+  // Action bar
+  const val ACTION_BAR = "shop_action_bar"
+  const val ACTION_DISCARD = "shop_action_discard"
+  const val ACTION_CREATE = "shop_action_create"
+  const val ACTION_SAVE = "shop_action_save"
+
+  // Search field internals
+  const val GAME_SEARCH_FIELD = "shop_game_search_field"
+  const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
+  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
+  const val GAME_SEARCH_MENU = "shop_game_search_menu"
+  const val GAME_SEARCH_ITEM = "shop_game_search_item"
+
+  // Quantity slider
+  const val QTY_CONTAINER = "shop_qty_container"
+  const val QTY_LABEL = "shop_qty_label"
+  const val QTY_MINUS_BUTTON = "shop_qty_minus_button"
+  const val QTY_INPUT_FIELD = "shop_qty_input_field"
+  const val QTY_PLUS_BUTTON = "shop_qty_plus_button"
+
+  // Game stock dialog
+  const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
+  const val GAME_DIALOG_BODY = "shop_game_dialog_body"
+  const val GAME_DIALOG_SLIDER = "shop_game_dialog_slider"
+  const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
+  const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
+  const val GAME_DIALOG_HELPER = "shop_game_dialog_helper"
+
+  // Game list
+  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
+  const val SHOP_GAME_DELETE = "shop_game_delete"
+  const val SHOP_GAME_EDIT = "shop_game_edit"
+  const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
+  const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
+  const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
+
+  // Availability section tags
+  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
+
+  // Contact section tags
+  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
+  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
+  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
+  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
+  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
+  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
+  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
+  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
+}
+
+/* =============================================================================
+ * MAGIC NUMBERS & DEFAULTS
+ * ============================================================================= */
+
+object ShopUiDefaults {
+
+  object DaysMagicNumbers {
+    val short = listOf("S", "M", "T", "W", "T", "F", "S")
+  }
+
+  object TimeMagicNumbers {
+    const val OPEN24_START = "00:00"
+    const val OPEN24_END = "23:59"
+
+    const val DISPLAY_PATTERN_12 = "h:mm a"
+
+    fun formatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(DISPLAY_PATTERN_12, locale)
+
+    val defaultStart: LocalTime =
+        LocalTime.of(
+            Dimensions.Numbers.defaultShopStartHour, Dimensions.Numbers.defaultShopStartMinute)
+    val defaultEnd: LocalTime =
+        LocalTime.of(Dimensions.Numbers.defaultShopEndHour, Dimensions.Numbers.defaultShopEndMinute)
+
+    val open24Start: LocalTime = LocalTime.of(0, 0)
+    val open24End: LocalTime = LocalTime.of(23, 59)
+  }
+
+  object StringsMagicNumbers {
+    // Section header
+    const val REQUIRED_INFO = "Required Info"
+
+    // Generic
+    const val BTN_SAVE = "Save"
+    const val BTN_CANCEL = "Cancel"
+    const val BTN_DISCARD = "Discard"
+    const val BTN_CREATE = "Create"
+
+    // LabeledField
+    const val LABEL_SHOP = "Shop"
+    const val PLACEHOLDER_SHOP = "Shop name"
+
+    // Time field
+    const val OPEN_TIME = "Open time"
+    const val CLOSE_TIME = "Close time"
+
+    // Day row
+    const val EDIT_HOURS = "Edit hours"
+
+    // Days selector / dialog
+    const val DIALOG_TITLE = "Select days & time"
+    const val OPEN_24 = "Open 24 hours"
+    const val CLOSED = "Closed"
+    const val ADD_HOURS = "Add hours"
+    const val INVALID_TIME_RANGES = "Invalid time ranges."
+
+    // Quantity
+    const val QUANTITY = "Quantity"
+
+    // Game stock dialog
+    const val GAME_DIALOG_TITLE = "Add game in stock"
+    const val DUPLICATE_GAME = "This game is already in stock."
+
+    // Availability
+    const val BOTTOM_SHEET_CONFIRM_BUTTON_TEXT = "Close"
+    const val TODAY_TEXT = "Today:"
+    const val AVAILABILITY_SECTION_TEXT = "Availability"
+    const val DAY_TEXT = "Day"
+  }
+
+  object RangesMagicNumbers {
+    val qtyGameDialog: IntRange = Dimensions.Numbers.quantityMin..Dimensions.Numbers.quantityMax
+  }
+}
+
+/* =============================================================================
+ * Utilities
+ * ============================================================================= */
+
+/**
+ * Formats a LocalTime object into a display string.
+ *
+ * @return The formatted time string.
+ * @receiver The LocalTime object to format.
+ */
+private fun LocalTime.display(): String = format(ShopUiDefaults.TimeMagicNumbers.formatter())
+
+/**
+ * Parses a raw time string into a LocalTime object.
+ *
+ * @param raw The raw time string to parse.
+ * @return The corresponding LocalTime object.
+ */
+private fun parseToLocalTime(raw: String): LocalTime {
+  val s = raw.trim()
+  val lower = s.lowercase(Locale.getDefault())
+
+  if (lower.contains("am") || lower.contains("pm")) {
+    val normalized =
+        lower
+            .replace("am", " am")
+            .replace("pm", " pm")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .uppercase(Locale.getDefault())
+    return LocalTime.parse(normalized, ShopUiDefaults.TimeMagicNumbers.formatter())
+  }
+
+  return runCatching {
+        val (h, mRest) = s.split(":")
+        LocalTime.of(h.toInt(), mRest.take(2).toInt())
+      }
+      .getOrElse {
+        LocalTime.parse(
+            s.uppercase(Locale.getDefault()), ShopUiDefaults.TimeMagicNumbers.formatter())
+      }
+}
+
+/**
+ * Checks if the provided hours represent a 24-hour open schedule.
+ *
+ * @param hours A list of TimeSlot objects.
+ * @return True if the shop is open 24 hours, false otherwise.
+ */
+private fun isOpen24(hours: List<TimeSlot>): Boolean =
+    hours.size == 1 &&
+        hours.first().open == ShopUiDefaults.TimeMagicNumbers.OPEN24_START &&
+        hours.first().close == ShopUiDefaults.TimeMagicNumbers.OPEN24_END
+
+/**
+ * Validates that the provided time intervals do not overlap. Supports intervals that span midnight
+ * (e.g., 20:00 to 01:00).
+ *
+ * @param intervals A list of pairs representing start and end times.
+ * @return A sorted list of valid time intervals.
+ * @throws IllegalArgumentException if any interval is invalid or if intervals overlap.
+ */
+private fun validateIntervals(
+    intervals: List<Pair<LocalTime, LocalTime>>
+): List<Pair<LocalTime, LocalTime>> {
+  // Allow all intervals except those where start == end
+  // If end < start, it means the interval spans midnight (e.g., 20:00 to 01:00)
+  val cleaned = intervals.filter { (s, e) -> e != s }
+  require(cleaned.size == intervals.size) { "End time must be different from start time." }
+
+  // Separate midnight-spanning intervals from regular ones
+  val regular = cleaned.filter { (s, e) -> e.isAfter(s) }
+  val midnightSpanning = cleaned.filter { (s, e) -> e.isBefore(s) }
+
+  // Check overlaps only among regular (non-midnight-spanning) intervals
+  val sorted = regular.sortedBy { it.first }
+  for (i in 1 until sorted.size) {
+    require(sorted[i].first.isAfter(sorted[i - 1].second)) { "Time ranges must not overlap." }
+  }
+
+  // Note: For simplicity, we don't validate overlaps involving midnight-spanning intervals.
+  // This allows flexibility for shop hours that extend past midnight.
+
+  // Return sorted regular intervals followed by midnight-spanning ones
+  return sorted + midnightSpanning
+}
+
+/**
+ * Shows a time picker dialog.
+ *
+ * @param context The context to use for the dialog.
+ * @param initial The initial time to display.
+ * @param onTimePicked Callback invoked with the selected time.
+ */
+private fun showTimePicker(
+    context: Context,
+    initial: LocalTime,
+    onTimePicked: (LocalTime) -> Unit
+) {
+  val is24h = DateFormat.is24HourFormat(context)
+  TimePickerDialog(
+          context,
+          { _, h, m -> onTimePicked(LocalTime.of(h, m)) },
+          initial.hour,
+          initial.minute,
+          is24h)
+      .show()
+}
+
+/**
+ * Toggles the presence of a day in the set.
+ *
+ * @param day The day to toggle.
+ * @return A new set with the day toggled.
+ */
+private fun Set<Int>.toggled(day: Int): Set<Int> = if (day in this) this - day else this + day
+
+/**
+ * Generates the initial list of time intervals based on the current opening hours and 24-hour
+ * status.
+ *
+ * @param current The current OpeningHours object.
+ * @param is24h Boolean indicating if the shop is open 24 hours.
+ * @return A list of pairs representing start and end times.
+ */
+private fun initialIntervals(
+    current: OpeningHours,
+    is24h: Boolean
+): List<Pair<LocalTime, LocalTime>> =
+    when {
+      is24h ->
+          listOf(
+              ShopUiDefaults.TimeMagicNumbers.open24Start to
+                  ShopUiDefaults.TimeMagicNumbers.open24End)
+      current.hours.isEmpty() ->
+          listOf(
+              ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                  ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+      else ->
+          current.hours
+              .mapNotNull { slot ->
+                runCatching {
+                      val st =
+                          slot.open?.let(::parseToLocalTime)
+                              ?: ShopUiDefaults.TimeMagicNumbers.defaultStart
+                      val en = slot.close?.let(::parseToLocalTime) ?: st.plusHours(1)
+                      st to en
+                    }
+                    .getOrNull()
+              }
+              .ifEmpty {
+                listOf(
+                    ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                        ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+              }
+    }
+
+/**
+ * Splits the time slots in several lines of text
+ *
+ * @param slots The list of time slots
+ * @return A list of time slots splitted in several lines of text
+ */
+private fun splittedHumanize(slots: List<TimeSlot>): List<String> {
+  return humanize(slots).split("\n")
+}
+
+/* =============================================================================
+ * Components
+ * ============================================================================= */
+
+/**
+ * A composable function that displays a section header with a title and an underline.
+ *
+ * @param title The title of the section header.
+ * @param modifier The modifier to be applied to the section header.
+ */
+@Composable
+fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+  val density = LocalDensity.current
+  var textWidth by remember { mutableStateOf(0.dp) }
+
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.sectionHeader(title))) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
+        modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
+    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
+    HorizontalDivider(
+        modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
+        thickness = Dimensions.DividerThickness.standard,
+        color = MaterialTheme.colorScheme.outlineVariant)
+    Spacer(Modifier.height(Dimensions.Spacing.medium))
+  }
+}
+
+/**
+ * A composable function that displays a labeled text field with a placeholder.
+ *
+ * @param label The label for the text field.
+ * @param placeholder The placeholder text for the text field.
+ * @param value The current value of the text field.
+ * @param onValueChange A callback function that is invoked when the value of the text field
+ *   changes.
+ * @param modifier The modifier to be applied to the text field.
+ * @param keyboardType The type of keyboard to be used for the text field.
+ * @param singleLine A boolean indicating whether the text field should be single line or not.
+ * @param minLines The minimum number of lines for the text field.
+ */
+@Composable
+fun LabeledField(
+    label: String,
+    placeholder: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    scrollToStartOnFocusLost: Boolean = false,
+) {
+  Box(modifier = modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
+    FocusableInputField(
+        label = { Text(label) },
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        leadingIcon = leadingIcon,
+        minLines = Dimensions.Numbers.singleLine,
+        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
+        placeholder = { Text(placeholder) },
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT),
+        scrollToStartOnFocusLost = scrollToStartOnFocusLost)
+  }
+}
+
+/**
+ * A composable function that displays a time field with a label and a clickable card.
+ *
+ * @param label The label for the time field.
+ * @param value The current value of the time field.
+ * @param onClick A callback function that is invoked when the time field is clicked.
+ * @param modifier The modifier to be applied to the time field.
+ */
+@Composable
+fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Column(modifier = modifier.testTag(ShopComponentsTestTags.timeField(label))) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_LABEL))
+    OutlinedCard(
+        onClick = onClick,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = Dimensions.Spacing.small)
+                .height(Dimensions.ContainerSize.timeFieldHeight)
+                .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
+        shape = MaterialTheme.shapes.medium) {
+          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_VALUE))
+          }
+        }
+  }
+}
+
+/* =============================================================================
+ * Rows & selectors
+ * ============================================================================= */
+
+/**
+ * A composable function that displays a row representing a day with its name, value, and an edit
+ * button.
+ *
+ * @param dayName The name of the day.
+ * @param value The value associated with the day.
+ * @param onEdit A callback function that is invoked when the edit button is clicked.
+ * @param modifier The modifier to be applied to the day row.
+ */
+@Composable
+fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+  Row(
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .clickable(onClick = onEdit)
+              .testTag(ShopComponentsTestTags.dayRow(dayName)),
+      verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = dayName,
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DAY_ROW_NAME),
+            fontSize = Dimensions.TextSize.subtitle)
+        Text(
+            text = value,
+            modifier =
+                Modifier.weight(2f)
+                    .padding(end = Dimensions.Spacing.medium)
+                    .testTag(ShopComponentsTestTags.DAY_ROW_VALUE),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            fontSize = Dimensions.TextSize.subtitle)
+        IconButton(
+            onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
+              Icon(
+                  imageVector = Icons.Outlined.Edit,
+                  contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
+            }
+      }
+}
+
+/**
+ * A composable function that displays a row for selecting opening and closing hours, along with a
+ * remove button.
+ *
+ * @param start The starting time.
+ * @param end The ending time.
+ * @param onPickStart A callback function that is invoked when the start time field is clicked.
+ * @param onPickEnd A callback function that is invoked when the end time field is clicked.
+ * @param onRemove A callback function that is invoked when the remove button is clicked.
+ * @param rowIndex An optional index for testing purposes.
+ */
+@Composable
+fun HourRow(
+    start: LocalTime,
+    end: LocalTime,
+    onPickStart: () -> Unit,
+    onPickEnd: () -> Unit,
+    onRemove: () -> Unit,
+    rowIndex: Int? = null
+) {
+  val labelTopSpace =
+      with(LocalDensity.current) {
+        MaterialTheme.typography.labelSmall.lineHeight.toDp() + Dimensions.Spacing.small
+      }
+
+  Row(
+      verticalAlignment = Alignment.Top,
+      modifier =
+          Modifier.fillMaxWidth()
+              .then(
+                  if (rowIndex != null) Modifier.testTag(ShopComponentsTestTags.hourRow(rowIndex))
+                  else Modifier.testTag(ShopComponentsTestTags.HOUR_ROW))) {
+        TimeField(
+            label = ShopUiDefaults.StringsMagicNumbers.OPEN_TIME,
+            value = start.display(),
+            onClick = onPickStart,
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD))
+        Spacer(Modifier.width(Dimensions.Spacing.large))
+        TimeField(
+            label = ShopUiDefaults.StringsMagicNumbers.CLOSE_TIME,
+            value = end.display(),
+            onClick = onPickEnd,
+            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD))
+        Spacer(Modifier.width(Dimensions.Spacing.small))
+
+        Column(
+            modifier = Modifier.width(Dimensions.ContainerSize.iconButtonSize),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              Spacer(Modifier.height(labelTopSpace))
+              Box(
+                  modifier =
+                      Modifier.height(Dimensions.ContainerSize.timeFieldHeight).fillMaxWidth(),
+                  contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = onRemove,
+                        modifier =
+                            Modifier.size(Dimensions.ContainerSize.iconButtonTouch)
+                                .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
+                          Icon(Icons.Filled.Close, contentDescription = "Remove interval")
+                        }
+                  }
+            }
+      }
+}
+
+/**
+ * A composable function that displays a selector for days of the week.
+ *
+ * @param selected A set of selected day indices (0 for Sunday, 1 for Monday, etc.).
+ * @param onToggle A callback function that is invoked when a day is toggled.
+ */
+@Composable
+fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
+  Row(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(vertical = Dimensions.Spacing.small)
+              .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically) {
+        ShopUiDefaults.DaysMagicNumbers.short.forEachIndexed { idx, short ->
+          val isSel = idx in selected
+
+          FilterChip(
+              selected = isSel,
+              onClick = { onToggle(idx) },
+              shape = CircleShape,
+              modifier =
+                  Modifier.size(Dimensions.ComponentWidth.chipSize)
+                      .testTag(ShopComponentsTestTags.dayChip(idx)),
+              label = {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                  Text(
+                      text = short,
+                      textAlign = TextAlign.Center,
+                      style = MaterialTheme.typography.titleMedium,
+                      fontWeight = FontWeight.SemiBold)
+                }
+              },
+              colors =
+                  FilterChipDefaults.filterChipColors(
+                      containerColor = Color.Transparent,
+                      labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                      selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                      selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
+              border =
+                  FilterChipDefaults.filterChipBorder(
+                      enabled = true,
+                      selected = isSel,
+                      borderColor = MaterialTheme.colorScheme.outlineVariant,
+                      selectedBorderColor = MaterialTheme.colorScheme.inversePrimary))
+        }
+      }
+}
+
+/* =============================================================================
+ * Dialogs
+ * ============================================================================= */
+
+/**
+ * A composable function that displays a dialog for selecting opening hours.
+ *
+ * @param initialSelectedDays A set of initially selected day indices.
+ * @param current The current OpeningHours object.
+ * @param onDismiss A callback function that is invoked when the dialog is dismissed.
+ * @param onSave A callback function that is invoked when the save button is clicked, with the
+ *   selected days, closed status, 24-hour status, and time intervals as parameters.
+ */
+@Composable
+fun OpeningHoursDialog(
+    initialSelectedDays: Set<Int>,
+    current: OpeningHours,
+    onDismiss: () -> Unit,
+    onSave:
+        (
+            selectedDays: Set<Int>,
+            closed: Boolean,
+            open24: Boolean,
+            intervals: List<Pair<LocalTime, LocalTime>>) -> Unit
+) {
+  val context = LocalContext.current
+
+  var selectedDays by remember(initialSelectedDays) { mutableStateOf(initialSelectedDays) }
+  var isClosed by remember(current) { mutableStateOf(current.hours.isEmpty()) }
+  var is24h by remember(current) { mutableStateOf(isOpen24(current.hours)) }
+  var intervals by remember(current, is24h) { mutableStateOf(initialIntervals(current, is24h)) }
+
+  var errorText by remember { mutableStateOf<String?>(null) }
+
+  AlertDialog(
+      onDismissRequest = onDismiss,
+      containerColor = MaterialTheme.colorScheme.background,
+      shape = MaterialTheme.shapes.extraLarge,
+      title = {
+        Box(
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG_TITLE),
+            contentAlignment = Alignment.Center) {
+              Text(
+                  ShopUiDefaults.StringsMagicNumbers.DIALOG_TITLE,
+                  style = MaterialTheme.typography.headlineSmall,
+                  textAlign = TextAlign.Center)
+            }
+      },
+      text = {
+        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG)) {
+          Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_DAYS)) {
+            DaysSelector(
+                selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
+          }
+
+          Spacer(Modifier.height(Dimensions.Spacing.large))
+
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val onIs24h: (Boolean) -> Unit = {
+              is24h = it
+              if (it) {
+                isClosed = false
+                intervals =
+                    listOf(
+                        ShopUiDefaults.TimeMagicNumbers.open24Start to
+                            ShopUiDefaults.TimeMagicNumbers.open24End)
+              }
+            }
+            Row(
+                modifier =
+                    Modifier.weight(1f)
+                        .testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW)
+                        .clickable { onIs24h(!is24h) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                  Checkbox(
+                      checked = is24h,
+                      onCheckedChange = onIs24h,
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
+                  Spacer(Modifier.width(Dimensions.Spacing.medium))
+                  Text(
+                      ShopUiDefaults.StringsMagicNumbers.OPEN_24,
+                      maxLines = Dimensions.Numbers.singleLine)
+                }
+
+            val onIsClosed: (Boolean) -> Unit = {
+              isClosed = it
+              if (it) {
+                is24h = false
+                intervals =
+                    listOf(
+                        ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                            ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+              }
+            }
+            Row(
+                modifier =
+                    Modifier.weight(1f)
+                        .testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW)
+                        .clickable { onIsClosed(!isClosed) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                  Checkbox(
+                      checked = isClosed,
+                      onCheckedChange = onIsClosed,
+                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
+                  Spacer(Modifier.width(Dimensions.Spacing.medium))
+                  Text(
+                      ShopUiDefaults.StringsMagicNumbers.CLOSED,
+                      maxLines = Dimensions.Numbers.singleLine)
+                }
+          }
+
+          Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+          AnimatedVisibility(visible = !isClosed && !is24h) {
+            Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
+              intervals.forEachIndexed { idx, (start, end) ->
+                HourRow(
+                    start = start,
+                    end = end,
+                    onPickStart = {
+                      showTimePicker(context, start) { t ->
+                        intervals = intervals.toMutableList().apply { this[idx] = t to end }
+                      }
+                    },
+                    onPickEnd = {
+                      showTimePicker(context, end) { t ->
+                        intervals = intervals.toMutableList().apply { this[idx] = start to t }
+                      }
+                    },
+                    onRemove = {
+                      intervals = intervals.toMutableList().apply { removeAt(idx) }
+                      if (intervals.isEmpty()) {
+                        intervals =
+                            listOf(
+                                ShopUiDefaults.TimeMagicNumbers.defaultStart to
+                                    ShopUiDefaults.TimeMagicNumbers.defaultEnd)
+                      }
+                    },
+                    rowIndex = idx)
+                Spacer(Modifier.height(Dimensions.Spacing.medium))
+              }
+
+              TextButton(
+                  onClick = {
+                    val defaultStart = ShopUiDefaults.TimeMagicNumbers.defaultStart
+                    val defaultEnd = ShopUiDefaults.TimeMagicNumbers.defaultEnd
+                    intervals = intervals + (defaultStart to defaultEnd)
+                  },
+                  contentPadding =
+                      PaddingValues(
+                          horizontal = Dimensions.Spacing.none, vertical = Dimensions.Spacing.none),
+                  modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
+                    Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
+                  }
+            }
+          }
+
+          errorText?.let {
+            Spacer(Modifier.height(Dimensions.Spacing.medium))
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ERROR))
+          }
+        }
+      },
+      dismissButton = {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CANCEL)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
+            }
+      },
+      confirmButton = {
+        TextButton(
+            onClick = {
+              try {
+                val open24Start = ShopUiDefaults.TimeMagicNumbers.open24Start
+                val open24End = ShopUiDefaults.TimeMagicNumbers.open24End
+                val open24Pair = open24Start to open24End
+
+                // If user entered a single interval with same start/end => treat as open 24
+                val normalizedIntervals =
+                    if (!isClosed &&
+                        !is24h &&
+                        intervals.size == 1 &&
+                        intervals[0].first == intervals[0].second) {
+                      listOf(open24Pair)
+                    } else intervals
+
+                val payload =
+                    when {
+                      isClosed -> emptyList()
+                      is24h -> listOf(open24Pair)
+                      else -> validateIntervals(normalizedIntervals)
+                    }
+
+                // Compute final open24 flag from the normalized payload
+                val open24Final =
+                    payload.size == 1 &&
+                        payload[0].first == open24Start &&
+                        payload[0].second == open24End
+
+                errorText = null
+                onSave(selectedDays, isClosed, open24Final, payload)
+              } catch (e: IllegalArgumentException) {
+                errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
+              }
+            },
+            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_SAVE)) {
+              Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
+            }
+      })
+}
+
+/* =============================================================================
+ * Footer action bar
+ * ============================================================================= */
+
+/**
+ * A composable function that displays an action bar with discard and a primary button.
+ * - Keeps existing test tags (ACTION_BAR, ACTION_DISCARD, ACTION_CREATE)
+ * - primaryButtonText defaults to "Create"; pass BTN_SAVE for edit flows
+ */
+@Composable
+fun ActionBar(
+    onDiscard: () -> Unit,
+    onPrimary: () -> Unit,
+    enabled: Boolean,
+    primaryButtonText: String = ShopUiDefaults.StringsMagicNumbers.BTN_CREATE,
+) {
+  Surface(
+      color = MaterialTheme.colorScheme.background,
+      contentColor = MaterialTheme.colorScheme.onSurface,
+      tonalElevation = Dimensions.Elevation.raised) {
+        Row(
+            Modifier.fillMaxWidth()
+                .padding(Dimensions.Padding.extraLarge)
+                .testTag(ShopComponentsTestTags.ACTION_BAR),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+              OutlinedButton(
+                  onClick = onDiscard,
+                  colors =
+                      ButtonDefaults.outlinedButtonColors(
+                          containerColor = MaterialTheme.colorScheme.outline,
+                          contentColor = MaterialTheme.colorScheme.error),
+                  modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
+                    Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
+                  }
+
+              val primaryColors =
+                  if (enabled)
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.secondary,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
+                  else
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.outline,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)
+
+              val primaryTag =
+                  if (primaryButtonText.equals(
+                      ShopUiDefaults.StringsMagicNumbers.BTN_SAVE, ignoreCase = true))
+                      ShopComponentsTestTags.ACTION_SAVE
+                  else ShopComponentsTestTags.ACTION_CREATE
+
+              Button(
+                  onClick = onPrimary,
+                  enabled = enabled,
+                  shape = RoundedCornerShape(Dimensions.ButtonRadius.rounded),
+                  colors = primaryColors,
+                  modifier = Modifier.weight(1f).testTag(primaryTag)) {
+                    Icon(Icons.Filled.Check, contentDescription = null)
+                    Spacer(Modifier.width(Dimensions.Spacing.medium))
+                    Text(primaryButtonText)
+                  }
+            }
+      }
+}
+
+// -------------------- AVAILABILITY SECTION --------------------
+
+/**
+ * A composable function that displays a bottom sheet with the full weekly opening hours for a shop
+ *
+ * @param openingHours The list of [OpeningHours] entries to display
+ * @param currentDayIndex The index of the current day (0 = Sunday, 1 = Monday, etc.)
+ * @param dayTagPrefix The prefix used for test tags associated with each day row in the dialog
+ * @param onDismiss A callback function that is invoked when the dialog is dismissed
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WeeklyAvailabilityDialog(
+    openingHours: List<OpeningHours>,
+    currentDayIndex: Int,
+    dayTagPrefix: String,
+    onDismiss: () -> Unit
+) {
+  val scrollState = rememberScrollState()
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+  ModalBottomSheet(
+      onDismissRequest = onDismiss,
+      sheetState = sheetState,
+      containerColor = MaterialTheme.colorScheme.background,
+  ) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = Dimensions.ContainerSize.bottomSheetHeight)
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.medium)
+                .verticalScroll(scrollState)) {
+          Column(modifier = Modifier.fillMaxWidth()) {
+            openingHours
+                .sortedBy { it.day }
+                .forEach { entry ->
+                  val day = entry.day
+                  val isToday = day == currentDayIndex
+                  val dayName =
+                      ShopFormUi.dayNames.getOrNull(day)
+                          ?: "${ShopUiDefaults.StringsMagicNumbers.DAY_TEXT} ${day + 1}"
+                  val lines = splittedHumanize(entry.hours)
+
+                  Row(
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(vertical = Dimensions.Spacing.small)
+                              .testTag("${dayTagPrefix}${day}"),
+                      verticalAlignment = Alignment.Top) {
+
+                        // Left: day name
+                        Text(
+                            text = dayName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            fontStyle = FontStyle.Normal,
+                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
+
+                        // Right: all time slots
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement =
+                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                              lines.forEach { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight =
+                                        if (isToday) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontStyle = FontStyle.Normal,
+                                    textAlign = TextAlign.End)
+                              }
+                            }
+                      }
+                }
+
+            Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            bottom = Dimensions.Spacing.medium, end = Dimensions.Spacing.medium),
+                horizontalArrangement = Arrangement.End) {
+                  TextButton(onClick = onDismiss) {
+                    Text(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
+                  }
+                }
+          }
+        }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AvailabilitySectionWithChevron(
+    openingHours: List<OpeningHours>,
+    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX,
+    addPadding: Boolean = false
+) {
+  var showSheet by remember { mutableStateOf(false) }
+
+  val today = Calendar.getInstance()[Calendar.DAY_OF_WEEK] - 1
+  val todayHours = openingHours.firstOrNull { it.day == today }
+
+  val todayText =
+      if (todayHours == null || todayHours.hours.isEmpty()) {
+        listOf(SpaceRenterUi.Misc.NO_TIME)
+      } else {
+        todayHours.hours.map { (start, end) ->
+          SpaceRenterUi.AvailabilitySection.timeRange(start, end)
+        }
+      }
+
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clickable { showSheet = true }
+                    .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
+                    .padding(vertical = Dimensions.Padding.medium)) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = SpaceRenterUi.AvailabilitySection.TITLE,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold)
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(top = Dimensions.Padding.small)
+                            .testTag("${dayTagPrefix}${today}_HOURS"),
+                    verticalAlignment = Alignment.Top) {
+                      // Left label
+                      Text(
+                          text = SpaceRenterUi.AvailabilitySection.TODAY,
+                          style = MaterialTheme.typography.bodyMedium)
+
+                      Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
+
+                      // Right – multiline times stacked neatly
+                      Column(
+                          verticalArrangement =
+                              Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+                            todayText.forEach { line ->
+                              Text(text = line, style = MaterialTheme.typography.bodyMedium)
+                            }
+                          }
+                    }
+              }
+
+              Icon(
+                  Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
+            }
+      }
+
+  if (showSheet) {
+    WeeklyAvailabilityDialog(
+        openingHours = openingHours,
+        currentDayIndex = today,
+        dayTagPrefix = dayTagPrefix,
+        onDismiss = { showSheet = false })
+  }
+}
+
+// -------------------- CONTACT SECTION --------------------
+
+/**
+ * Composable that displays the contact information section
+ *
+ * @param name name to display
+ * @param address location text
+ * @param email email to display
+ * @param phone phone number to display
+ * @param website website link to display
+ */
+@Composable
+fun ContactSection(
+    name: String,
+    address: String,
+    email: String,
+    phone: String,
+    website: String,
+    addPadding: Boolean = false
+) {
+  Column(
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        // Display address contact row
+        ContactRow(
+            Icons.Default.Place,
+            address,
+            ShopComponentsTestTags.SHOP_ADDRESS_TEXT,
+            ShopComponentsTestTags.SHOP_ADDRESS_BUTTON)
+        // Display email contact row
+        ContactRow(
+            Icons.Default.Email,
+            email,
+            ShopComponentsTestTags.SHOP_EMAIL_TEXT,
+            ShopComponentsTestTags.SHOP_EMAIL_BUTTON)
+
+        // Display phone contact row
+        if (phone.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Phone,
+              phone,
+              ShopComponentsTestTags.SHOP_PHONE_TEXT,
+              ShopComponentsTestTags.SHOP_PHONE_BUTTON)
+        }
+        // Display website contact row
+        if (website.isNotBlank()) {
+          ContactRow(
+              Icons.Default.Language,
+              website,
+              ShopComponentsTestTags.SHOP_WEBSITE_TEXT,
+              ShopComponentsTestTags.SHOP_WEBSITE_BUTTON)
+        }
+      }
+}
+
+/**
+ * Composable that displays a single row of contact information with an icon, text, and a button to
+ * copy the text to the clipboard.
+ *
+ * @param icon The icon to display for the contact method.
+ * @param text The contact text to display and copy.
+ * @param textTag The test tag for the text element.
+ * @param buttonTag The test tag for the copy button.
+ */
+@Composable
+fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
+  val clipboardManager: ClipboardManager = LocalClipboardManager.current
+  val context = LocalContext.current
+
+  Row(
+      verticalAlignment = Alignment.Top,
+      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
+        IconButton(
+            onClick = {
+              clipboardManager.setText(AnnotatedString(text))
+              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
+              Icon(icon, contentDescription = null, tint = AppColors.neutral)
+            }
+
+        Text(
+            text = text,
+            style = LocalTextStyle.current,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).testTag(textTag))
+      }
+}
+
+/**
+ * Composable function representing the availability section.
+ *
+ * @param week List of opening hours for each day of the week.
+ * @param onEdit Callback function to handle editing of opening hours for a specific day.
+ */
+@Composable
+fun AvailabilitySection(week: List<OpeningHours>, onEdit: (Int) -> Unit) {
+  Column(Modifier.testTag(ShopFormTestTags.AVAILABILITY_LIST)) {
+    week.forEach { oh ->
+      val day = oh.day
+      DayRow(
+          dayName = ShopFormUi.dayNames[day], value = humanize(oh.hours), onEdit = { onEdit(day) })
+    }
+  }
+  Spacer(Modifier.height(Dimensions.Spacing.small))
+}
+
+/**
+ * Composable function representing a collapsible section with a title, optional header, and
+ * content.
+ *
+ * @param title The title of the section.
+ * @param initiallyExpanded Boolean indicating whether the section is initially expanded.
+ * @param header Optional composable function for the header content.
+ * @param content Composable function for the main content of the section.
+ * @param testTag Optional test tag for the section.
+ */
+@Composable
+fun CollapsibleSection(
+    title: String,
+    initiallyExpanded: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit,
+    testTag: String? = null,
+    expanded: Boolean? = null,
+    onExpandedChange: ((Boolean) -> Unit)? = null,
+) {
+  val (isExpanded, setExpanded) =
+      if (expanded != null && onExpandedChange != null) {
+        expanded to onExpandedChange
+      } else {
+        var localExpanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+        localExpanded to { v: Boolean -> localExpanded = v }
+      }
+
+  val arrowRotation by
+      animateFloatAsState(
+          targetValue = if (isExpanded) Dimensions.Angles.expanded else Dimensions.Angles.collapsed,
+          label = "arrow")
+
+  Column(Modifier.fillMaxWidth()) {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(top = Dimensions.Padding.medium)
+                .clickable { setExpanded(!isExpanded) }
+                .then(
+                    if (testTag != null) {
+                      Modifier.testTag(testTag + "_header")
+                    } else Modifier),
+        verticalAlignment = Alignment.CenterVertically) {
+          Text(
+              text = title,
+              style = MaterialTheme.typography.titleMedium,
+              modifier =
+                  Modifier.weight(1f).let { m ->
+                    if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_TITLE_SUFFIX)
+                    else m
+                  })
+
+          IconButton(
+              onClick = { setExpanded(!isExpanded) },
+              modifier =
+                  Modifier.let { m ->
+                    if (testTag != null)
+                        m.testTag(testTag + ShopFormTestTags.SECTION_TOGGLE_ICON_SUFFIX)
+                    else m
+                  }) {
+                Icon(
+                    Icons.Filled.ExpandMore,
+                    contentDescription =
+                        if (isExpanded) ShopFormUi.Strings.COLLAPSE else ShopFormUi.Strings.EXPAND,
+                    modifier = Modifier.rotate(arrowRotation))
+              }
+        }
+
+    HorizontalDivider(
+        thickness = Dimensions.DividerThickness.standard,
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier =
+            Modifier.padding(bottom = Dimensions.Spacing.large).let { m ->
+              if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_DIVIDER_SUFFIX)
+              else m
+            })
+
+    AnimatedVisibility(visible = isExpanded) {
+      Column(
+          Modifier.padding(top = Dimensions.Spacing.none).let { m ->
+            if (testTag != null) m.testTag(testTag + ShopFormTestTags.SECTION_CONTENT_SUFFIX) else m
+          },
+          content = content)
+    }
+  }
+}
+
+/**
+ * Composable function representing the opening hours editor dialog.
+ *
+ * @param show Boolean indicating whether to show the dialog.
+ * @param day The day of the week being edited.
+ * @param week List of opening hours for each day of the week.
+ * @param onWeekChange Callback function to update the opening hours for the week.
+ * @param onDismiss Callback function to dismiss the dialog.
+ */
+@Composable
+fun OpeningHoursEditor(
+    show: Boolean,
+    day: Int?,
+    week: List<OpeningHours>,
+    onWeekChange: (List<OpeningHours>) -> Unit,
+    onDismiss: () -> Unit
+) {
+  if (!show || day == null) return
+  Box(Modifier.testTag(ShopFormTestTags.OPENING_HOURS_DIALOG_WRAPPER)) {
+    OpeningHoursDialog(
+        initialSelectedDays = setOf(day),
+        current = week[day],
+        onDismiss = onDismiss,
+        onSave = { selectedDays, closed, open24, intervals ->
+          val encoded: List<TimeSlot> =
+              when {
+                closed -> emptyList()
+                open24 -> listOf(TimeSlot(TimeUi.OPEN24_START, TimeUi.OPEN24_END))
+                else -> intervals.map { TimeSlot(it.first.hhmm(), it.second.hhmm()) }
+              }
+          val copy = week.toMutableList()
+          selectedDays.forEach { d -> copy[d] = OpeningHours(day = d, hours = encoded) }
+          onWeekChange(copy)
+          onDismiss()
+        })
+  }
+}
+
+/**
+ * A composable function that displays an "Add" button with an icon and text.
+ *
+ * @param onClick A callback function that is invoked when the button is clicked.
+ * @param modifier An optional [Modifier] for styling the button.
+ * @param buttonText The text to display on the button.
+ * @param buttonTestTag The test tag for the button text.
+ * @param labelTestTag The test tag for the button label.
+ */
+@Composable
+fun AddButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    buttonText: String,
+    buttonTestTag: String,
+    labelTestTag: String,
+) {
+  Button(
+      shape = RoundedCornerShape(Dimensions.CornerRadius.small),
+      colors =
+          ButtonDefaults.buttonColors(
+              containerColor = AppColors.secondary,
+              disabledContainerColor = AppColors.secondary,
+              contentColor = AppColors.focus,
+              disabledContentColor = AppColors.focus),
+      onClick = { onClick() },
+      modifier = modifier.testTag(buttonTestTag).fillMaxWidth()) {
+        Icon(Icons.Filled.Add, contentDescription = null)
+        Spacer(modifier.width(Dimensions.Padding.mediumSmall))
+        Text(buttonText, modifier = modifier.testTag(labelTestTag))
+      }
+}

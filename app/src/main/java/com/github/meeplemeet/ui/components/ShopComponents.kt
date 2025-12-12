@@ -1,1038 +1,651 @@
-// This file was initially done by hand and
-// then improved and refactored using ChatGPT-5 Extend Thinking
-// Docstrings were generated using copilot from Android studio
-@file:Suppress("FunctionName")
+// This file contains shared components, test tags, and utilities used by both
+// CreateShopScreen and ShopDetailsEditScreen
+// Github copilot was used for this file
 
 package com.github.meeplemeet.ui.components
 
-import android.app.TimePickerDialog
-import android.content.Context
-import android.text.format.DateFormat
-import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
+import android.annotation.SuppressLint
+import android.util.Log
+import android.util.Patterns
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.VideogameAsset
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
-import com.github.meeplemeet.ui.FocusableInputField
-import com.github.meeplemeet.ui.space_renter.SpaceRenterTestTags
-import com.github.meeplemeet.ui.space_renter.SpaceRenterUi
+import com.github.meeplemeet.ui.shops.ShopScreenDefaults
+import com.github.meeplemeet.ui.shops.ShopTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.Locale
+import kotlinx.coroutines.launch
 
-/* =============================================================================
- * Test tags
- * ============================================================================= */
+interface ShopFormActions {
+  fun onNameChange(name: String)
 
-object ShopComponentsTestTags {
-  // Section header
-  const val SECTION_HEADER = "shop_section_header"
-  const val SECTION_HEADER_LABEL = "shop_section_header_label"
-  const val SECTION_HEADER_DIVIDER = "shop_section_header_divider"
+  fun onEmailChange(email: String)
 
-  fun sectionHeader(title: String) = "$SECTION_HEADER:$title"
+  fun onPhoneChange(phone: String)
 
-  // LabeledField
-  const val LABELED_FIELD_CONTAINER = "shop_labeled_field"
-  const val LABELED_FIELD_INPUT = "shop_labeled_field_input"
+  fun onWebsiteChange(website: String)
 
-  fun labeledField(label: String) = "$LABELED_FIELD_CONTAINER:$label"
-
-  // TimeField
-  const val TIME_FIELD_CONTAINER = "shop_time_field"
-  const val TIME_FIELD_CARD = "shop_time_field_card"
-  const val TIME_FIELD_LABEL = "shop_time_field_label"
-  const val TIME_FIELD_VALUE = "shop_time_field_value"
-
-  fun timeField(label: String) = "$TIME_FIELD_CONTAINER:$label"
-
-  // Day row
-  const val DAY_ROW = "shop_day_row"
-  const val DAY_ROW_NAME = "shop_day_row_name"
-  const val DAY_ROW_VALUE = "shop_day_row_value"
-  const val DAY_ROW_EDIT = "shop_day_row_edit"
-
-  fun dayRow(name: String) = "$DAY_ROW:$name"
-
-  // Hour row
-  const val HOUR_ROW = "shop_hour_row"
-  const val HOUR_ROW_REMOVE = "shop_hour_row_remove"
-  const val HOUR_ROW_OPEN_FIELD = "shop_hour_row_open_field"
-  const val HOUR_ROW_CLOSE_FIELD = "shop_hour_row_close_field"
-
-  fun hourRow(index: Int) = "$HOUR_ROW:$index"
-
-  // Days selector
-  const val DAYS_SELECTOR = "shop_days_selector"
-  const val DAY_CHIP = "shop_day_chip"
-
-  fun dayChip(index: Int) = "$DAY_CHIP:$index"
-
-  // Opening hours dialog
-  const val DIALOG = "shop_opening_hours_dialog"
-  const val DIALOG_TITLE = "shop_opening_hours_title"
-  const val DIALOG_DAYS = "shop_opening_hours_days"
-  const val DIALOG_OPEN24_CHECKBOX = "shop_open_24_checkbox"
-  const val DIALOG_CLOSED_CHECKBOX = "shop_closed_checkbox"
-  const val DIALOG_OPEN24_ROW = "shop_open_24_row"
-  const val DIALOG_CLOSED_ROW = "shop_closed_row"
-  const val DIALOG_INTERVALS = "shop_intervals"
-  const val DIALOG_ADD_HOURS = "shop_add_hours_button"
-  const val DIALOG_ERROR = "shop_dialog_error"
-  const val DIALOG_SAVE = "shop_dialog_save"
-  const val DIALOG_CANCEL = "shop_dialog_cancel"
-
-  // Action bar
-  const val ACTION_BAR = "shop_action_bar"
-  const val ACTION_DISCARD = "shop_action_discard"
-  const val ACTION_CREATE = "shop_action_create"
-  const val ACTION_SAVE = "shop_action_save"
-
-  // Search field internals
-  const val GAME_SEARCH_FIELD = "shop_game_search_field"
-  const val GAME_SEARCH_CLEAR = "shop_game_search_clear"
-  const val GAME_SEARCH_PROGRESS = "shop_game_search_progress"
-  const val GAME_SEARCH_MENU = "shop_game_search_menu"
-  const val GAME_SEARCH_ITEM = "shop_game_search_item"
-
-  // Quantity slider
-  const val QTY_CONTAINER = "shop_qty_container"
-  const val QTY_LABEL = "shop_qty_label"
-  const val QTY_MINUS_BUTTON = "shop_qty_minus_button"
-  const val QTY_INPUT_FIELD = "shop_qty_input_field"
-  const val QTY_PLUS_BUTTON = "shop_qty_plus_button"
-
-  // Game stock dialog
-  const val GAME_DIALOG_TITLE = "shop_game_dialog_title"
-  const val GAME_DIALOG_BODY = "shop_game_dialog_body"
-  const val GAME_DIALOG_SLIDER = "shop_game_dialog_slider"
-  const val GAME_DIALOG_SAVE = "shop_game_dialog_save"
-  const val GAME_DIALOG_CANCEL = "shop_game_dialog_cancel"
-  const val GAME_DIALOG_HELPER = "shop_game_dialog_helper"
-
-  // Game list
-  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
-  const val SHOP_GAME_DELETE = "shop_game_delete"
-  const val SHOP_GAME_MINUS_BUTTON = "shop_game_minus_button"
-  const val SHOP_GAME_QTY_INPUT = "shop_game_qty_input"
-  const val SHOP_GAME_PLUS_BUTTON = "shop_game_plus_button"
-
-  // Availability section tags
-  const val SHOP_DAY_PREFIX = "SHOP_DAY_"
-
-  // Contact section tags
-  const val SHOP_PHONE_TEXT = "SHOP_PHONE_TEXT"
-  const val SHOP_PHONE_BUTTON = "SHOP_PHONE_BUTTON"
-  const val SHOP_EMAIL_TEXT = "SHOP_EMAIL_TEXT"
-  const val SHOP_EMAIL_BUTTON = "SHOP_EMAIL_BUTTON"
-  const val SHOP_ADDRESS_TEXT = "SHOP_ADDRESS_TEXT"
-  const val SHOP_ADDRESS_BUTTON = "SHOP_ADDRESS_BUTTON"
-  const val SHOP_WEBSITE_TEXT = "SHOP_WEBSITE_TEXT"
-  const val SHOP_WEBSITE_BUTTON = "SHOP_WEBSITE_BUTTON"
+  fun onLocationChange(location: Location)
 }
 
-/* =============================================================================
- * MAGIC NUMBERS & DEFAULTS
- * ============================================================================= */
+interface GamePickerActions {
+  fun onStockChange(stock: List<Pair<Game, Int>>)
 
-object ShopUiDefaults {
+  fun onQtyChange(qty: Int)
 
-  object DaysMagicNumbers {
-    val short = listOf("S", "M", "T", "W", "T", "F", "S")
-  }
+  fun onSetGameQuery(query: String)
 
-  object TimeMagicNumbers {
-    const val OPEN24_START = "00:00"
-    const val OPEN24_END = "23:59"
+  fun onSetGame(game: Game)
 
-    const val DISPLAY_PATTERN_12 = "h:mm a"
+  fun onDismiss()
+}
 
-    fun formatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
-        DateTimeFormatter.ofPattern(DISPLAY_PATTERN_12, locale)
+/* ================================================================================================
+ * Shared Test Tags
+ * ================================================================================================ */
+object ShopFormTestTags {
+  const val SECTION_HEADER_SUFFIX = "_header"
+  const val SECTION_TITLE_SUFFIX = "_title"
+  const val SECTION_TOGGLE_SUFFIX = "_toggle"
+  const val SECTION_TOGGLE_ICON_SUFFIX = "_toggle_icon"
+  const val SECTION_DIVIDER_SUFFIX = "_divider"
+  const val SECTION_CONTENT_SUFFIX = "_content"
 
-    val defaultStart: LocalTime =
-        LocalTime.of(
-            Dimensions.Numbers.defaultShopStartHour, Dimensions.Numbers.defaultShopStartMinute)
-    val defaultEnd: LocalTime =
-        LocalTime.of(Dimensions.Numbers.defaultShopEndHour, Dimensions.Numbers.defaultShopEndMinute)
+  const val FIELD_SHOP = "field_shop_name"
+  const val FIELD_EMAIL = "field_email"
+  const val FIELD_ADDRESS = "field_address"
+  const val FIELD_PHONE = "field_phone"
+  const val FIELD_LINK = "field_link"
 
-    val open24Start: LocalTime = LocalTime.of(0, 0)
-    val open24End: LocalTime = LocalTime.of(23, 59)
-  }
+  const val AVAILABILITY_LIST = "availability_list"
 
-  object StringsMagicNumbers {
-    // Section header
-    const val REQUIRED_INFO = "Required Info"
+  const val OPENING_HOURS_DIALOG_WRAPPER = "opening_hours_dialog_wrapper"
+  const val GAME_STOCK_DIALOG_WRAPPER = "game_stock_dialog_wrapper"
 
-    // Generic
-    const val BTN_SAVE = "Save"
-    const val BTN_CANCEL = "Cancel"
-    const val BTN_DISCARD = "Discard"
-    const val BTN_CREATE = "Create"
-
-    // LabeledField
-    const val LABEL_SHOP = "Shop"
-    const val PLACEHOLDER_SHOP = "Shop name"
-
-    // Time field
-    const val OPEN_TIME = "Open time"
-    const val CLOSE_TIME = "Close time"
-
-    // Day row
-    const val EDIT_HOURS = "Edit hours"
-
-    // Days selector / dialog
-    const val DIALOG_TITLE = "Select days & time"
-    const val OPEN_24 = "Open 24 hours"
-    const val CLOSED = "Closed"
-    const val ADD_HOURS = "Add hours"
-    const val INVALID_TIME_RANGES = "Invalid time ranges."
-
-    // Quantity
-    const val QUANTITY = "Quantity"
-
-    // Game stock dialog
-    const val GAME_DIALOG_TITLE = "Add game in stock"
-    const val DUPLICATE_GAME = "This game is already in stock."
-
-    // Availability
-    const val BOTTOM_SHEET_CONFIRM_BUTTON_TEXT = "Close"
-    const val TODAY_TEXT = "Today:"
-    const val AVAILABILITY_SECTION_TEXT = "Availability"
-    const val DAY_TEXT = "Day"
-  }
-
-  object RangesMagicNumbers {
-    val qtyGameDialog: IntRange = Dimensions.Numbers.quantityMin..Dimensions.Numbers.quantityMax
+  fun gameTestTag(gameUid: String): String {
+    return "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${gameUid}"
   }
 }
 
-/* =============================================================================
- * Utilities
- * ============================================================================= */
+/* ================================================================================================
+ * Shared UI Defaults
+ * ================================================================================================ */
+object ShopFormUi {
+  object Dim {
+    val contentHPadding = Dimensions.Padding.extraLarge
+    val contentVPadding = Dimensions.Padding.medium
+    val sectionSpace = Dimensions.Padding.large
+    val bottomSpacer = Dimensions.ContainerSize.bottomSpacer
+    val betweenControls = Dimensions.Padding.mediumSmall
+    const val thumbSize = 30
+    const val bubbleSize = 100
+    const val imageSize = 200
+  }
+
+  object Strings {
+    const val SHOP_LABEL = "Shop"
+    const val SHOP_PLACEHOLDER = "Shop name"
+
+    const val EMAIL_LABEL = "Email"
+    const val EMAIL_PLACEHOLDER = "Email"
+
+    const val PHONE_LABEL = "Contact info"
+    const val PHONE_PLACEHOLDER = "Phone number"
+
+    const val LINK_LABEL = "Link"
+    const val LINK_PLACEHOLDER = "Website/Instagram link"
+
+    const val COLLAPSE = "Collapse"
+    const val EXPAND = "Expand"
+
+    const val CLOSED_LABEL = "Closed"
+    const val OPEN24_LABEL = "Open 24 hours"
+
+    const val ERROR_EMAIL_MSG = "Enter a valid email address."
+  }
+
+  val dayNames: List<String> by lazy {
+    val weekdays = DateFormatSymbols().weekdays
+    (0..6).map { idx -> weekdays.getOrNull(idx + 1) ?: "Day ${idx + 1}" }
+  }
+}
+
+/* ================================================================================================
+ * Time utilities
+ * ================================================================================================ */
+object TimeUi {
+  const val OPEN24_START = "00:00"
+  const val OPEN24_END = "23:59"
+
+  fun fmt12(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+      DateTimeFormatter.ofPattern("h:mm a", locale)
+}
 
 /**
- * Formats a LocalTime object into a display string.
+ * Formats a LocalTime object into "HH:mm" string format.
  *
- * @return The formatted time string.
+ * @return A string representation of the time in "HH:mm" format.
  * @receiver The LocalTime object to format.
  */
-private fun LocalTime.display(): String = format(ShopUiDefaults.TimeMagicNumbers.formatter())
+fun LocalTime.hhmm(): String = "%02d:%02d".format(hour, minute)
 
 /**
- * Parses a raw time string into a LocalTime object.
+ * Tries to parse a time string into a LocalTime object.
  *
- * @param raw The raw time string to parse.
- * @return The corresponding LocalTime object.
+ * Supports both 12-hour (with AM/PM) and 24-hour formats.
+ *
+ * @return A LocalTime object if parsing is successful, null otherwise.
+ * @receiver The time string to parse.
  */
-private fun parseToLocalTime(raw: String): LocalTime {
-  val s = raw.trim()
-  val lower = s.lowercase(Locale.getDefault())
-
-  if (lower.contains("am") || lower.contains("pm")) {
-    val normalized =
-        lower
-            .replace("am", " am")
-            .replace("pm", " pm")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-            .uppercase(Locale.getDefault())
-    return LocalTime.parse(normalized, ShopUiDefaults.TimeMagicNumbers.formatter())
-  }
-
-  return runCatching {
-        val (h, mRest) = s.split(":")
-        LocalTime.of(h.toInt(), mRest.take(2).toInt())
-      }
-      .getOrElse {
-        LocalTime.parse(
-            s.uppercase(Locale.getDefault()), ShopUiDefaults.TimeMagicNumbers.formatter())
-      }
-}
+fun String.tryParseTime(): LocalTime? =
+    runCatching {
+          val lower = lowercase(Locale.getDefault())
+          if (lower.contains("am") || lower.contains("pm")) {
+            LocalTime.parse(
+                replace("am", " AM", ignoreCase = true)
+                    .replace("pm", " PM", ignoreCase = true)
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                    .uppercase(Locale.getDefault()),
+                TimeUi.fmt12())
+          } else {
+            val (h, mRest) = split(":")
+            LocalTime.of(h.toInt(), mRest.take(2).toInt())
+          }
+        }
+        .getOrNull()
 
 /**
- * Checks if the provided hours represent a 24-hour open schedule.
+ * Converts a list of TimeSlot objects into a human-readable string format.
  *
- * @param hours A list of TimeSlot objects.
- * @return True if the shop is open 24 hours, false otherwise.
+ * @param hours List of TimeSlot objects representing opening hours.
+ * @return A string representation of the opening hours.
  */
-private fun isOpen24(hours: List<TimeSlot>): Boolean =
-    hours.size == 1 &&
-        hours.first().open == ShopUiDefaults.TimeMagicNumbers.OPEN24_START &&
-        hours.first().close == ShopUiDefaults.TimeMagicNumbers.OPEN24_END
-
-/**
- * Validates that the provided time intervals do not overlap. Supports intervals that span midnight
- * (e.g., 20:00 to 01:00).
- *
- * @param intervals A list of pairs representing start and end times.
- * @return A sorted list of valid time intervals.
- * @throws IllegalArgumentException if any interval is invalid or if intervals overlap.
- */
-private fun validateIntervals(
-    intervals: List<Pair<LocalTime, LocalTime>>
-): List<Pair<LocalTime, LocalTime>> {
-  // Allow all intervals except those where start == end
-  // If end < start, it means the interval spans midnight (e.g., 20:00 to 01:00)
-  val cleaned = intervals.filter { (s, e) -> e != s }
-  require(cleaned.size == intervals.size) { "End time must be different from start time." }
-
-  // Separate midnight-spanning intervals from regular ones
-  val regular = cleaned.filter { (s, e) -> e.isAfter(s) }
-  val midnightSpanning = cleaned.filter { (s, e) -> e.isBefore(s) }
-
-  // Check overlaps only among regular (non-midnight-spanning) intervals
-  val sorted = regular.sortedBy { it.first }
-  for (i in 1 until sorted.size) {
-    require(sorted[i].first.isAfter(sorted[i - 1].second)) { "Time ranges must not overlap." }
-  }
-
-  // Note: For simplicity, we don't validate overlaps involving midnight-spanning intervals.
-  // This allows flexibility for shop hours that extend past midnight.
-
-  // Return sorted regular intervals followed by midnight-spanning ones
-  return sorted + midnightSpanning
-}
-
-/**
- * Shows a time picker dialog.
- *
- * @param context The context to use for the dialog.
- * @param initial The initial time to display.
- * @param onTimePicked Callback invoked with the selected time.
- */
-private fun showTimePicker(
-    context: Context,
-    initial: LocalTime,
-    onTimePicked: (LocalTime) -> Unit
-) {
-  val is24h = DateFormat.is24HourFormat(context)
-  TimePickerDialog(
-          context,
-          { _, h, m -> onTimePicked(LocalTime.of(h, m)) },
-          initial.hour,
-          initial.minute,
-          is24h)
-      .show()
-}
-
-/**
- * Toggles the presence of a day in the set.
- *
- * @param day The day to toggle.
- * @return A new set with the day toggled.
- */
-private fun Set<Int>.toggled(day: Int): Set<Int> = if (day in this) this - day else this + day
-
-/**
- * Generates the initial list of time intervals based on the current opening hours and 24-hour
- * status.
- *
- * @param current The current OpeningHours object.
- * @param is24h Boolean indicating if the shop is open 24 hours.
- * @return A list of pairs representing start and end times.
- */
-private fun initialIntervals(
-    current: OpeningHours,
-    is24h: Boolean
-): List<Pair<LocalTime, LocalTime>> =
+fun humanize(hours: List<TimeSlot>): String =
     when {
-      is24h ->
-          listOf(
-              ShopUiDefaults.TimeMagicNumbers.open24Start to
-                  ShopUiDefaults.TimeMagicNumbers.open24End)
-      current.hours.isEmpty() ->
-          listOf(
-              ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                  ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-      else ->
-          current.hours
-              .mapNotNull { slot ->
-                runCatching {
-                      val st =
-                          slot.open?.let(::parseToLocalTime)
-                              ?: ShopUiDefaults.TimeMagicNumbers.defaultStart
-                      val en = slot.close?.let(::parseToLocalTime) ?: st.plusHours(1)
-                      st to en
-                    }
-                    .getOrNull()
-              }
-              .ifEmpty {
-                listOf(
-                    ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                        ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-              }
+      hours.isEmpty() -> ShopFormUi.Strings.CLOSED_LABEL
+      hours.size == 1 &&
+          hours[0].open == TimeUi.OPEN24_START &&
+          hours[0].close == TimeUi.OPEN24_END -> ShopFormUi.Strings.OPEN24_LABEL
+      else -> {
+        // Sort by opening time
+        val sorted = hours.sortedBy { ts -> ts.open?.tryParseTime() ?: LocalTime.MAX }
+        sorted.joinToString("\n") { slot ->
+          val s = slot.open?.let { it.tryParseTime()?.format(TimeUi.fmt12()) ?: it } ?: "-"
+          val e = slot.close?.let { it.tryParseTime()?.format(TimeUi.fmt12()) ?: it } ?: "-"
+          "$s - $e"
+        }
+      }
     }
 
-/**
- * Splits the time slots in several lines of text
- *
- * @param slots The list of time slots
- * @return A list of time slots splitted in several lines of text
- */
-private fun splittedHumanize(slots: List<TimeSlot>): List<String> {
-  return humanize(slots).split("\n")
-}
+/* ================================================================================================
+ * Helpers
+ * ================================================================================================ */
 
-/* =============================================================================
- * Components
- * ============================================================================= */
+/** Returns an empty list of opening hours for each day of the week. */
+fun emptyWeek(): List<OpeningHours> =
+    List(7) { day -> OpeningHours(day = day, hours = emptyList()) }
 
 /**
- * A composable function that displays a section header with a title and an underline.
+ * Validates if the provided email string is in a valid email format.
  *
- * @param title The title of the section header.
- * @param modifier The modifier to be applied to the section header.
+ * @param email The email string to validate.
+ * @return True if the email is valid, false otherwise.
  */
-@Composable
-fun SectionHeader(title: String, modifier: Modifier = Modifier) {
-  val density = LocalDensity.current
-  var textWidth by remember { mutableStateOf(0.dp) }
+fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-  Column(modifier = modifier.testTag(ShopComponentsTestTags.sectionHeader(title))) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        onTextLayout = { layout -> textWidth = with(density) { layout.size.width.toDp() } },
-        modifier = Modifier.testTag(ShopComponentsTestTags.SECTION_HEADER_LABEL))
-    Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
-    HorizontalDivider(
-        modifier = Modifier.width(textWidth).testTag(ShopComponentsTestTags.SECTION_HEADER_DIVIDER),
-        thickness = Dimensions.DividerThickness.standard,
-        color = MaterialTheme.colorScheme.outlineVariant)
-    Spacer(Modifier.height(Dimensions.Spacing.medium))
+@Stable
+class CreateShopFormState(
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialWeek: List<OpeningHours> = emptyWeek(),
+    initialShop: Shop? = null,
+    private val onSetGameQueryCallback: (String) -> Unit,
+    private val onSetGameCallback: (Game) -> Unit
+) : ShopFormActions, GamePickerActions {
+
+  var shopName by mutableStateOf(initialShop?.name ?: "")
+  var email by mutableStateOf(initialShop?.email ?: "")
+  var phone by mutableStateOf(initialShop?.phone ?: "")
+  var website by mutableStateOf(initialShop?.website ?: "")
+  var addressText by mutableStateOf(initialShop?.address?.name ?: "")
+
+  var week by mutableStateOf(if (initialShop != null) initialShop.openingHours else initialWeek)
+  var stock by mutableStateOf(if (initialShop != null) initialShop.gameCollection else initialStock)
+  var photoCollectionUrl by mutableStateOf(initialShop?.photoCollectionUrl ?: listOf())
+
+  // Dialog & UI states
+  var showHoursDialog by mutableStateOf(false)
+  var editingDay by mutableStateOf<Int?>(null)
+
+  var showGameDialog by mutableStateOf(false)
+  var editingGame by mutableStateOf<Game?>(null)
+  var qty by mutableIntStateOf(1)
+
+  // Derived state for validation
+  private val hasOpeningHours by derivedStateOf { week.any { it.hours.isNotEmpty() } }
+
+  // ---- ShopFormActions implementation ----
+  override fun onNameChange(name: String) {
+    shopName = name
+  }
+
+  override fun onEmailChange(email: String) {
+    this.email = email
+  }
+
+  override fun onPhoneChange(phone: String) {
+    this.phone = phone
+  }
+
+  override fun onWebsiteChange(website: String) {
+    this.website = website
+  }
+
+  override fun onLocationChange(location: Location) {
+    addressText = location.name
+  }
+
+  // ---- GamePickerActions implementation ----
+  override fun onStockChange(stock: List<Pair<Game, Int>>) {
+    this.stock = stock
+  }
+
+  override fun onQtyChange(qty: Int) {
+    this.qty = qty
+  }
+
+  override fun onSetGameQuery(query: String) {
+    onSetGameQueryCallback(query)
+  }
+
+  override fun onSetGame(game: Game) {
+    onSetGameCallback(game)
+  }
+
+  override fun onDismiss() {
+    showGameDialog = false
+    editingGame = null
+  }
+
+  // ---- Helpers for photos ----
+  fun addOrReplacePhoto(path: String, index: Int) {
+    photoCollectionUrl =
+        if (index < photoCollectionUrl.size && photoCollectionUrl[index].isNotEmpty()) {
+          photoCollectionUrl.mapIndexed { i, old -> if (i == index) path else old }
+        } else {
+          photoCollectionUrl + path
+        }
+  }
+
+  fun removePhoto(url: String) {
+    photoCollectionUrl = photoCollectionUrl.filter { it != url }
+  }
+
+  // ---- Helpers for stock ----
+  fun updateStockQuantity(game: Game, qty: Int) {
+    stock = stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+  }
+
+  fun removeFromStock(game: Game) {
+    stock = stock.filterNot { it.first.uid == game.uid }
+  }
+
+  fun addOrUpdateStock(game: Game, qty: Int) {
+    val existing = stock.find { it.first.uid == game.uid }
+    stock =
+        if (existing != null) {
+          stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+        } else {
+          stock + (game to qty)
+        }
+  }
+
+  // ---- Helpers ----
+  fun onDiscard(onBack: () -> Unit) {
+    shopName = ""
+    email = ""
+    addressText = ""
+    phone = ""
+    website = ""
+    week = emptyWeek()
+    editingDay = null
+    showHoursDialog = false
+    showGameDialog = false
+    qty = 1
+    stock = emptyList()
+    photoCollectionUrl = emptyList()
+    onSetGameQueryCallback("")
+    editingGame = null
+    onBack()
   }
 }
 
+/* ================================================================================================
+ * Shared Composable Components
+ * ================================================================================================ */
+
 /**
- * A composable function that displays a labeled text field with a placeholder.
+ * Composable function representing the required information section.
  *
- * @param label The label for the text field.
- * @param placeholder The placeholder text for the text field.
- * @param value The current value of the text field.
- * @param onValueChange A callback function that is invoked when the value of the text field
- *   changes.
- * @param modifier The modifier to be applied to the text field.
- * @param keyboardType The type of keyboard to be used for the text field.
- * @param singleLine A boolean indicating whether the text field should be single line or not.
- * @param minLines The minimum number of lines for the text field.
+ * @param shop The current shop state.
+ * @param actions The actions to handle form updates.
+ * @param viewModel The view model for location search.
+ * @param owner The owner account.
  */
 @Composable
-fun LabeledField(
-    label: String,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    singleLine: Boolean = true,
-    minLines: Int = Dimensions.Numbers.singleLine,
+fun RequiredInfoSection(
+    shop: Shop,
+    actions: ShopFormActions,
+    online: Boolean,
+    viewModel: ShopSearchViewModel,
+    owner: Account
 ) {
-  Box(modifier.fillMaxWidth().testTag(ShopComponentsTestTags.labeledField(label))) {
-    FocusableInputField(
-        label = { Text(label) },
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = singleLine,
-        minLines = minLines,
-        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = keyboardType),
-        placeholder = { Text(placeholder) },
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.LABELED_FIELD_INPUT))
+  Box(Modifier.padding(bottom = Dimensions.Padding.small)) {
+    LabeledField(
+        label = ShopFormUi.Strings.SHOP_LABEL,
+        placeholder = ShopFormUi.Strings.SHOP_PLACEHOLDER,
+        value = shop.name,
+        onValueChange = { if (it.length <= 32) actions.onNameChange(it) },
+        modifier = Modifier.testTag(ShopFormTestTags.FIELD_SHOP))
+  }
+
+  Box(
+      Modifier.testTag(ShopFormTestTags.FIELD_ADDRESS)
+          .padding(bottom = Dimensions.Padding.medium)) {
+        ShopLocationSearchBar(
+            account = owner,
+            shop = shop,
+            enabled = online,
+            viewModel = viewModel,
+            inputFieldTestTag = SessionComponentsTestTags.LOCATION_FIELD,
+            dropdownItemTestTag = SessionComponentsTestTags.LOCATION_FIELD_ITEM)
+      }
+
+  Box(modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.small)) {
+    Text(text = "Contact Info", style = MaterialTheme.typography.titleMedium)
+  }
+
+  Box(Modifier.padding(bottom = Dimensions.Padding.small)) {
+    LabeledField(
+        label = ShopFormUi.Strings.EMAIL_LABEL,
+        placeholder = ShopFormUi.Strings.EMAIL_PLACEHOLDER,
+        leadingIcon = {
+          Icon(
+              imageVector = Icons.Default.Email,
+              tint = AppColors.neutral,
+              contentDescription = null)
+        },
+        value = shop.email,
+        onValueChange = { if (it.length <= 60) actions.onEmailChange(it) },
+        keyboardType = KeyboardType.Email,
+        modifier = Modifier.testTag(ShopFormTestTags.FIELD_EMAIL))
+  }
+
+  val showEmailError = shop.email.isNotEmpty() && !isValidEmail(shop.email)
+  if (showEmailError) {
+    Text(
+        text = ShopFormUi.Strings.ERROR_EMAIL_MSG,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall)
+  }
+
+  Row(modifier = Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+    Box(Modifier.weight(1f).padding(end = Dimensions.Padding.medium)) {
+      LabeledField(
+          label = ShopFormUi.Strings.PHONE_LABEL,
+          placeholder = ShopFormUi.Strings.PHONE_PLACEHOLDER,
+          value = shop.phone,
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Call,
+                tint = AppColors.neutral,
+                contentDescription = null)
+          },
+          onValueChange = { if (it.length <= 16) actions.onPhoneChange(it) },
+          keyboardType = KeyboardType.Phone,
+          modifier = Modifier.testTag(ShopFormTestTags.FIELD_PHONE))
+    }
+
+    Box(Modifier.weight(1f)) {
+      LabeledField(
+          label = ShopFormUi.Strings.LINK_LABEL,
+          placeholder = ShopFormUi.Strings.LINK_PLACEHOLDER,
+          value = shop.website,
+          leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Link,
+                tint = AppColors.neutral,
+                contentDescription = null)
+          },
+          onValueChange = { if (it.length <= 50) actions.onWebsiteChange(it) },
+          modifier = Modifier.testTag(ShopFormTestTags.FIELD_LINK),
+          keyboardType = KeyboardType.Uri)
+    }
   }
 }
 
 /**
- * A composable function that displays a time field with a label and a clickable card.
+ * Composable function representing the game stock picker dialog.
  *
- * @param label The label for the time field.
- * @param value The current value of the time field.
- * @param onClick A callback function that is invoked when the time field is clicked.
- * @param modifier The modifier to be applied to the time field.
+ * @param owner Current user
+ * @param shop Shop to fetch data from
+ * @param viewModel VM used by this screen
+ * @param gameUIState Ui state of the game related components
+ * @param state Ui state
  */
 @Composable
-fun TimeField(label: String, value: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-  Column(modifier = modifier.testTag(ShopComponentsTestTags.timeField(label))) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_LABEL))
-    OutlinedCard(
-        onClick = onClick,
+fun GameStockPicker(
+    owner: Account,
+    shop: Shop?,
+    viewModel: ShopSearchViewModel,
+    gameUIState: GameUIState,
+    state: CreateShopFormState,
+) {
+  if (!state.showGameDialog) return
+
+  val existing = remember(state.stock) { state.stock.map { it.first.uid }.toSet() }
+  Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
+    GameStockDialog(
+        owner,
+        shop,
+        viewModel = viewModel,
+        gameUIState = gameUIState,
+        onQueryChange = state::onSetGameQuery,
+        quantity = state.qty,
+        onQuantityChange = state::onQtyChange,
+        existingIds = existing,
+        ignoreId = state.editingGame?.uid,
+        onDismiss = {
+          state.onDismiss()
+          state.onQtyChange(1)
+          state.onSetGameQuery("")
+        },
+        onSave = {
+          gameUIState.fetchedGame?.let { g -> state.addOrUpdateStock(g, state.qty) }
+          state.onQtyChange(1)
+          state.onSetGameQuery("")
+          state.onDismiss()
+        })
+  }
+}
+
+/**
+ * Displays the fetched game's image
+ *
+ * @param gameUIState game Ui state after the search
+ */
+@Composable
+fun GameStockImage(gameUIState: GameUIState) {
+  val game = gameUIState.fetchedGame
+  if (game != null) {
+    AsyncImage(
+        model = game.imageURL,
+        contentDescription = "Game image",
         modifier =
-            Modifier.fillMaxWidth()
-                .padding(top = Dimensions.Spacing.small)
-                .height(Dimensions.ContainerSize.timeFieldHeight)
-                .testTag(ShopComponentsTestTags.TIME_FIELD_CARD),
-        shape = MaterialTheme.shapes.medium) {
-          Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.testTag(ShopComponentsTestTags.TIME_FIELD_VALUE))
-          }
-        }
+            Modifier.sizeIn(
+                    maxWidth = ShopFormUi.Dim.imageSize.dp, maxHeight = ShopFormUi.Dim.imageSize.dp)
+                .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
+                .padding(vertical = Dimensions.Padding.medium),
+        contentScale = ContentScale.Fit)
   }
 }
-
-/* =============================================================================
- * Rows & selectors
- * ============================================================================= */
-
-/**
- * A composable function that displays a row representing a day with its name, value, and an edit
- * button.
- *
- * @param dayName The name of the day.
- * @param value The value associated with the day.
- * @param onEdit A callback function that is invoked when the edit button is clicked.
- * @param modifier The modifier to be applied to the day row.
- */
-@Composable
-fun DayRow(dayName: String, value: String, onEdit: () -> Unit, modifier: Modifier = Modifier) {
-  Row(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .clickable(onClick = onEdit)
-              .testTag(ShopComponentsTestTags.dayRow(dayName)),
-      verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = dayName,
-            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.DAY_ROW_NAME),
-            style = MaterialTheme.typography.bodyLarge)
-        Text(
-            text = value,
-            modifier =
-                Modifier.weight(2f)
-                    .padding(end = Dimensions.Spacing.medium)
-                    .testTag(ShopComponentsTestTags.DAY_ROW_VALUE),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.End,
-        )
-        IconButton(
-            onClick = onEdit, modifier = Modifier.testTag(ShopComponentsTestTags.DAY_ROW_EDIT)) {
-              Icon(
-                  imageVector = Icons.Outlined.Edit,
-                  contentDescription = ShopUiDefaults.StringsMagicNumbers.EDIT_HOURS)
-            }
-      }
-}
-
-/**
- * A composable function that displays a row for selecting opening and closing hours, along with a
- * remove button.
- *
- * @param start The starting time.
- * @param end The ending time.
- * @param onPickStart A callback function that is invoked when the start time field is clicked.
- * @param onPickEnd A callback function that is invoked when the end time field is clicked.
- * @param onRemove A callback function that is invoked when the remove button is clicked.
- * @param rowIndex An optional index for testing purposes.
- */
-@Composable
-fun HourRow(
-    start: LocalTime,
-    end: LocalTime,
-    onPickStart: () -> Unit,
-    onPickEnd: () -> Unit,
-    onRemove: () -> Unit,
-    rowIndex: Int? = null
-) {
-  val labelTopSpace =
-      with(LocalDensity.current) {
-        MaterialTheme.typography.labelSmall.lineHeight.toDp() + Dimensions.Spacing.small
-      }
-
-  Row(
-      verticalAlignment = Alignment.Top,
-      modifier =
-          Modifier.fillMaxWidth()
-              .then(
-                  if (rowIndex != null) Modifier.testTag(ShopComponentsTestTags.hourRow(rowIndex))
-                  else Modifier.testTag(ShopComponentsTestTags.HOUR_ROW))) {
-        TimeField(
-            label = ShopUiDefaults.StringsMagicNumbers.OPEN_TIME,
-            value = start.display(),
-            onClick = onPickStart,
-            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_OPEN_FIELD))
-        Spacer(Modifier.width(Dimensions.Spacing.large))
-        TimeField(
-            label = ShopUiDefaults.StringsMagicNumbers.CLOSE_TIME,
-            value = end.display(),
-            onClick = onPickEnd,
-            modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.HOUR_ROW_CLOSE_FIELD))
-        Spacer(Modifier.width(Dimensions.Spacing.small))
-
-        Column(
-            modifier = Modifier.width(Dimensions.ContainerSize.iconButtonSize),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-              Spacer(Modifier.height(labelTopSpace))
-              Box(
-                  modifier =
-                      Modifier.height(Dimensions.ContainerSize.timeFieldHeight).fillMaxWidth(),
-                  contentAlignment = Alignment.Center) {
-                    IconButton(
-                        onClick = onRemove,
-                        modifier =
-                            Modifier.size(Dimensions.ContainerSize.iconButtonTouch)
-                                .testTag(ShopComponentsTestTags.HOUR_ROW_REMOVE)) {
-                          Icon(Icons.Filled.Close, contentDescription = "Remove interval")
-                        }
-                  }
-            }
-      }
-}
-
-/**
- * A composable function that displays a selector for days of the week.
- *
- * @param selected A set of selected day indices (0 for Sunday, 1 for Monday, etc.).
- * @param onToggle A callback function that is invoked when a day is toggled.
- */
-@Composable
-fun DaysSelector(selected: Set<Int>, onToggle: (Int) -> Unit) {
-  Row(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(vertical = Dimensions.Spacing.small)
-              .testTag(ShopComponentsTestTags.DAYS_SELECTOR),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically) {
-        ShopUiDefaults.DaysMagicNumbers.short.forEachIndexed { idx, short ->
-          val isSel = idx in selected
-
-          FilterChip(
-              selected = isSel,
-              onClick = { onToggle(idx) },
-              shape = CircleShape,
-              modifier =
-                  Modifier.size(Dimensions.ComponentWidth.chipSize)
-                      .testTag(ShopComponentsTestTags.dayChip(idx)),
-              label = {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                  Text(
-                      text = short,
-                      textAlign = TextAlign.Center,
-                      style = MaterialTheme.typography.titleMedium,
-                      fontWeight = FontWeight.SemiBold)
-                }
-              },
-              colors =
-                  FilterChipDefaults.filterChipColors(
-                      containerColor = Color.Transparent,
-                      labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                      selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                      selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
-              border =
-                  FilterChipDefaults.filterChipBorder(
-                      enabled = true,
-                      selected = isSel,
-                      borderColor = MaterialTheme.colorScheme.outlineVariant,
-                      selectedBorderColor = MaterialTheme.colorScheme.inversePrimary))
-        }
-      }
-}
-
-/* =============================================================================
- * Dialogs
- * ============================================================================= */
-
-/**
- * A composable function that displays a dialog for selecting opening hours.
- *
- * @param initialSelectedDays A set of initially selected day indices.
- * @param current The current OpeningHours object.
- * @param onDismiss A callback function that is invoked when the dialog is dismissed.
- * @param onSave A callback function that is invoked when the save button is clicked, with the
- *   selected days, closed status, 24-hour status, and time intervals as parameters.
- */
-@Composable
-fun OpeningHoursDialog(
-    initialSelectedDays: Set<Int>,
-    current: OpeningHours,
-    onDismiss: () -> Unit,
-    onSave:
-        (
-            selectedDays: Set<Int>,
-            closed: Boolean,
-            open24: Boolean,
-            intervals: List<Pair<LocalTime, LocalTime>>) -> Unit
-) {
-  val context = LocalContext.current
-
-  var selectedDays by remember(initialSelectedDays) { mutableStateOf(initialSelectedDays) }
-  var isClosed by remember(current) { mutableStateOf(current.hours.isEmpty()) }
-  var is24h by remember(current) { mutableStateOf(isOpen24(current.hours)) }
-  var intervals by remember(current, is24h) { mutableStateOf(initialIntervals(current, is24h)) }
-
-  var errorText by remember { mutableStateOf<String?>(null) }
-
-  AlertDialog(
-      onDismissRequest = onDismiss,
-      containerColor = MaterialTheme.colorScheme.background,
-      shape = MaterialTheme.shapes.extraLarge,
-      title = {
-        Box(
-            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG_TITLE),
-            contentAlignment = Alignment.Center) {
-              Text(
-                  ShopUiDefaults.StringsMagicNumbers.DIALOG_TITLE,
-                  style = MaterialTheme.typography.headlineSmall,
-                  textAlign = TextAlign.Center)
-            }
-      },
-      text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.DIALOG)) {
-          Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_DAYS)) {
-            DaysSelector(
-                selected = selectedDays, onToggle = { d -> selectedDays = selectedDays.toggled(d) })
-          }
-
-          Spacer(Modifier.height(Dimensions.Spacing.large))
-
-          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            val onIs24h: (Boolean) -> Unit = {
-              is24h = it
-              if (it) {
-                isClosed = false
-                intervals =
-                    listOf(
-                        ShopUiDefaults.TimeMagicNumbers.open24Start to
-                            ShopUiDefaults.TimeMagicNumbers.open24End)
-              }
-            }
-            Row(
-                modifier =
-                    Modifier.weight(1f)
-                        .testTag(ShopComponentsTestTags.DIALOG_OPEN24_ROW)
-                        .clickable { onIs24h(!is24h) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center) {
-                  Checkbox(
-                      checked = is24h,
-                      onCheckedChange = onIs24h,
-                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX))
-                  Spacer(Modifier.width(Dimensions.Spacing.medium))
-                  Text(
-                      ShopUiDefaults.StringsMagicNumbers.OPEN_24,
-                      maxLines = Dimensions.Numbers.singleLine)
-                }
-
-            val onIsClosed: (Boolean) -> Unit = {
-              isClosed = it
-              if (it) {
-                is24h = false
-                intervals =
-                    listOf(
-                        ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                            ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-              }
-            }
-            Row(
-                modifier =
-                    Modifier.weight(1f)
-                        .testTag(ShopComponentsTestTags.DIALOG_CLOSED_ROW)
-                        .clickable { onIsClosed(!isClosed) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center) {
-                  Checkbox(
-                      checked = isClosed,
-                      onCheckedChange = onIsClosed,
-                      modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX))
-                  Spacer(Modifier.width(Dimensions.Spacing.medium))
-                  Text(
-                      ShopUiDefaults.StringsMagicNumbers.CLOSED,
-                      maxLines = Dimensions.Numbers.singleLine)
-                }
-          }
-
-          Spacer(Modifier.height(Dimensions.Spacing.medium))
-
-          AnimatedVisibility(visible = !isClosed && !is24h) {
-            Column(Modifier.testTag(ShopComponentsTestTags.DIALOG_INTERVALS)) {
-              intervals.forEachIndexed { idx, (start, end) ->
-                HourRow(
-                    start = start,
-                    end = end,
-                    onPickStart = {
-                      showTimePicker(context, start) { t ->
-                        intervals = intervals.toMutableList().apply { this[idx] = t to end }
-                      }
-                    },
-                    onPickEnd = {
-                      showTimePicker(context, end) { t ->
-                        intervals = intervals.toMutableList().apply { this[idx] = start to t }
-                      }
-                    },
-                    onRemove = {
-                      intervals = intervals.toMutableList().apply { removeAt(idx) }
-                      if (intervals.isEmpty()) {
-                        intervals =
-                            listOf(
-                                ShopUiDefaults.TimeMagicNumbers.defaultStart to
-                                    ShopUiDefaults.TimeMagicNumbers.defaultEnd)
-                      }
-                    },
-                    rowIndex = idx)
-                Spacer(Modifier.height(Dimensions.Spacing.medium))
-              }
-
-              TextButton(
-                  onClick = {
-                    val defaultStart = ShopUiDefaults.TimeMagicNumbers.defaultStart
-                    val defaultEnd = ShopUiDefaults.TimeMagicNumbers.defaultEnd
-                    intervals = intervals + (defaultStart to defaultEnd)
-                  },
-                  contentPadding =
-                      PaddingValues(
-                          horizontal = Dimensions.Spacing.none, vertical = Dimensions.Spacing.none),
-                  modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ADD_HOURS)) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(Dimensions.Spacing.medium))
-                    Text(ShopUiDefaults.StringsMagicNumbers.ADD_HOURS)
-                  }
-            }
-          }
-
-          errorText?.let {
-            Spacer(Modifier.height(Dimensions.Spacing.medium))
-            Text(
-                it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_ERROR))
-          }
-        }
-      },
-      dismissButton = {
-        TextButton(
-            onClick = onDismiss,
-            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_CANCEL)) {
-              Text(ShopUiDefaults.StringsMagicNumbers.BTN_CANCEL)
-            }
-      },
-      confirmButton = {
-        TextButton(
-            onClick = {
-              try {
-                val open24Start = ShopUiDefaults.TimeMagicNumbers.open24Start
-                val open24End = ShopUiDefaults.TimeMagicNumbers.open24End
-                val open24Pair = open24Start to open24End
-
-                // If user entered a single interval with same start/end => treat as open 24
-                val normalizedIntervals =
-                    if (!isClosed &&
-                        !is24h &&
-                        intervals.size == 1 &&
-                        intervals[0].first == intervals[0].second) {
-                      listOf(open24Pair)
-                    } else intervals
-
-                val payload =
-                    when {
-                      isClosed -> emptyList()
-                      is24h -> listOf(open24Pair)
-                      else -> validateIntervals(normalizedIntervals)
-                    }
-
-                // Compute final open24 flag from the normalized payload
-                val open24Final =
-                    payload.size == 1 &&
-                        payload[0].first == open24Start &&
-                        payload[0].second == open24End
-
-                errorText = null
-                onSave(selectedDays, isClosed, open24Final, payload)
-              } catch (e: IllegalArgumentException) {
-                errorText = e.message ?: ShopUiDefaults.StringsMagicNumbers.INVALID_TIME_RANGES
-              }
-            },
-            modifier = Modifier.testTag(ShopComponentsTestTags.DIALOG_SAVE)) {
-              Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
-            }
-      })
-}
-
-/* =============================================================================
- * Footer action bar
- * ============================================================================= */
-
-/**
- * A composable function that displays an action bar with discard and a primary button.
- * - Keeps existing test tags (ACTION_BAR, ACTION_DISCARD, ACTION_CREATE)
- * - primaryButtonText defaults to "Create"; pass BTN_SAVE for edit flows
- */
-@Composable
-fun ActionBar(
-    onDiscard: () -> Unit,
-    onPrimary: () -> Unit,
-    enabled: Boolean,
-    primaryButtonText: String = ShopUiDefaults.StringsMagicNumbers.BTN_CREATE,
-) {
-  Surface(
-      color = MaterialTheme.colorScheme.background,
-      contentColor = MaterialTheme.colorScheme.onSurface,
-      tonalElevation = Dimensions.Elevation.raised) {
-        Row(
-            Modifier.fillMaxWidth()
-                .padding(Dimensions.Padding.extraLarge)
-                .testTag(ShopComponentsTestTags.ACTION_BAR),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
-              OutlinedButton(
-                  onClick = onDiscard,
-                  colors =
-                      ButtonDefaults.outlinedButtonColors(
-                          containerColor = MaterialTheme.colorScheme.outline,
-                          contentColor = MaterialTheme.colorScheme.error),
-                  modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.ACTION_DISCARD)) {
-                    Icon(Icons.Filled.Delete, contentDescription = null)
-                    Spacer(Modifier.width(Dimensions.Spacing.medium))
-                    Text(ShopUiDefaults.StringsMagicNumbers.BTN_DISCARD)
-                  }
-
-              val primaryColors =
-                  if (enabled)
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.secondary,
-                          contentColor = MaterialTheme.colorScheme.onSecondary)
-                  else
-                      ButtonDefaults.buttonColors(
-                          containerColor = MaterialTheme.colorScheme.outline,
-                          contentColor = MaterialTheme.colorScheme.onSecondary)
-
-              val primaryTag =
-                  if (primaryButtonText.equals(
-                      ShopUiDefaults.StringsMagicNumbers.BTN_SAVE, ignoreCase = true))
-                      ShopComponentsTestTags.ACTION_SAVE
-                  else ShopComponentsTestTags.ACTION_CREATE
-
-              Button(
-                  onClick = onPrimary,
-                  enabled = enabled,
-                  shape = RoundedCornerShape(Dimensions.ButtonRadius.rounded),
-                  colors = primaryColors,
-                  modifier = Modifier.weight(1f).testTag(primaryTag)) {
-                    Icon(Icons.Filled.Check, contentDescription = null)
-                    Spacer(Modifier.width(Dimensions.Spacing.medium))
-                    Text(primaryButtonText)
-                  }
-            }
-      }
-}
-
-/* =============================================================================
- * Game search + quantity
- * ============================================================================= */
 
 /**
  * A composable function that displays a quantity input with +/- buttons and a label.
  *
  * @param value The current quantity value.
  * @param onValueChange A callback function that is invoked when the quantity value changes.
- * @param range The range of valid quantity values.
  * @param modifier The modifier to be applied to the quantity input.
+ * @param max The max value the slider can reach
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun GameAddUI(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    max: Int = 100
+) {
   Column(modifier.testTag(ShopComponentsTestTags.QTY_CONTAINER)) {
-    Text(
-        ShopUiDefaults.StringsMagicNumbers.QUANTITY,
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.testTag(ShopComponentsTestTags.QTY_LABEL))
-
     Spacer(Modifier.height(Dimensions.Spacing.large))
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
         modifier = Modifier.fillMaxWidth()) {
-          IconButton(
-              onClick = {
-                val newValue = (value - 1)
-                onValueChange(newValue)
-              },
-              enabled = value > 0,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_MINUS_BUTTON)) {
-                Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-              }
+          var sliderWidth by remember { mutableStateOf(0f) }
+          var bubbleWidth by remember { mutableStateOf(0f) }
 
-          FocusableInputField(
-              value = value.toString(),
-              onValueChange = { newText ->
-                val newValue = newText.toIntOrNull() ?: 0
-                if (newValue > 0) {
-                  onValueChange(newValue)
-                }
-              },
-              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-              singleLine = true,
-              textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-              modifier = Modifier.weight(1f).testTag(ShopComponentsTestTags.QTY_INPUT_FIELD))
+          val density = LocalDensity.current
+          val thumbDiameterPx = with(density) { ShopFormUi.Dim.thumbSize.dp.toPx() }
+          val thumbRadiusPx = thumbDiameterPx / 2f
 
-          IconButton(
-              onClick = {
-                val newValue = (value + 1)
-                onValueChange(newValue)
-              },
-              enabled = true,
-              modifier = Modifier.testTag(ShopComponentsTestTags.QTY_PLUS_BUTTON)) {
-                Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
+          Box(
+              modifier =
+                  Modifier.weight(1f)
+                      .testTag(ShopComponentsTestTags.QTY_INPUT_FIELD)
+                      .height(ShopFormUi.Dim.bubbleSize.dp)) {
+                Box(
+                    modifier =
+                        Modifier.onGloballyPositioned { coords ->
+                              bubbleWidth = coords.size.width.toFloat()
+                            }
+                            .offset {
+                              if (sliderWidth <= 0f || bubbleWidth <= 0f)
+                                  return@offset IntOffset.Zero
+
+                              val fraction = (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                              val trackWidth = sliderWidth - thumbDiameterPx
+                              val thumbCenterX = thumbRadiusPx + (trackWidth * fraction)
+
+                              val minX = thumbRadiusPx - bubbleWidth / 2f
+                              val maxX = sliderWidth - thumbRadiusPx - bubbleWidth / 2f
+
+                              val x = (thumbCenterX - bubbleWidth / 2f).coerceIn(minX, maxX)
+
+                              IntOffset(x.toInt(), 0)
+                            }
+                            .align(Alignment.TopStart)) {
+                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier =
+                                Modifier.shadow(Dimensions.Elevation.extraHigh, CircleShape)
+                                    .background(AppColors.focus, CircleShape)
+                                    .padding(Dimensions.Padding.extraMedium)) {
+                              Text(
+                                  text = value.toString(),
+                                  color = AppColors.primary,
+                                  style = MaterialTheme.typography.bodyMedium)
+                            }
+
+                        // Pointer triangle
+                        val pathColor = AppColors.focus
+                        Canvas(
+                            modifier =
+                                Modifier.size(
+                                    width = Dimensions.Padding.extraLarge,
+                                    height = Dimensions.Padding.extraMedium)) {
+                              val path =
+                                  Path().apply {
+                                    moveTo(size.width / 2f, size.height)
+                                    lineTo(0f, 0f)
+                                    lineTo(size.width, 0f)
+                                    close()
+                                  }
+                              drawPath(path, pathColor)
+                            }
+                      }
+                    }
+
+                Slider(
+                    value = value.toFloat(),
+                    onValueChange = { onValueChange(it.toInt().coerceIn(0, max)) },
+                    valueRange = 0f..max.toFloat(),
+                    modifier =
+                        Modifier.fillMaxWidth().align(Alignment.BottomCenter).onGloballyPositioned {
+                          sliderWidth = it.size.width.toFloat()
+                        },
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = AppColors.focus,
+                            activeTrackColor = AppColors.focus,
+                            inactiveTrackColor = AppColors.textIconsFade),
+                    thumb = {
+                      Box(
+                          modifier =
+                              Modifier.size(ShopFormUi.Dim.thumbSize.dp)
+                                  .shadow(Dimensions.Elevation.high, CircleShape)
+                                  .background(AppColors.focus, CircleShape))
+                    })
               }
         }
   }
@@ -1046,10 +659,15 @@ fun GameAddUI(value: Int, onValueChange: (Int) -> Unit, modifier: Modifier = Mod
  * A composable function that displays a dialog for adding a game to stock with search and quantity
  * selection.
  *
+ * @param owner current user
+ * @param shop Current shop we're creating
+ * @param viewModel VM used by this screen
+ * @param gameUIState Current ui state of the game
  * @param onQueryChange A callback function that is invoked when the search query changes.
  * @param quantity The current quantity value.
  * @param onQuantityChange A callback function that is invoked when the quantity value changes.
  * @param existingIds A set of existing game IDs to prevent duplicates.
+ * @param ignoreId used to remove duplicate warning messages when editing the game item
  * @param onDismiss A callback function that is invoked when the dialog is dismissed.
  * @param onSave A callback function that is invoked when the save button is clicked.
  */
@@ -1063,11 +681,13 @@ fun GameStockDialog(
     quantity: Int,
     onQuantityChange: (Int) -> Unit,
     existingIds: Set<String> = emptySet(),
+    ignoreId: String? = null,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
   val selectedGame = gameUIState.fetchedGame
-  val isDuplicate = selectedGame?.uid?.let { it in existingIds } ?: false
+  val isDuplicate =
+      selectedGame?.uid?.let { it in existingIds && (ignoreId == null || it != ignoreId) } ?: false
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -1085,34 +705,37 @@ fun GameStockDialog(
             }
       },
       text = {
-        Column(Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY)) {
-          ShopGameSearchBar(
-              owner,
-              shop,
-              viewModel,
-              gameUIState.fetchedGame,
-              existingIds,
-              inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
-              dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
+        Column(
+            Modifier.fillMaxWidth().testTag(ShopComponentsTestTags.GAME_DIALOG_BODY),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+              ShopGameSearchBar(
+                  owner,
+                  shop,
+                  viewModel,
+                  gameUIState.fetchedGame,
+                  existingIds,
+                  inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
+                  dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
-          if (isDuplicate) {
-            Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
-            Text(
-                ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
-          }
+              if (isDuplicate) {
+                Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
+                Text(
+                    ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_HELPER))
+              }
 
-          Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+              Spacer(Modifier.height(Dimensions.Spacing.extraLarge))
+              GameStockImage(gameUIState = gameUIState)
 
-          GameAddUI(
-              value = quantity,
-              onValueChange = onQuantityChange,
-              modifier =
-                  Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
-                      .background(AppColors.primary))
-        }
+              GameAddUI(
+                  value = quantity,
+                  onValueChange = onQuantityChange,
+                  modifier =
+                      Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SLIDER)
+                          .background(AppColors.primary))
+            }
       },
       dismissButton = {
         TextButton(
@@ -1135,490 +758,229 @@ fun GameStockDialog(
  * Games: grid + item (with optional delete)
  * ============================================================================= */
 
-/**
- * A composable function that displays a section of games in a grid or list format, with optional
- * title and delete buttons.
- *
- * @param games A list of pairs containing [Game] objects and their corresponding quantities.
- * @param modifier The modifier to be applied to the game list section.
- * @param clickableGames A boolean indicating whether the game items are clickable.
- * @param title An optional title for the game list section.
- * @param hasDeleteButton A boolean indicating whether the game items have delete buttons.
- * @param onClick A callback function that is invoked when a game item is clicked.
- * @param onDelete A callback function that is invoked when a game item is deleted.
- */
-@Composable
-fun GameListSection(
-    games: List<Pair<Game, Int>>,
-    modifier: Modifier = Modifier,
-    clickableGames: Boolean = false,
-    title: String? = null,
-    hasDeleteButton: Boolean = false,
-    onClick: (Game) -> Unit = {},
-    onDelete: (Game) -> Unit = {},
-) {
-  Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = modifier.fillMaxWidth()) {
-        if (title != null) {
-          Text(
-              title,
-              style = MaterialTheme.typography.titleLarge,
-              fontWeight = FontWeight.SemiBold,
-          )
-        }
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-            contentPadding = PaddingValues(bottom = Dimensions.Spacing.extraLarge),
-            modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
-              items(items = games, key = { it.first.uid }) { (game, count) ->
-                GameItem(
-                    game = game,
-                    count = count,
-                    clickable = clickableGames,
-                    onClick = onClick,
-                    hasDeleteButton = hasDeleteButton,
-                    onDelete = onDelete)
-              }
-            }
-      }
-}
-
-/**
- * A composable function that displays a game item with its name, icon, quantity badge, and optional
- * delete button.
- *
- * @param game The [Game] object to be displayed.
- * @param count The quantity of the game.
- * @param modifier The modifier to be applied to the game item.
- * @param clickable A boolean indicating whether the game item is clickable.
- * @param onClick A callback function that is invoked when the game item is clicked.
- * @param hasDeleteButton A boolean indicating whether the game item has a delete button.
- * @param onDelete A callback function that is invoked when the delete button is clicked.
- */
-@Composable
-fun GameItem(
-    game: Game,
-    count: Int,
-    modifier: Modifier = Modifier,
-    clickable: Boolean = false,
-    onClick: (Game) -> Unit = {},
-    hasDeleteButton: Boolean = false,
-    onDelete: (Game) -> Unit = {},
-) {
-  Card(
-      modifier =
-          modifier
-              .fillMaxWidth()
-              .testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}")
-              .clickable(enabled = clickable, onClick = { onClick(game) }),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(
-            modifier = Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically) {
-
-              // Icon + badge
-              Box(
-                  modifier = Modifier.size(Dimensions.IconSize.huge),
-                  contentAlignment = Alignment.Center) {
-                    BadgedBox(
-                        badge = {
-                          // Only show badge if count > 0
-                          if (count > 0) {
-                            val max = ShopUiDefaults.RangesMagicNumbers.qtyGameDialog.last
-                            val label = if (count > max) "$max+" else count.toString()
-                            Badge(
-                                modifier =
-                                    Modifier.offset(
-                                            x = Dimensions.BadgeSize.offsetX,
-                                            y = Dimensions.BadgeSize.offsetY)
-                                        .defaultMinSize(
-                                            minWidth = Dimensions.BadgeSize.minSize,
-                                            minHeight = Dimensions.BadgeSize.minSize),
-                                containerColor = MaterialTheme.colorScheme.inversePrimary) {
-                                  Text(
-                                      label,
-                                      style = MaterialTheme.typography.labelSmall,
-                                      maxLines = Dimensions.Numbers.singleLine,
-                                      softWrap = false,
-                                      modifier =
-                                          Modifier.padding(horizontal = Dimensions.Spacing.small))
-                                }
-                          }
-                        }) {
-                          Icon(Icons.Filled.VideogameAsset, contentDescription = null)
-                        }
-                  }
-
-              Spacer(Modifier.width(Dimensions.Spacing.medium))
-
-              // Name centered
-              Column(
-                  modifier = Modifier.weight(1f),
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  verticalArrangement = Arrangement.Center) {
-                    Text(
-                        game.name,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center)
-                  }
-
-              // Optional delete
-              if (hasDeleteButton) {
-                IconButton(
-                    onClick = { onDelete(game) },
-                    modifier =
-                        Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}"),
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error)) {
-                      Icon(
-                          Icons.Filled.Delete, contentDescription = "Remove ${game.name} from list")
-                    }
-              }
-            }
-      }
-}
-
 /* =============================================================================
  * Games: editable item helper
  * ============================================================================= */
 
-/** Editable game row used in edit screen (inline quantity +/- and delete). */
+/**
+ * A composable function that displays a game item as an image card with an optional stock badge
+ *
+ * @param game The [Game] object whose image and name are displayed
+ * @param count The stock quantity for the game. When greater than zero, a stock badge is shown
+ * @param modifier The [Modifier] to be applied to the root container of the game item
+ * @param clickable A boolean indicating whether the game card is clickable
+ * @param onClick A callback function that is invoked when the game card is clicked
+ * @param imageHeight An optional fixed height for the image area
+ */
 @Composable
-fun EditableGameItem(
+fun GameItemImage(
     game: Game,
     count: Int,
-    onQuantityChange: (Game, Int) -> Unit,
-    onDelete: (Game) -> Unit,
     modifier: Modifier = Modifier,
+    online: Boolean,
+    editable: Boolean = false,
+    clickable: Boolean = true,
+    onClick: (Game) -> Unit = {},
+    onEdit: (Game) -> Unit = {},
+    onDelete: (Game) -> Unit = {},
+    imageHeight: Dp? = null,
 ) {
-  Card(
-      modifier =
-          modifier.fillMaxWidth().testTag("${ShopComponentsTestTags.SHOP_GAME_PREFIX}${game.uid}"),
-      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(
-            Modifier.padding(Dimensions.Padding.medium),
-            verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  game.name,
-                  style = MaterialTheme.typography.bodyLarge,
-                  modifier = Modifier.weight(1f))
-              Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                    IconButton(
-                        onClick = { onQuantityChange(game, (count - 1).coerceAtLeast(0)) },
-                        enabled = count > 0,
-                        modifier =
-                            Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON)) {
-                          Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity")
-                        }
-                    FocusableInputField(
-                        value = count.toString(),
-                        onValueChange = { newText ->
-                          val newValue = newText.toIntOrNull() ?: 0
-                          if (newValue >= 0) {
-                            onQuantityChange(game, newValue)
-                          }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        textStyle =
-                            MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
-                        modifier =
-                            Modifier.width(Dimensions.ComponentWidth.inputFieldWidth)
-                                .testTag(ShopComponentsTestTags.SHOP_GAME_QTY_INPUT))
-                    IconButton(
-                        onClick = { onQuantityChange(game, count + 1) },
-                        modifier = Modifier.testTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON)) {
-                          Icon(Icons.Filled.Add, contentDescription = "Increase quantity")
-                        }
-                  }
+  Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
+  Box(modifier = modifier.testTag(ShopFormTestTags.gameTestTag(game.uid))) {
+    Column(
+        modifier =
+            Modifier.padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.background)
+                .clickable(enabled = clickable) { onClick(game) },
+        horizontalAlignment = Alignment.CenterHorizontally) {
+          AsyncImage(
+              model = game.imageURL,
+              contentDescription = game.name,
+              contentScale = ContentScale.Crop,
+              modifier =
+                  Modifier.fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
+                      .shadow(Dimensions.Elevation.high, MaterialTheme.shapes.medium, clip = true)
+                      .clip(MaterialTheme.shapes.medium)
+                      .background(MaterialTheme.colorScheme.background)
+                      .let {
+                        if (imageHeight != null) it.height(imageHeight)
+                        else it.aspectRatio(ShopScreenDefaults.Game.GAME_IMG_DEFAULT_ASPECT_RATIO)
+                      },
+              placeholder = painterResource(R.drawable.ic_dice),
+              error = painterResource(R.drawable.ic_dice))
+
+          Spacer(Modifier.height(Dimensions.Spacing.small))
+
+          Text(
+              text = game.name,
+              style = MaterialTheme.typography.bodySmall,
+              textAlign = TextAlign.Center,
+              maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
+              overflow = TextOverflow.Ellipsis,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}"))
+        }
+
+    if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
+      val label =
+          if (count > ShopScreenDefaults.Stock.MAX_STOCK_SHOWED)
+              "${ShopScreenDefaults.Stock.MAX_STOCK_SHOWED}+"
+          else count.toString()
+
+      Column(
+          modifier = Modifier.padding(top = Dimensions.Padding.xLarge).align(Alignment.TopEnd),
+          horizontalAlignment = Alignment.End,
+          verticalArrangement = Arrangement.SpaceEvenly) {
+            Box(
+                modifier =
+                    Modifier.size(Dimensions.Padding.xLarge)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
+                contentAlignment = Alignment.Center) {
+                  Text(
+                      text = label,
+                      style = MaterialTheme.typography.bodySmall,
+                      fontSize = Dimensions.TextSize.small,
+                      color = MaterialTheme.colorScheme.onPrimary)
+                }
+
+            if (editable && online) {
               IconButton(
                   onClick = { onDelete(game) },
-                  colors =
-                      IconButtonDefaults.iconButtonColors(
-                          contentColor = MaterialTheme.colorScheme.error),
                   modifier =
-                      Modifier.testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete game")
+                      Modifier.offset(x = Dimensions.Padding.large)
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        tint = AppColors.textIcons)
+                  }
+
+              IconButton(
+                  onClick = {
+                    onEdit(game)
+                    Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
+                  },
+                  modifier =
+                      Modifier.offset(
+                              x = Dimensions.Padding.large, y = -Dimensions.Padding.extraMedium)
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = AppColors.textIcons)
                   }
             }
-      }
-}
-
-// -------------------- AVAILABILITY SECTION --------------------
-
-/**
- * A composable function that displays a bottom sheet with the full weekly opening hours for a shop
- *
- * @param openingHours The list of [OpeningHours] entries to display
- * @param currentDayIndex The index of the current day (0 = Sunday, 1 = Monday, etc.)
- * @param dayTagPrefix The prefix used for test tags associated with each day row in the dialog
- * @param onDismiss A callback function that is invoked when the dialog is dismissed
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun WeeklyAvailabilityDialog(
-    openingHours: List<OpeningHours>,
-    currentDayIndex: Int,
-    dayTagPrefix: String,
-    onDismiss: () -> Unit
-) {
-  val scrollState = rememberScrollState()
-  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-  ModalBottomSheet(
-      onDismissRequest = onDismiss,
-      sheetState = sheetState,
-      containerColor = MaterialTheme.colorScheme.background,
-  ) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .heightIn(max = Dimensions.ContainerSize.bottomSheetHeight)
-                .padding(
-                    horizontal = Dimensions.Padding.extraLarge,
-                    vertical = Dimensions.Spacing.medium)
-                .verticalScroll(scrollState)) {
-          Column(modifier = Modifier.fillMaxWidth()) {
-            openingHours
-                .sortedBy { it.day }
-                .forEach { entry ->
-                  val day = entry.day
-                  val isToday = day == currentDayIndex
-                  val dayName =
-                      ShopFormUi.dayNames.getOrNull(day)
-                          ?: "${ShopUiDefaults.StringsMagicNumbers.DAY_TEXT} ${day + 1}"
-                  val lines = splittedHumanize(entry.hours)
-
-                  Row(
-                      modifier =
-                          Modifier.fillMaxWidth()
-                              .padding(vertical = Dimensions.Spacing.small)
-                              .testTag("${dayTagPrefix}${day}"),
-                      verticalAlignment = Alignment.Top) {
-
-                        // Left: day name
-                        Text(
-                            text = dayName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                            fontStyle = FontStyle.Normal,
-                            modifier = Modifier.padding(end = Dimensions.Spacing.medium))
-
-                        // Right: all time slots
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement =
-                                Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                              lines.forEach { line ->
-                                Text(
-                                    text = line,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight =
-                                        if (isToday) FontWeight.SemiBold else FontWeight.Normal,
-                                    fontStyle = FontStyle.Normal,
-                                    textAlign = TextAlign.End)
-                              }
-                            }
-                      }
-                }
-
-            Spacer(Modifier.height(Dimensions.Spacing.medium))
-
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(
-                            bottom = Dimensions.Spacing.medium, end = Dimensions.Spacing.medium),
-                horizontalArrangement = Arrangement.End) {
-                  TextButton(onClick = onDismiss) {
-                    Text(ShopUiDefaults.StringsMagicNumbers.BOTTOM_SHEET_CONFIRM_BUTTON_TEXT)
-                  }
-                }
           }
-        }
+    }
   }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AvailabilitySectionWithChevron(
-    openingHours: List<OpeningHours>,
-    dayTagPrefix: String = ShopComponentsTestTags.SHOP_DAY_PREFIX,
-    addPadding: Boolean = false
-) {
-  var showSheet by remember { mutableStateOf(false) }
-
-  val today = Calendar.getInstance()[Calendar.DAY_OF_WEEK] - 1
-  val todayHours = openingHours.firstOrNull { it.day == today }
-
-  val todayText =
-      if (todayHours == null || todayHours.hours.isEmpty()) {
-        listOf(SpaceRenterUi.Misc.NO_TIME)
-      } else {
-        todayHours.hours.map { (start, end) ->
-          SpaceRenterUi.AvailabilitySection.timeRange(start, end)
-        }
-      }
-
-  Column(
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clickable { showSheet = true }
-                    .testTag(SpaceRenterTestTags.AVAILABILITY_HEADER)
-                    .padding(vertical = Dimensions.Padding.medium)) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = SpaceRenterUi.AvailabilitySection.TITLE,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold)
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(top = Dimensions.Padding.small)
-                            .testTag("${dayTagPrefix}${today}_HOURS"),
-                    verticalAlignment = Alignment.Top) {
-                      // Left label
-                      Text(
-                          text = SpaceRenterUi.AvailabilitySection.TODAY,
-                          style = MaterialTheme.typography.bodyMedium)
-
-                      Spacer(modifier = Modifier.width(Dimensions.Padding.medium))
-
-                      // Right – multiline times stacked neatly
-                      Column(
-                          verticalArrangement =
-                              Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
-                            todayText.forEach { line ->
-                              Text(text = line, style = MaterialTheme.typography.bodyMedium)
-                            }
-                          }
-                    }
-              }
-
-              Icon(
-                  Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIcons)
-            }
-      }
-
-  if (showSheet) {
-    WeeklyAvailabilityDialog(
-        openingHours = openingHours,
-        currentDayIndex = today,
-        dayTagPrefix = dayTagPrefix,
-        onDismiss = { showSheet = false })
-  }
-}
-
-// -------------------- CONTACT SECTION --------------------
 
 /**
- * Composable that displays the contact information section
+ * A composable function that displays a paged grid section of game image items with an optional
+ * title and page indicators
  *
- * @param name name to display
- * @param address location text
- * @param email email to display
- * @param phone phone number to display
- * @param website website link to display
+ * @param games The list of pairs of [Game] and stock count to display in the grid
+ * @param modifier The [Modifier] to be applied to the section container
+ * @param clickableGames A boolean indicating whether individual game cards are clickable
+ * @param title The title text displayed above the grid (for example, "Discover Games")
+ * @param editable Used to distinguish between view and edit mode
+ * @param onClick A callback function that is invoked when a game card is clicked
+ * @param onEdit A callback function that is invoked when the edit button is clicked
+ * @param onDelete A callback function that is invoked when the delete button is clicked
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ContactSection(
-    name: String,
-    address: String,
-    email: String,
-    phone: String,
-    website: String,
-    addPadding: Boolean = false
+fun GameImageListSection(
+    games: List<Pair<Game, Int>>,
+    modifier: Modifier = Modifier,
+    clickableGames: Boolean = false,
+    title: String,
+    editable: Boolean = false,
+    online: Boolean,
+    onClick: (Game) -> Unit = {},
+    onEdit: (Game) -> Unit = {},
+    onDelete: (Game) -> Unit = {}
 ) {
+  val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
+  if (clampedGames.isEmpty()) return
+
+  val pages =
+      remember(clampedGames) {
+        clampedGames
+            .chunked(ShopScreenDefaults.Pager.GAMES_PER_PAGE)
+            .take(ShopScreenDefaults.Pager.MAX_PAGES)
+      }
+  val pageCount = pages.size
+
+  val pagerState = rememberPagerState(pageCount = { pageCount })
+  val scope = rememberCoroutineScope()
+
   Column(
-      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier =
-          Modifier.fillMaxWidth()
-              .padding(horizontal = if (addPadding) Dimensions.Padding.xxLarge else 0.dp)) {
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
+      modifier = modifier.fillMaxWidth()) {
         Text(
-            text = name,
+            text = title,
             style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             fontWeight = FontWeight.SemiBold,
         )
 
-        // Display address contact row
-        ContactRow(
-            Icons.Default.Place,
-            address,
-            ShopComponentsTestTags.SHOP_ADDRESS_TEXT,
-            ShopComponentsTestTags.SHOP_ADDRESS_BUTTON)
-        // Display email contact row
-        ContactRow(
-            Icons.Default.Email,
-            email,
-            ShopComponentsTestTags.SHOP_EMAIL_TEXT,
-            ShopComponentsTestTags.SHOP_EMAIL_BUTTON)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+          val gridWidth = maxWidth
+          val imageHeight = gridWidth / ShopScreenDefaults.Pager.IMAGE_HEIGHT_CORRECTION
+          val textAreaHeight = ShopScreenDefaults.Game.GAME_NAME_AREA_HEIGHT
+          val rowHeight = imageHeight + textAreaHeight
+          val gridHeight = rowHeight * ShopScreenDefaults.Pager.GAMES_PER_COLUMN
 
-        // Display phone contact row
-        if (phone.isNotBlank()) {
-          ContactRow(
-              Icons.Default.Phone,
-              phone,
-              ShopComponentsTestTags.SHOP_PHONE_TEXT,
-              ShopComponentsTestTags.SHOP_PHONE_BUTTON)
+          HorizontalPager(
+              state = pagerState,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(gridHeight)
+                      .testTag(ShopTestTags.SHOP_GAME_PAGER)) { pageIndex ->
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(ShopScreenDefaults.Pager.GAMES_PER_ROW),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    userScrollEnabled = false,
+                    modifier = Modifier.fillMaxSize()) {
+                      items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
+                        GameItemImage(
+                            game = game,
+                            count = count,
+                            clickable = clickableGames,
+                            editable = editable,
+                            onClick = onClick,
+                            onDelete = onDelete,
+                            onEdit = onEdit,
+                            imageHeight = imageHeight,
+                            online = online,
+                            modifier = Modifier.height(rowHeight))
+                      }
+                    }
+              }
         }
-        // Display website contact row
-        if (website.isNotBlank()) {
-          ContactRow(
-              Icons.Default.Language,
-              website,
-              ShopComponentsTestTags.SHOP_WEBSITE_TEXT,
-              ShopComponentsTestTags.SHOP_WEBSITE_BUTTON)
+
+        if (pageCount > ShopScreenDefaults.Pager.MINIMAL_PAGE_COUNT) {
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.medium),
+              horizontalArrangement = Arrangement.Center) {
+                repeat(pageCount) { index ->
+                  val selected = (index == pagerState.currentPage)
+                  Box(
+                      modifier =
+                          Modifier.padding(horizontal = Dimensions.Padding.small)
+                              .size(
+                                  if (selected) ShopScreenDefaults.Pager.PAGER_SELECTED_BUBBLE_SIZE
+                                  else ShopScreenDefaults.Pager.PAGER_UNSELECTED_BUBBLE_SIZE)
+                              .clip(CircleShape)
+                              .testTag("${ShopTestTags.SHOP_GAME_PAGER_INDICATOR_PREFIX}$index")
+                              .background(
+                                  if (selected) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.outline)
+                              .clickable { scope.launch { pagerState.animateScrollToPage(index) } })
+                }
+              }
         }
-      }
-}
-
-/**
- * Composable that displays a single row of contact information with an icon, text, and a button to
- * copy the text to the clipboard.
- *
- * @param icon The icon to display for the contact method.
- * @param text The contact text to display and copy.
- * @param textTag The test tag for the text element.
- * @param buttonTag The test tag for the copy button.
- */
-@Composable
-fun ContactRow(icon: ImageVector, text: String, textTag: String, buttonTag: String) {
-  val clipboardManager: ClipboardManager = LocalClipboardManager.current
-  val context = LocalContext.current
-
-  Row(
-      verticalAlignment = Alignment.Top,
-      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.small)) {
-        IconButton(
-            onClick = {
-              clipboardManager.setText(AnnotatedString(text))
-              Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier.size(Dimensions.IconSize.large).testTag(buttonTag)) {
-              Icon(icon, contentDescription = null, tint = AppColors.neutral)
-            }
-
-        Text(
-            text = text,
-            style = LocalTextStyle.current,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).testTag(textTag))
       }
 }

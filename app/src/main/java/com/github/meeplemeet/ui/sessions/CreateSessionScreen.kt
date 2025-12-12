@@ -248,6 +248,7 @@ fun CreateSessionScreen(
                                     selectedGameId.ifBlank {
                                       form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
                                     },
+                                gameName = "Temp game name",
                                 date = toTimestamp(form.date, form.time),
                                 location = locationUi.selectedLocation ?: Location(),
                                 *form.participants.toTypedArray())
@@ -520,11 +521,16 @@ fun ParticipantsSection(
 
         UserChipsGrid(
             participants = allCandidates,
-            onRemove = onRemove,
-            onAdd = onAdd,
             account = account,
+            selectedParticipants = selected,
             editable = true,
-            useCheckboxes = true,
-            selectedParticipants = selected)
+            onToggle = { user, checked ->
+              if (checked) {
+                onAdd(user)
+              } else {
+                onRemove(user)
+              }
+            },
+        )
       }
 }

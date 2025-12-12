@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -22,16 +23,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -56,11 +62,14 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
@@ -74,16 +83,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
@@ -96,20 +109,21 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterSearchViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_BUTTON
-import com.github.meeplemeet.ui.sessions.SessionTestTags.LOCATION_PICKER_DIALOG
+import com.github.meeplemeet.ui.sessions.SessionDefaults
 import com.github.meeplemeet.ui.sessions.isDateTimeInPast
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.appShapes
+import com.google.firebase.Timestamp
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** Extra test tags for components (kept separate to avoid breaking other tests). */
-object ComponentsTestTags {
+object SessionComponentsTestTags {
   const val UNDERLINED_LABEL = "comp_underlined_label"
   const val LABELED_LABEL = "comp_labeled_label"
   const val COUNT_BUBBLE_TEXT = "comp_count_bubble_text"
@@ -130,7 +144,24 @@ object ComponentsTestTags {
   const val SESSION_LOCATION_SEARCH_ITEM = "comp_session_location_search_item"
 
   fun participantName(name: String) = "$PARTICIPANT_NAME:$name"
+
+  const val LOCATION_PICKER_DIALOG = "location_picker_dialog"
+  const val LOCATION_PICKER_BUTTON = "location_picker_button"
+  const val TITLE = "session_title"
+  const val DATE_FIELD = "date_field"
+  const val TIME_FIELD = "time_field"
+  const val LOCATION_FIELD = "location_field"
+  const val LOCATION_FIELD_ITEM = "location_field_item"
+  const val DATE_PICKER_OK_BUTTON = "date_picker_ok_button"
+  const val DATE_PICK_BUTTON = "date_pick_button"
+  const val TIME_PICK_BUTTON = "time_pick_button"
+  const val TIME_PICKER_OK_BUTTON = "time_picker_ok_button"
+
+  fun chipsTag(uid: String) = "chip${uid}"
+
+  fun removeParticipantTag(uid: String) = "remove:${uid}"
 }
+
 /** Common labels, placeholders, and button texts used across components. */
 private const val LABEL_DATE = "Date"
 private const val LABEL_TIME = "Time"
@@ -138,18 +169,31 @@ private const val TEXT_SELECT_LOCATION = "Select a location"
 private const val LABEL_LOCATION = "Location"
 private const val PLACEHOLDER_LOCATION = "Enter an address"
 private const val PLACEHOLDER_SEARCH_GAMES = "Search games"
-private const val PLACEHOLDER_SEARCH = "Search"
-private const val BUTTON_PICK = "Pick"
 private const val BUTTON_OK = "OK"
 private const val BUTTON_CANCEL = "Cancel"
 private const val TITLE_SELECT_TIME = "Select Time"
 private const val LABEL_GAME = "Game"
 private const val OUTLINE_DEFAULT_ALPHA = 0.5f
+const val MAX_TITLE_LENGTH: Int = 100
+private const val MAX_LINES = 3
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
   Add,
   Remove
+}
+
+/**
+ * Helper function to convert a Firebase Timestamp to a LocalDate and LocalTime pair.
+ *
+ * @param timestamp The Firebase Timestamp to convert.
+ * @return Pair containing the corresponding LocalDate and LocalTime.
+ */
+fun timestampToLocal(timestamp: Timestamp): Pair<LocalDate, LocalTime> {
+  val instant = Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
+  val zone = ZoneId.systemDefault()
+  val dateTime = LocalDateTime.ofInstant(instant, zone)
+  return dateTime.toLocalDate() to dateTime.toLocalTime()
 }
 
 /* =======================================================================
@@ -187,7 +231,7 @@ fun UnderlinedLabel(
 ) {
   Text(
       text = text,
-      modifier = Modifier.testTag(ComponentsTestTags.UNDERLINED_LABEL),
+      modifier = Modifier.testTag(SessionComponentsTestTags.UNDERLINED_LABEL),
       style = textStyle,
       color = textColor,
       textDecoration = TextDecoration.Underline,
@@ -212,11 +256,11 @@ fun LabeledTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = false,
     labelTextStyle: TextStyle = MaterialTheme.typography.bodySmall,
     labelTextColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    modifier: Modifier = Modifier,
     outlinedTextStyle: TextStyle = MaterialTheme.typography.bodySmall
 ) {
   Column {
@@ -224,7 +268,7 @@ fun LabeledTextField(
         label,
         style = labelTextStyle,
         color = labelTextColor,
-        modifier = Modifier.testTag(ComponentsTestTags.LABELED_LABEL))
+        modifier = Modifier.testTag(SessionComponentsTestTags.LABELED_LABEL))
     Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
     FocusableInputField(
         value = value,
@@ -311,7 +355,6 @@ fun IconTextField(
  * @param editable Whether the text field is editable or read-only.
  * @param leadingIcon Optional composable for the leading icon.
  * @param trailingIcon Optional composable for the trailing icon.
- * @param textStyle The style to be applied to the text inside the text field.
  * @param modifier Modifier to be applied to the OutlinedTextField.
  */
 @Composable
@@ -385,7 +428,7 @@ fun CountBubble(
   Box(modifier = modifier) {
     Text(
         "$count",
-        modifier = Modifier.testTag(ComponentsTestTags.COUNT_BUBBLE_TEXT),
+        modifier = Modifier.testTag(SessionComponentsTestTags.COUNT_BUBBLE_TEXT),
         style = styleText,
         color = colorText)
   }
@@ -423,7 +466,7 @@ fun DiscretePillSlider(
           valueRange = range,
           steps = steps,
           colors = sliderColors,
-          modifier = Modifier.testTag(ComponentsTestTags.PILL_RANGE_SLIDER))
+          modifier = Modifier.testTag(SessionComponentsTestTags.PILL_RANGE_SLIDER))
     }
   }
 }
@@ -444,7 +487,8 @@ fun TopBarWithDivider(
   /** --- Top App Bar --- */
   Column {
     CenterAlignedTopAppBar(
-        modifier = Modifier.testTag(ComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
+        modifier =
+            Modifier.testTag(SessionComponentsTestTags.TOP_APP_BAR).background(AppColors.primary),
         navigationIcon = {
           IconButton(
               onClick = { onReturn() },
@@ -502,7 +546,7 @@ fun ParticipantChip(
         modifier =
             textModifier
                 .align(Alignment.Center)
-                .testTag(ComponentsTestTags.participantName(account.name)),
+                .testTag(SessionComponentsTestTags.participantName(account.name)),
         style = MaterialTheme.typography.labelSmall,
         color = textColor,
         textAlign = TextAlign.Center,
@@ -530,7 +574,7 @@ fun ParticipantChip(
               modifier =
                   Modifier.size(Dimensions.IconSize.standard)
                       .testTag(
-                          "${ComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
+                          "${SessionComponentsTestTags.PARTICIPANT_ACTION}:${action.name}:${account.name}"),
               colors = IconButtonDefaults.iconButtonColors(contentColor = tint)) {
                 Icon(icon, contentDescription = null)
               }
@@ -586,8 +630,8 @@ fun DatePickerDockedField(
     editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
-    testTagPick: String = SessionTestTags.DATE_PICK_BUTTON,
-    testTagDate: String = SessionTestTags.DATE_FIELD
+    testTagPick: String = SessionComponentsTestTags.DATE_PICK_BUTTON,
+    testTagDate: String = SessionComponentsTestTags.DATE_FIELD
 ) {
   var showDialogDate by remember { mutableStateOf(false) }
   val text = value?.format(displayFormatter) ?: LABEL_DATE
@@ -662,7 +706,7 @@ fun AppDatePickerDialog(
               selectedDayContainerColor = AppColors.neutral),
       confirmButton = {
         TextButton(
-            modifier = Modifier.testTag(SessionTestTags.DATE_PICKER_OK_BUTTON),
+            modifier = Modifier.testTag(SessionComponentsTestTags.DATE_PICKER_OK_BUTTON),
             onClick = {
               state.selectedDateMillis?.let { ms ->
                 onDateSelected(Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate())
@@ -680,7 +724,7 @@ fun AppDatePickerDialog(
   ) {
     DatePicker(
         state = state,
-        modifier = Modifier.testTag(ComponentsTestTags.DATE_PICKER),
+        modifier = Modifier.testTag(SessionComponentsTestTags.DATE_PICKER),
         colors =
             DatePickerDefaults.colors(
                 todayContentColor = AppColors.textIcons,
@@ -707,10 +751,11 @@ fun TimePickerField(
     value: LocalTime?,
     onValueChange: (LocalTime?) -> Unit,
     label: String = LABEL_TIME,
-    is24Hour: Boolean = true,
-    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    is24Hour: Boolean = false,
+    displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
 ) {
   var open by remember { mutableStateOf(false) }
+  var showingInput by remember { mutableStateOf(true) }
   val state =
       rememberTimePickerState(
           is24Hour = is24Hour,
@@ -718,10 +763,10 @@ fun TimePickerField(
           initialMinute = value?.minute ?: Dimensions.Numbers.defaultTimeMinute)
   val text = value?.format(displayFormatter) ?: LABEL_TIME
 
-  Box(modifier = Modifier.testTag(SessionTestTags.TIME_FIELD)) {
+  Box(modifier = Modifier.testTag(SessionComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = { /* read-only; picker controls it */},
+        onValueChange = {},
         placeholder = label,
         editable = false,
         leadingIcon = {
@@ -732,9 +777,9 @@ fun TimePickerField(
               Icons.Default.ChevronRight, contentDescription = null, tint = AppColors.textIconsFade)
         },
         modifier =
-            Modifier.fillMaxWidth(1f)
+            Modifier.fillMaxWidth()
                 .clickable { open = true }
-                .testTag(SessionTestTags.TIME_PICK_BUTTON))
+                .testTag(SessionComponentsTestTags.TIME_PICK_BUTTON))
   }
 
   if (open) {
@@ -742,101 +787,77 @@ fun TimePickerField(
         onDismissRequest = { open = false },
         containerColor = AppColors.primary,
         shape = RoundedCornerShape(Dimensions.Spacing.xxxLarge),
-        confirmButton = {
-          Row(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .padding(
-                          horizontal = Dimensions.Spacing.xxLarge,
-                          vertical = Dimensions.Padding.medium),
-              horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.large)) {
-                // Cancel button
-                Surface(
-                    shape = RoundedCornerShape(Dimensions.Spacing.large),
-                    color = AppColors.secondary,
-                    modifier = Modifier.weight(1f)) {
-                      TextButton(
-                          onClick = { open = false },
-                          modifier = Modifier.fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium)) {
-                            Text(
-                                BUTTON_CANCEL,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AppColors.textIconsFade)
-                          }
-                    }
-
-                // OK button
-                Surface(
-                    shape = RoundedCornerShape(Dimensions.Spacing.extraLarge),
-                    color = AppColors.neutral,
-                    modifier = Modifier.weight(1f)) {
-                      TextButton(
-                          modifier =
-                              Modifier.testTag(SessionTestTags.TIME_PICKER_OK_BUTTON)
-                                  .fillMaxWidth(),
-                          contentPadding = PaddingValues(vertical = Dimensions.Padding.medium),
-                          onClick = {
-                            onValueChange(LocalTime.of(state.hour, state.minute))
-                            open = false
-                          }) {
-                            Text(
-                                BUTTON_OK,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AppColors.primary)
-                          }
-                    }
-              }
-        },
-        dismissButton = {},
+        confirmButton = {},
         text = {
-          Column(
-              modifier = Modifier.fillMaxWidth().padding(vertical = Dimensions.Padding.medium),
-              horizontalAlignment = Alignment.CenterHorizontally) {
-                // Header with icon and label
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Spacing.xxLarge),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center) {
-                      Icon(
-                          Icons.Default.Timer,
-                          contentDescription = null,
-                          tint = AppColors.neutral,
-                          modifier = Modifier.size(Dimensions.IconSize.extraLarge))
-                      Spacer(Modifier.width(Dimensions.Padding.large))
-                      Text(
-                          TITLE_SELECT_TIME,
-                          style = MaterialTheme.typography.titleLarge,
-                          color = AppColors.textIcons)
-                    }
+          Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                TITLE_SELECT_TIME,
+                style = MaterialTheme.typography.labelMedium,
+                color = AppColors.textIconsFade,
+                modifier = Modifier.padding(bottom = Dimensions.Spacing.large))
 
-                // Time input without background
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+              if (showingInput) {
                 TimeInput(
                     state = state,
-                    modifier =
-                        Modifier.testTag(ComponentsTestTags.TIME_PICKER)
-                            .padding(
-                                horizontal = Dimensions.Padding.extraLarge,
-                                vertical = Dimensions.Padding.medium),
-                    TimePickerDefaults.colors(
-                        clockDialColor = AppColors.primary,
-                        clockDialSelectedContentColor = AppColors.primary,
-                        clockDialUnselectedContentColor = AppColors.textIconsFade,
-                        selectorColor = AppColors.neutral,
-                        periodSelectorBorderColor = AppColors.neutral,
-                        periodSelectorSelectedContainerColor = AppColors.neutral,
-                        periodSelectorSelectedContentColor = AppColors.primary,
-                        periodSelectorUnselectedContainerColor = AppColors.secondary,
-                        periodSelectorUnselectedContentColor = AppColors.textIconsFade,
-                        timeSelectorSelectedContainerColor = AppColors.neutral,
-                        timeSelectorUnselectedContainerColor = AppColors.secondary,
-                        timeSelectorSelectedContentColor = AppColors.primary,
-                        timeSelectorUnselectedContentColor = AppColors.textIcons,
-                    ))
+                    modifier = Modifier.testTag(SessionComponentsTestTags.TIME_PICKER),
+                    colors = timePickerColors())
+              } else {
+                TimePicker(
+                    state = state,
+                    modifier = Modifier.testTag(SessionComponentsTestTags.TIME_PICKER),
+                    colors = timePickerColors())
               }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Spacing.large),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                  IconButton(onClick = { showingInput = !showingInput }) {
+                    Icon(
+                        if (showingInput) Icons.Default.Schedule else Icons.Default.Keyboard,
+                        contentDescription = null,
+                        tint = AppColors.textIconsFade)
+                  }
+
+                  Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.Padding.medium)) {
+                    TextButton(onClick = { open = false }) {
+                      Text(BUTTON_CANCEL, color = AppColors.textIconsFade)
+                    }
+                    TextButton(
+                        onClick = {
+                          onValueChange(LocalTime.of(state.hour, state.minute))
+                          open = false
+                        },
+                        modifier =
+                            Modifier.testTag(SessionComponentsTestTags.TIME_PICKER_OK_BUTTON)) {
+                          Text(BUTTON_OK, color = AppColors.neutral)
+                        }
+                  }
+                }
+          }
         })
   }
 }
+
+@Composable
+private fun timePickerColors() =
+    TimePickerDefaults.colors(
+        clockDialColor = AppColors.secondary,
+        clockDialSelectedContentColor = AppColors.primary,
+        clockDialUnselectedContentColor = AppColors.textIcons,
+        selectorColor = AppColors.neutral,
+        periodSelectorBorderColor = AppColors.textIconsFade,
+        periodSelectorSelectedContainerColor = AppColors.neutral,
+        periodSelectorSelectedContentColor = AppColors.primary,
+        periodSelectorUnselectedContainerColor = AppColors.primary,
+        periodSelectorUnselectedContentColor = AppColors.textIcons,
+        timeSelectorSelectedContainerColor = AppColors.neutral,
+        timeSelectorUnselectedContainerColor = AppColors.secondary,
+        timeSelectorSelectedContentColor = AppColors.primary,
+        timeSelectorUnselectedContentColor = AppColors.textIcons,
+    )
 
 /**
  * A combined date and time picker component.
@@ -898,8 +919,8 @@ fun SessionLocationSearchButton(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
-    buttonTestTag: String = LOCATION_PICKER_BUTTON,
-    dialogTestTag: String = LOCATION_PICKER_DIALOG
+    buttonTestTag: String = SessionComponentsTestTags.LOCATION_PICKER_BUTTON,
+    dialogTestTag: String = SessionComponentsTestTags.LOCATION_PICKER_DIALOG
 ) {
   var showDialog by rememberSaveable { mutableStateOf(false) }
   var selectedLocationLabel by rememberSaveable {
@@ -986,8 +1007,8 @@ fun SessionLocationSearchBar(
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
     onLocationSelected: (Location) -> Unit = {},
-    inputFieldTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
-    dropdownItemTestTag: String = ComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
+    inputFieldTestTag: String = SessionComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT,
+    dropdownItemTestTag: String = SessionComponentsTestTags.SESSION_LOCATION_SEARCH_ITEM
 ) {
   LocationSearchBar(
       setLocation = { location ->
@@ -1002,6 +1023,16 @@ fun SessionLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a shop location.
+ *
+ * @param account The user's account.
+ * @param shop The shop for which the location is being searched (optional).
+ * @param viewModel The ShopSearchViewModel for managing shop search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun ShopLocationSearchBar(
     account: Account,
@@ -1029,6 +1060,16 @@ fun ShopLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a space renter location.
+ *
+ * @param account The user's account.
+ * @param spaceRenter The space renter for which the location is being searched (optional).
+ * @param viewModel The SpaceRenterSearchViewModel for managing space renter search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun SpaceRenterLocationSearchBar(
     account: Account,
@@ -1054,6 +1095,17 @@ fun SpaceRenterLocationSearchBar(
       dropdownItemTestTag = dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a location.
+ *
+ * @param setLocation Callback function to set the selected location.
+ * @param setLocationQuery Callback function to set the location query.
+ * @param initial The initial location to display in the search bar.
+ * @param viewModel The SearchViewModel for managing location search state.
+ * @param enabled Whether the search bar is enabled or disabled.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LocationSearchBar(
@@ -1068,15 +1120,30 @@ private fun LocationSearchBar(
   val results by viewModel.locationUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
-  var text by rememberSaveable { mutableStateOf(initial.name) }
+  var text by rememberSaveable(inputFieldTestTag) { mutableStateOf(initial.name) }
   val hasSuggestions = results.locationSuggestions.isNotEmpty()
 
   LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
+
+  // Sync text field with ViewModel's locationQuery/selection
+  LaunchedEffect(results.locationQuery, results.selectedLocation) {
+    val selectedName = results.selectedLocation?.name
+    val query = results.locationQuery
+    // Prefer the selected location name if available and query is empty or matches logic
+    // But mainly we want to ensure if query is updated from VM side (e.g. initialization), text
+    // reflects it.
+    if (query.isNotBlank() && text != query) {
+      text = query
+    } else if (selectedName != null && selectedName != text) {
+      text = selectedName
+    }
+  }
 
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         FocusableInputField(
             value = text,
+            maxLines = MAX_LINES,
             enabled = enabled,
             onValueChange = {
               menuOpen = true
@@ -1089,7 +1156,9 @@ private fun LocationSearchBar(
                 Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                     .fillMaxWidth()
                     .testTag(inputFieldTestTag),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = {
+              Icon(Icons.Default.Search, tint = AppColors.neutral, contentDescription = null)
+            },
         )
 
         ExposedDropdownMenu(
@@ -1113,14 +1182,24 @@ private fun LocationSearchBar(
       }
 }
 
+/**
+ * A search bar for selecting a session game.
+ *
+ * @param account The user's account.
+ * @param discussion The discussion associated with the session.
+ * @param viewModel The CreateSessionViewModel for managing session state.
+ * @param initial The initial game to display in the search bar.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun SessionGameSearchBar(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel,
     initial: Game? = null,
-    inputFieldTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
-    dropdownItemTestTag: String = ComponentsTestTags.SESSION_GAME_SEARCH_ITEM
+    inputFieldTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_INPUT,
+    dropdownItemTestTag: String = SessionComponentsTestTags.SESSION_GAME_SEARCH_ITEM
 ) {
   GameSearchBar(
       setGame = { viewModel.setGame(account, discussion, it) },
@@ -1132,6 +1211,17 @@ fun SessionGameSearchBar(
       dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a shop game.
+ *
+ * @param account The user's account.
+ * @param shop The shop for which the game is being searched (optional).
+ * @param viewModel The ShopSearchViewModel for managing shop search state.
+ * @param initial The initial game to display in the search bar.
+ * @param existing Set of existing game UIDs to exclude from suggestions.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @Composable
 fun ShopGameSearchBar(
     account: Account,
@@ -1158,6 +1248,17 @@ fun ShopGameSearchBar(
       dropdownItemTestTag)
 }
 
+/**
+ * A search bar for selecting a space renter game.
+ *
+ * @param account The user's account.
+ * @param spaceRenter The space renter for which the game is being searched (optional).
+ * @param viewModel The SpaceRenterSearchViewModel for managing space renter search state.
+ * @param initial The initial game to display in the search bar.
+ * @param existing Set of existing game UIDs to exclude from suggestions.
+ * @param inputFieldTestTag Test tag for the input field.
+ * @param dropdownItemTestTag Test tag for the dropdown items.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameSearchBar(
@@ -1238,4 +1339,196 @@ private fun GameSearchBar(
                       com.github.meeplemeet.ui.sessions.SessionCreationTestTags.GAME_SEARCH_ERROR))
     }
   }
+}
+
+/**
+ * Component used to display participants in a scrollable vertical list.
+ *
+ * @param participants All users to display.
+ * @param account The current user (used to avoid showing a switch for self).
+ * @param selectedParticipants The subset that is currently "in the session".
+ * @param onToggle Called whenever a switch is toggled. `checked == true` means add, `false` means
+ *   remove.
+ * @param editable When false, no switches are shown (read-only list).
+ * @param modifier Modifier for the whole grid.
+ */
+@Composable
+fun UserChipsGrid(
+    participants: List<Account>,
+    account: Account,
+    modifier: Modifier = Modifier,
+    selectedParticipants: List<Account> = emptyList(),
+    onToggle: (Account, Boolean) -> Unit,
+    editable: Boolean = false,
+) {
+  val maxHeight = Dimensions.ContainerSize.mapHeight
+  val scrollState = rememberScrollState()
+  val selectedIds = remember(selectedParticipants) { selectedParticipants.map { it.uid }.toSet() }
+
+  Column(
+      modifier = modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(scrollState),
+      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none),
+  ) {
+    participants.forEach { user ->
+      val isSelected = user.uid in selectedIds
+      val isAdmin = user.uid == account.uid
+      val canToggle = editable && !isAdmin
+
+      val onCheckedChange: ((Boolean) -> Unit)? =
+          if (canToggle) {
+            { checked -> onToggle(user, checked) }
+          } else {
+            null
+          }
+
+      UserChip(
+          user = user,
+          isChecked = isSelected,
+          onCheckedChange = onCheckedChange,
+          modifier = Modifier.fillMaxWidth().testTag(SessionComponentsTestTags.chipsTag(user.uid)),
+      )
+    }
+  }
+}
+
+/**
+ * A chip representing a user with an optional switch to indicate inclusion.
+ *
+ * @param user The account of the user.
+ * @param isChecked Whether the user is included (switch state).
+ * @param onCheckedChange Callback when the switch state changes. If null, no switch is shown.
+ * @param modifier Modifier for the chip layout.
+ */
+@Composable
+fun UserChip(
+    user: Account,
+    isChecked: Boolean,
+    modifier: Modifier = Modifier,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+) {
+  Surface(
+      modifier = modifier,
+      shape = appShapes.medium,
+      color = AppColors.primary,
+      tonalElevation = Dimensions.Elevation.minimal,
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.tiny),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      // Avatar + text
+      Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+          modifier = Modifier.weight(1f),
+      ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large),
+            modifier = Modifier.weight(1f),
+        ) {
+          SessionParticipantAvatar(
+              account = user,
+              modifier = Modifier.size(Dimensions.AvatarSize.small),
+          )
+
+          Column {
+            Text(
+                text = user.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppColors.textIcons,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = "@${user.handle}",
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textIconsFade,
+            )
+          }
+        }
+      }
+
+      // Only show switch when we have a callback
+      if (onCheckedChange != null) {
+        ParticipantSwitch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(SessionComponentsTestTags.removeParticipantTag(user.name)),
+        )
+      }
+    }
+  }
+}
+
+/**
+ * A switch component used to indicate participant inclusion.
+ *
+ * @param checked Whether the switch is on or off.
+ * @param onCheckedChange Callback when the switch state changes.
+ * @param modifier Modifier for the switch layout.
+ */
+@Composable
+private fun ParticipantSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  Switch(
+      checked = checked,
+      onCheckedChange = onCheckedChange,
+      modifier = modifier,
+      thumbContent = {
+        Icon(
+            imageVector = if (checked) Icons.Default.Check else Icons.Default.Close,
+            contentDescription = null,
+            modifier = Modifier.size(Dimensions.IconSize.small),
+            tint = AppColors.textIcons,
+        )
+      },
+      colors =
+          SwitchDefaults.colors(
+              checkedThumbColor = AppColors.neutral,
+              checkedTrackColor = AppColors.divider,
+              uncheckedThumbColor = AppColors.negative,
+              uncheckedTrackColor = AppColors.divider,
+              disabledCheckedThumbColor = AppColors.negative,
+              disabledUncheckedThumbColor = AppColors.negative,
+          ),
+  )
+}
+
+/**
+ * Composable function to display a participant's avatar.
+ *
+ * @param account The participant's account.
+ */
+@Composable
+fun SessionParticipantAvatar(account: Account, modifier: Modifier = Modifier) {
+  val initial =
+      remember(account.name) {
+        account.name.trim().firstOrNull()?.uppercase()
+            ?: SessionDefaults.USER_NAME_MISSING_AVATAR_PLACEHOLDER
+      }
+
+  val hasPhoto = !account.photoUrl.isNullOrBlank()
+
+  Box(
+      modifier = modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surface),
+      contentAlignment = Alignment.Center) {
+        if (hasPhoto) {
+          AsyncImage(
+              model = account.photoUrl,
+              contentDescription = "Profile picture of ${account.name}",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize(),
+          )
+        } else {
+          Text(
+              text = initial,
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.tertiary)
+        }
+      }
 }

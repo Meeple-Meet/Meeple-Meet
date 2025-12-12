@@ -107,6 +107,7 @@ class SessionViewerScreenTest : FirestoreTests() {
         discussionId = baseDiscussion.uid,
         name = "Friday Night Session",
         gameId = sessionGame.uid,
+        gameName = sessionGame.name,
         date = futureDate,
         location = Location(name = "Meeple Café"),
         *participantIds.toTypedArray())
@@ -379,6 +380,7 @@ class SessionViewerScreenTest : FirestoreTests() {
           discussionId = soloDiscussion.uid,
           name = "Solo Admin Session",
           gameId = sessionGame.uid,
+          gameName = sessionGame.name,
           date = futureDate,
           location = Location(name = "Solo Place"),
           soloAdmin.uid)

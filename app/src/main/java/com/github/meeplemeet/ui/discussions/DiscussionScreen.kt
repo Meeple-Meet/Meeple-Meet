@@ -82,6 +82,7 @@ import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.navigation.EmailVerificationBanner
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -210,10 +211,12 @@ fun CharacterCounter(currentLength: Int, maxLength: Int, testTag: String) {
 fun DiscussionScreen(
     account: Account,
     discussion: Discussion,
+    verified: Boolean,
     viewModel: DiscussionViewModel = viewModel(),
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
+    onVerifyClick: () -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
   var messageText by remember { mutableStateOf(TextFieldValue("")) }
@@ -625,255 +628,266 @@ fun DiscussionScreen(
                   }
 
               // Bottom input bar
-              var showAttachmentMenu by remember { mutableStateOf(false) }
-              var showPollDialog by remember { mutableStateOf(false) }
+              if (!verified) {
+                EmailVerificationBanner(onVerifyClick = onVerifyClick)
+              } else {
+                var showAttachmentMenu by remember { mutableStateOf(false) }
+                var showPollDialog by remember { mutableStateOf(false) }
 
-              Surface(
-                  modifier = Modifier.fillMaxWidth(),
-                  color = MaterialTheme.colorScheme.surface,
-                  shadowElevation = Dimensions.Elevation.medium) {
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(
-                                    horizontal = Dimensions.Spacing.medium,
-                                    vertical = Dimensions.Spacing.medium),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
-                          Row(
-                              modifier =
-                                  Modifier.weight(1f)
-                                      .wrapContentHeight()
-                                      .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
-                                      .background(MessagingColors.inputBackground)
-                                      .padding(
-                                          horizontal = Dimensions.Spacing.large,
-                                          vertical = Dimensions.Spacing.medium),
-                              verticalAlignment = Alignment.CenterVertically) {
-                                Box {
-                                  IconButton(
-                                      modifier =
-                                          Modifier.size(Dimensions.ButtonSize.medium)
-                                              .testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
-                                      onClick = { showAttachmentMenu = true }) {
-                                        Icon(
-                                            Icons.Default.AttachFile,
-                                            contentDescription = "Attach",
-                                            tint = MessagingColors.primaryText,
-                                            modifier = Modifier.size(Dimensions.IconSize.standard))
-                                      }
-
-                                  if (showAttachmentMenu) {
-                                    val popupOffset = IntOffset(x = -30, y = -200)
-                                    Popup(
-                                        onDismissRequest = { showAttachmentMenu = false },
-                                        offset = popupOffset,
-                                        properties = PopupProperties(focusable = true)) {
-                                          Surface(
-                                              shape =
-                                                  RoundedCornerShape(Dimensions.CornerRadius.large),
-                                              color = MessagingColors.messageBubbleOther,
-                                              shadowElevation = Dimensions.Elevation.high,
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = Dimensions.Elevation.medium) {
+                      Row(
+                          modifier =
+                              Modifier.fillMaxWidth()
+                                  .padding(
+                                      horizontal = Dimensions.Spacing.medium,
+                                      vertical = Dimensions.Spacing.medium),
+                          verticalAlignment = Alignment.CenterVertically,
+                          horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
+                            Row(
+                                modifier =
+                                    Modifier.weight(1f)
+                                        .wrapContentHeight()
+                                        .clip(RoundedCornerShape(Dimensions.CornerRadius.round))
+                                        .background(MessagingColors.inputBackground)
+                                        .padding(
+                                            horizontal = Dimensions.Spacing.large,
+                                            vertical = Dimensions.Spacing.medium),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                  Box {
+                                    IconButton(
+                                        modifier =
+                                            Modifier.size(Dimensions.ButtonSize.medium)
+                                                .testTag(DiscussionTestTags.ATTACHMENT_BUTTON),
+                                        onClick = { showAttachmentMenu = true }) {
+                                          Icon(
+                                              Icons.Default.AttachFile,
+                                              contentDescription = "Attach",
+                                              tint = MessagingColors.primaryText,
                                               modifier =
-                                                  Modifier.wrapContentWidth()
-                                                      .padding(
-                                                          horizontal = Dimensions.Spacing.small)) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement =
-                                                        Arrangement.spacedBy(
-                                                            Dimensions.Spacing.small),
-                                                    modifier =
-                                                        Modifier.padding(
-                                                            Dimensions.Spacing.small)) {
-                                                      IconButton(
-                                                          enabled = online,
-                                                          onClick = {
-                                                            showAttachmentMenu = false
-                                                            val granted =
-                                                                ContextCompat.checkSelfPermission(
-                                                                    context,
-                                                                    Manifest.permission.CAMERA) ==
-                                                                    PackageManager
-                                                                        .PERMISSION_GRANTED
-                                                            if (granted) {
-                                                              cameraLauncher.launch(null)
-                                                            } else {
-                                                              cameraPermissionLauncher.launch(
-                                                                  Manifest.permission.CAMERA)
-                                                            }
-                                                          },
-                                                          modifier =
-                                                              Modifier.testTag(
-                                                                      DiscussionTestTags
-                                                                          .ATTACHMENT_CAMERA_OPTION)
-                                                                  .alpha(
-                                                                      if (online)
-                                                                          Dimensions.Alpha.full
-                                                                      else
-                                                                          Dimensions.Alpha
-                                                                              .disabled)) {
-                                                            Icon(
-                                                                Icons.Default.PhotoCamera,
-                                                                contentDescription = "Camera",
-                                                                tint = MessagingColors.primaryText,
-                                                                modifier =
-                                                                    Modifier.size(
-                                                                        Dimensions.AvatarSize
-                                                                            .medium))
-                                                          }
-                                                      IconButton(
-                                                          enabled = online,
-                                                          onClick = {
-                                                            showAttachmentMenu = false
-                                                            galleryLauncher.launch("image/*")
-                                                          },
-                                                          modifier =
-                                                              Modifier.testTag(
-                                                                      DiscussionTestTags
-                                                                          .ATTACHMENT_GALLERY_OPTION)
-                                                                  .alpha(
-                                                                      if (online)
-                                                                          Dimensions.Alpha.full
-                                                                      else
-                                                                          Dimensions.Alpha
-                                                                              .disabled)) {
-                                                            Icon(
-                                                                Icons.Default.Image,
-                                                                contentDescription = "Gallery",
-                                                                tint = MessagingColors.primaryText,
-                                                                modifier =
-                                                                    Modifier.size(
-                                                                        Dimensions.AvatarSize
-                                                                            .medium))
-                                                          }
-                                                      IconButton(
-                                                          onClick = {
-                                                            showAttachmentMenu = false
-                                                            showPollDialog = true
-                                                          },
-                                                          modifier =
-                                                              Modifier.testTag(
-                                                                  DiscussionTestTags
-                                                                      .ATTACHMENT_POLL_OPTION)) {
-                                                            Icon(
-                                                                Icons.Default.Poll,
-                                                                contentDescription = "Poll",
-                                                                tint = MessagingColors.primaryText,
-                                                                modifier =
-                                                                    Modifier.size(
-                                                                        Dimensions.AvatarSize
-                                                                            .medium))
-                                                          }
-                                                    }
-                                              }
+                                                  Modifier.size(Dimensions.IconSize.standard))
                                         }
-                                  }
-                                }
 
-                                if (showPollDialog) {
-                                  CreatePollDialog(
-                                      onDismiss = { showPollDialog = false },
-                                      onCreate = { question, options, allowMultiple ->
-                                        if (effectiveOnline)
-                                            viewModel.createPoll(
-                                                discussion = discussion,
-                                                creatorId = account.uid,
-                                                question = question,
-                                                options = options,
-                                                allowMultipleVotes = allowMultiple)
-                                        else
-                                            OfflineModeManager.sendPendingMessage(
-                                                discussion.uid,
-                                                Message(
-                                                    content = question,
-                                                    poll =
-                                                        Poll(
-                                                            question,
-                                                            options,
-                                                            allowMultipleVotes = allowMultiple)))
-                                        showPollDialog = false
-                                      })
-                                }
-
-                                BasicTextField(
-                                    value = messageText,
-                                    onValueChange = { newValue ->
-                                      if (newValue.text.length <= MAX_MESSAGE_LENGTH) {
-                                        messageText = newValue
-                                      }
-                                    },
-                                    modifier =
-                                        Modifier.weight(1f)
-                                            .wrapContentHeight()
-                                            .testTag(DiscussionTestTags.INPUT_FIELD),
-                                    textStyle =
-                                        MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = Dimensions.TextSize.body,
-                                            color = MessagingColors.primaryText),
-                                    minLines = 1,
-                                    maxLines = 5,
-                                    decorationBox = { inner ->
-                                      if (messageText.text.isEmpty()) {
-                                        Text(
-                                            "Message",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontSize = Dimensions.TextSize.body,
-                                            color = MessagingColors.metadataText)
-                                      }
-                                      inner()
-                                    })
-
-                                CharacterCounter(
-                                    currentLength = messageText.text.length,
-                                    maxLength = MAX_MESSAGE_LENGTH,
-                                    testTag = DiscussionTestTags.CHAR_COUNTER)
-                              }
-
-                          FloatingActionButton(
-                              onClick = {
-                                if (messageText.text.isNotBlank() && !isSending) {
-                                  isSending = true
-                                  try {
-                                    if (effectiveOnline) {
-                                      val editing = messageBeingEdited
-                                      if (editing != null) {
-                                        viewModel.editMessage(
-                                            discussion, editing, account, messageText.text)
-                                        messageBeingEdited = null
-                                      } else {
-                                        viewModel.sendMessageToDiscussion(
-                                            discussion, account, messageText.text)
-                                      }
-                                    } else
-                                        OfflineModeManager.sendPendingMessage(
-                                            discussion.uid, Message(content = messageText.text))
-                                    messageText = TextFieldValue("")
-                                  } catch (e: Exception) {
-                                    scope.launch {
-                                      snackbarHostState.showSnackbar(
-                                          message =
-                                              "Failed to send message: ${e.message ?: UNKNOWN_ERROR}",
-                                          duration = SnackbarDuration.Long)
+                                    if (showAttachmentMenu) {
+                                      val popupOffset = IntOffset(x = -30, y = -200)
+                                      Popup(
+                                          onDismissRequest = { showAttachmentMenu = false },
+                                          offset = popupOffset,
+                                          properties = PopupProperties(focusable = true)) {
+                                            Surface(
+                                                shape =
+                                                    RoundedCornerShape(
+                                                        Dimensions.CornerRadius.large),
+                                                color = MessagingColors.messageBubbleOther,
+                                                shadowElevation = Dimensions.Elevation.high,
+                                                modifier =
+                                                    Modifier.wrapContentWidth()
+                                                        .padding(
+                                                            horizontal =
+                                                                Dimensions.Spacing.small)) {
+                                                  Row(
+                                                      verticalAlignment =
+                                                          Alignment.CenterVertically,
+                                                      horizontalArrangement =
+                                                          Arrangement.spacedBy(
+                                                              Dimensions.Spacing.small),
+                                                      modifier =
+                                                          Modifier.padding(
+                                                              Dimensions.Spacing.small)) {
+                                                        IconButton(
+                                                            enabled = online,
+                                                            onClick = {
+                                                              showAttachmentMenu = false
+                                                              val granted =
+                                                                  ContextCompat.checkSelfPermission(
+                                                                      context,
+                                                                      Manifest.permission.CAMERA) ==
+                                                                      PackageManager
+                                                                          .PERMISSION_GRANTED
+                                                              if (granted) {
+                                                                cameraLauncher.launch(null)
+                                                              } else {
+                                                                cameraPermissionLauncher.launch(
+                                                                    Manifest.permission.CAMERA)
+                                                              }
+                                                            },
+                                                            modifier =
+                                                                Modifier.testTag(
+                                                                        DiscussionTestTags
+                                                                            .ATTACHMENT_CAMERA_OPTION)
+                                                                    .alpha(
+                                                                        if (online)
+                                                                            Dimensions.Alpha.full
+                                                                        else
+                                                                            Dimensions.Alpha
+                                                                                .disabled)) {
+                                                              Icon(
+                                                                  Icons.Default.PhotoCamera,
+                                                                  contentDescription = "Camera",
+                                                                  tint =
+                                                                      MessagingColors.primaryText,
+                                                                  modifier =
+                                                                      Modifier.size(
+                                                                          Dimensions.AvatarSize
+                                                                              .medium))
+                                                            }
+                                                        IconButton(
+                                                            enabled = online,
+                                                            onClick = {
+                                                              showAttachmentMenu = false
+                                                              galleryLauncher.launch("image/*")
+                                                            },
+                                                            modifier =
+                                                                Modifier.testTag(
+                                                                        DiscussionTestTags
+                                                                            .ATTACHMENT_GALLERY_OPTION)
+                                                                    .alpha(
+                                                                        if (online)
+                                                                            Dimensions.Alpha.full
+                                                                        else
+                                                                            Dimensions.Alpha
+                                                                                .disabled)) {
+                                                              Icon(
+                                                                  Icons.Default.Image,
+                                                                  contentDescription = "Gallery",
+                                                                  tint =
+                                                                      MessagingColors.primaryText,
+                                                                  modifier =
+                                                                      Modifier.size(
+                                                                          Dimensions.AvatarSize
+                                                                              .medium))
+                                                            }
+                                                        IconButton(
+                                                            onClick = {
+                                                              showAttachmentMenu = false
+                                                              showPollDialog = true
+                                                            },
+                                                            modifier =
+                                                                Modifier.testTag(
+                                                                    DiscussionTestTags
+                                                                        .ATTACHMENT_POLL_OPTION)) {
+                                                              Icon(
+                                                                  Icons.Default.Poll,
+                                                                  contentDescription = "Poll",
+                                                                  tint =
+                                                                      MessagingColors.primaryText,
+                                                                  modifier =
+                                                                      Modifier.size(
+                                                                          Dimensions.AvatarSize
+                                                                              .medium))
+                                                            }
+                                                      }
+                                                }
+                                          }
                                     }
-                                  } finally {
-                                    isSending = false
                                   }
+
+                                  if (showPollDialog) {
+                                    CreatePollDialog(
+                                        onDismiss = { showPollDialog = false },
+                                        onCreate = { question, options, allowMultiple ->
+                                          if (effectiveOnline)
+                                              viewModel.createPoll(
+                                                  discussion = discussion,
+                                                  creatorId = account.uid,
+                                                  question = question,
+                                                  options = options,
+                                                  allowMultipleVotes = allowMultiple)
+                                          else
+                                              OfflineModeManager.sendPendingMessage(
+                                                  discussion.uid,
+                                                  Message(
+                                                      content = question,
+                                                      poll =
+                                                          Poll(
+                                                              question,
+                                                              options,
+                                                              allowMultipleVotes = allowMultiple)))
+                                          showPollDialog = false
+                                        })
+                                  }
+
+                                  BasicTextField(
+                                      value = messageText,
+                                      onValueChange = { newValue ->
+                                        if (newValue.text.length <= MAX_MESSAGE_LENGTH) {
+                                          messageText = newValue
+                                        }
+                                      },
+                                      modifier =
+                                          Modifier.weight(1f)
+                                              .wrapContentHeight()
+                                              .testTag(DiscussionTestTags.INPUT_FIELD),
+                                      textStyle =
+                                          MaterialTheme.typography.bodyMedium.copy(
+                                              fontSize = Dimensions.TextSize.body,
+                                              color = MessagingColors.primaryText),
+                                      minLines = 1,
+                                      maxLines = 5,
+                                      decorationBox = { inner ->
+                                        if (messageText.text.isEmpty()) {
+                                          Text(
+                                              "Message",
+                                              style = MaterialTheme.typography.bodyMedium,
+                                              fontSize = Dimensions.TextSize.body,
+                                              color = MessagingColors.metadataText)
+                                        }
+                                        inner()
+                                      })
+
+                                  CharacterCounter(
+                                      currentLength = messageText.text.length,
+                                      maxLength = MAX_MESSAGE_LENGTH,
+                                      testTag = DiscussionTestTags.CHAR_COUNTER)
                                 }
-                              },
-                              modifier =
-                                  Modifier.size(Dimensions.ButtonSize.standard)
-                                      .testTag(DiscussionTestTags.SEND_BUTTON),
-                              containerColor = MessagingColors.whatsappGreen,
-                              contentColor = MessagingColors.messageBubbleOther,
-                              shape = CircleShape) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Send",
-                                    modifier = Modifier.size(Dimensions.IconSize.standard))
-                              }
-                        }
-                  }
+
+                            FloatingActionButton(
+                                onClick = {
+                                  if (messageText.text.isNotBlank() && !isSending) {
+                                    isSending = true
+                                    try {
+                                      if (effectiveOnline) {
+                                        val editing = messageBeingEdited
+                                        if (editing != null) {
+                                          viewModel.editMessage(
+                                              discussion, editing, account, messageText.text)
+                                          messageBeingEdited = null
+                                        } else {
+                                          viewModel.sendMessageToDiscussion(
+                                              discussion, account, messageText.text)
+                                        }
+                                      } else
+                                          OfflineModeManager.sendPendingMessage(
+                                              discussion.uid, Message(content = messageText.text))
+                                      messageText = TextFieldValue("")
+                                    } catch (e: Exception) {
+                                      scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message =
+                                                "Failed to send message: ${e.message ?: UNKNOWN_ERROR}",
+                                            duration = SnackbarDuration.Long)
+                                      }
+                                    } finally {
+                                      isSending = false
+                                    }
+                                  }
+                                },
+                                modifier =
+                                    Modifier.size(Dimensions.ButtonSize.standard)
+                                        .testTag(DiscussionTestTags.SEND_BUTTON),
+                                containerColor = MessagingColors.whatsappGreen,
+                                contentColor = MessagingColors.messageBubbleOther,
+                                shape = CircleShape) {
+                                  Icon(
+                                      Icons.AutoMirrored.Filled.Send,
+                                      contentDescription = "Send",
+                                      modifier = Modifier.size(Dimensions.IconSize.standard))
+                                }
+                          }
+                    }
+              }
             }
       }
 }

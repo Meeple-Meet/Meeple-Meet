@@ -1,10 +1,15 @@
 package com.github.meeplemeet.ui.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Language
@@ -17,13 +22,16 @@ import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,6 +54,8 @@ object NavigationTestTags {
   const val DISCOVER_TAB = "DiscoverTab"
   const val PROFILE_TAB = "ProfileTab"
   const val MAP_TAB = "MapTab"
+  const val EMAIL_VERIFICATION_BANNER = "EmailVerificationBanner"
+  const val EMAIL_VERIFICATION_BUTTON = "EmailVerificationButton"
 }
 
 private const val UNSELECTED_ALPHA = 0.5f
@@ -223,6 +233,63 @@ fun BottomNavigationMenu(
                   selected = screen == currentScreen,
                   onClick = { onTabSelected(screen) },
                   modifier = screen.testTag?.let { Modifier.testTag(it) } ?: Modifier)
+            }
+      }
+}
+
+/**
+ * Displays the bottom navigation bar with an optional email verification banner.
+ *
+ * @param currentScreen The currently active [MeepleMeetScreen].
+ * @param verified Whether the user's email is verified.
+ * @param onTabSelected Callback triggered when a tab is selected.
+ * @param onVerifyClick Callback triggered when the verification button is clicked.
+ * @param modifier Optional [Modifier] for layout customization.
+ */
+@Composable
+fun BottomBarWithVerification(
+    currentScreen: MeepleMeetScreen,
+    verified: Boolean,
+    onTabSelected: (MeepleMeetScreen) -> Unit,
+    onVerifyClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+  Column(modifier = modifier) {
+    if (!verified) {
+      EmailVerificationBanner(onVerifyClick = onVerifyClick)
+    }
+    BottomNavigationMenu(currentScreen = currentScreen, onTabSelected = onTabSelected)
+  }
+}
+
+/**
+ * Displays a banner prompting the user to verify their email address.
+ *
+ * @param onVerifyClick Callback triggered when the verification button is clicked.
+ */
+@Composable
+fun EmailVerificationBanner(
+    onVerifyClick: () -> Unit,
+) {
+  Surface(
+      color = AppColors.neutral,
+      modifier = Modifier.fillMaxWidth().testTag(NavigationTestTags.EMAIL_VERIFICATION_BANNER)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.medium),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  text = "Verify your email to unlock full access",
+                  color = AppColors.textIcons,
+                  modifier = Modifier.weight(1f))
+              IconButton(
+                  onClick = onVerifyClick,
+                  modifier = Modifier.testTag(NavigationTestTags.EMAIL_VERIFICATION_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "Verify email",
+                        tint = AppColors.textIcons)
+                  }
             }
       }
 }

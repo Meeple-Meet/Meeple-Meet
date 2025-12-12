@@ -7,22 +7,29 @@ package com.github.meeplemeet.ui.posts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -32,10 +39,11 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
 import java.text.SimpleDateFormat
@@ -44,6 +52,8 @@ import java.util.*
 object FeedsOverviewTestTags {
   const val ADD_POST_BUTTON = "AddPostButton"
   const val POST_CARD_PREFIX = "Post/"
+  const val SEARCH_TEXT_FIELD = "PostSearchTextField"
+  const val SEARCH_CLEAR = "PostSearchClear"
 }
 
 object PostOverviewScreenUi {
@@ -70,56 +80,65 @@ private const val NO_POSTS_DEFAULT_TEXT = "No Posts yet"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostsOverviewScreen(
-    viewModel: PostOverviewViewModel = viewModel(),
+    verified: Boolean,
     navigation: NavigationActions,
+    viewModel: PostOverviewViewModel = viewModel(),
     account: Account,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
 ) {
   val context = LocalContext.current
   val posts by viewModel.posts.collectAsState()
-  val postsSorted = remember(posts) { posts.sortedByDescending { it.timestamp } }
+
+  var searchQuery by rememberSaveable { mutableStateOf("") }
+
+  val postsSorted =
+      remember(posts, searchQuery) {
+        val sorted = posts.sortedByDescending { it.timestamp }
+
+        // Filter by search query
+        if (searchQuery.isBlank()) {
+          sorted
+        } else {
+          val query = searchQuery.trim().lowercase()
+          sorted.filter { post -> post.title.lowercase().contains(query) }
+        }
+      }
+
+  val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
   Scaffold(
-      floatingActionButton = {
-        FloatingActionButton(
-            onClick = onClickAddPost,
-            modifier = Modifier.testTag(FeedsOverviewTestTags.ADD_POST_BUTTON),
-            containerColor = MessagingColors.redditOrange,
-            contentColor = MessagingColors.messagingSurface,
-            shape = CircleShape) {
-              Icon(
-                  Icons.Default.Add,
-                  contentDescription = "Create",
-                  modifier = Modifier.size(Dimensions.IconSize.large))
-            }
-      },
       topBar = {
-        CenterAlignedTopAppBar(
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface),
-            title = {
-              Text(
-                  text = MeepleMeetScreen.PostsOverview.title,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontSize = Dimensions.TextSize.largeHeading,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-            })
+        PostsTopBar(
+            title = MeepleMeetScreen.PostsOverview.title,
+            showAddButton = verified,
+            onAddPostClick = onClickAddPost,
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onClearQuery = { searchQuery = "" },
+            focusManager = focusManager)
       },
       bottomBar = {
-        BottomNavigationMenu(
+        BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.PostsOverview,
-            modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
-            onTabSelected = { screen -> navigation.navigateTo(screen) })
+            onTabSelected = { screen -> navigation.navigateTo(screen) },
+            verified = verified,
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
         if (postsSorted.isEmpty()) {
-          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) { EmptyFeedListText() }
+          Box(
+              modifier =
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  }) {
+                EmptyFeedListText()
+              }
         } else {
           LazyColumn(
-              modifier = Modifier.fillMaxSize().padding(innerPadding),
+              modifier =
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  },
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
                   if (account.relationships[post.authorId] == RelationshipStatus.BLOCKED)
@@ -322,4 +341,113 @@ public fun FeedCard(
     HorizontalDivider(
         color = MessagingColors.divider, thickness = Dimensions.DividerThickness.standard)
   }
+}
+
+/**
+ * Top bar for the posts overview screen, styled to match DiscussionsTopBar.
+ *
+ * @param title The title text shown in the top bar.
+ * @param showAddButton Whether to show the add post button.
+ * @param onAddPostClick Callback when the add post button is clicked.
+ * @param query The current search query.
+ * @param onQueryChange Callback when the search query changes.
+ * @param onClearQuery Callback to clear the search query.
+ * @param focusManager FocusManager to handle clearing focus.
+ */
+@Composable
+fun PostsTopBar(
+    title: String,
+    showAddButton: Boolean,
+    onAddPostClick: () -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearQuery: () -> Unit,
+    focusManager: FocusManager
+) {
+  Column(
+      modifier =
+          Modifier.fillMaxWidth()
+              .background(AppColors.primary)
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
+              .padding(
+                  horizontal = Dimensions.Padding.extraLarge,
+                  vertical = Dimensions.Spacing.large)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  text = title,
+                  color = AppColors.textIcons,
+                  fontSize = Dimensions.TextSize.extraLarge,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+
+              if (showAddButton)
+                  IconButton(
+                      onClick = onAddPostClick,
+                      modifier =
+                          Modifier.background(MessagingColors.redditOrange, CircleShape)
+                              .size(Dimensions.AvatarSize.small)
+                              .testTag(FeedsOverviewTestTags.ADD_POST_BUTTON)) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "New post",
+                            tint = AppColors.textIcons)
+                      }
+            }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(Dimensions.ContainerSize.searchFieldHeight)
+                    .background(
+                        AppColors.secondary,
+                        androidx.compose.foundation.shape.RoundedCornerShape(
+                            Dimensions.CornerRadius.round))
+                    .testTag(FeedsOverviewTestTags.SEARCH_TEXT_FIELD),
+            singleLine = true,
+            textStyle =
+                androidx.compose.ui.text.TextStyle(
+                    color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
+            decorationBox = { innerTextField ->
+              Row(
+                  modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = AppColors.textIconsFade,
+                        modifier = Modifier.size(Dimensions.IconSize.standard))
+                    Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                    Box(modifier = Modifier.weight(1f)) {
+                      if (query.isEmpty()) {
+                        Text(
+                            text = "Search",
+                            color = AppColors.textIconsFade,
+                            fontSize = Dimensions.TextSize.subtitle)
+                      }
+                      innerTextField()
+                    }
+                    if (query.isNotEmpty()) {
+                      IconButton(
+                          onClick = onClearQuery,
+                          modifier =
+                              Modifier.size(Dimensions.IconSize.large)
+                                  .testTag(FeedsOverviewTestTags.SEARCH_CLEAR)) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = AppColors.textIconsFade,
+                                modifier = Modifier.size(Dimensions.IconSize.standard))
+                          }
+                    }
+                  }
+            })
+      }
 }

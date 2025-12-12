@@ -92,7 +92,7 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
   }
 
   private fun ensureSectionExpanded(sectionBaseTag: String) {
-    val toggleTag = sectionBaseTag + "_toggle"
+    val toggleTag = sectionBaseTag + "_header"
     val contentTag = sectionBaseTag + "_content"
 
     scrollListToTag(toggleTag)

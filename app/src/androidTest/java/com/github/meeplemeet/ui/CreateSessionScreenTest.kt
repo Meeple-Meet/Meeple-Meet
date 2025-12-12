@@ -13,11 +13,10 @@ import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
-import com.github.meeplemeet.ui.components.ComponentsTestTags
+import com.github.meeplemeet.ui.components.SessionComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionCreationTestTags
-import com.github.meeplemeet.ui.sessions.SessionTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
@@ -173,7 +172,7 @@ class CreateSessionScreenTest : FirestoreTests() {
     checkpoint("ui_chrome_present_and_nav_discard_callbacks_fire") {
       compose.waitForIdle() // guarantee first frame
 
-      compose.onNodeWithTag(ComponentsTestTags.TOP_APP_BAR).assertExists()
+      compose.onNodeWithTag(SessionComponentsTestTags.TOP_APP_BAR).assertExists()
       compose.onNodeWithTag(NavigationTestTags.SCREEN_TITLE).assertExists()
       compose
           .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON)
@@ -255,11 +254,11 @@ class CreateSessionScreenTest : FirestoreTests() {
       gameInput().performTextInput("Root")
 
       // Open location dialog and search for a location
-      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).performClick()
+      compose.onNodeWithTag(SessionComponentsTestTags.LOCATION_PICKER_BUTTON).performClick()
       compose.waitForIdle()
-      compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_DIALOG).assertIsDisplayed()
+      compose.onNodeWithTag(SessionComponentsTestTags.LOCATION_PICKER_DIALOG).assertIsDisplayed()
       compose
-          .onNodeWithTag(ComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
+          .onNodeWithTag(SessionComponentsTestTags.SESSION_LOCATION_SEARCH_INPUT)
           .performTextInput("EPFL")
       compose.waitForIdle()
 
@@ -278,7 +277,7 @@ class CreateSessionScreenTest : FirestoreTests() {
       compose.onNodeWithTag(SessionCreationTestTags.GAME_SEARCH_ERROR).assertExists()
 
       checkpoint("organisation_section_shows_location_label") {
-        compose.onNodeWithTag(SessionTestTags.LOCATION_PICKER_BUTTON).assertExists()
+        compose.onNodeWithTag(SessionComponentsTestTags.LOCATION_PICKER_BUTTON).assertExists()
       }
 
       checkpoint("create_and_discard_button_components_behave") {

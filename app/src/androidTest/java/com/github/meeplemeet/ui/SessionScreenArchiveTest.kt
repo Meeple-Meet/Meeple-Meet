@@ -97,6 +97,7 @@ class SessionScreenArchiveTest : FirestoreTests() {
         discussionId = discussion.uid,
         name = "Archive Session",
         gameId = sessionGame.uid,
+        gameName = sessionGame.name,
         date = Timestamp(sessionDate),
         location = Location(name = "Test Location"),
         admin.uid,

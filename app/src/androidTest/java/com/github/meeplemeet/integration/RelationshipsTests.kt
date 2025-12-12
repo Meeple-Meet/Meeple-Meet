@@ -11,6 +11,7 @@ import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -467,6 +468,7 @@ class RelationshipsTests : FirestoreTests() {
     accountRepository.resetRelationship(alice.uid, bob.uid)
     var accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     viewModel.sendFriendRequest(accounts[0], accounts[1])
+    delay(200)
 
     accounts = accountRepository.getAccounts(listOf(alice.uid, bob.uid))
     assertEquals(RelationshipStatus.SENT, accounts[0].relationships[bob.uid])

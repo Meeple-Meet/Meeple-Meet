@@ -226,18 +226,37 @@ class ShopRepository(
    *
    * @param ids The list of unique identifiers of the shops to delete.
    */
-  suspend fun deleteShops(ids: List<String>) {
+  suspend fun deleteShops(ids: List<String>, ownerId: String? = null) {
     coroutineScope {
       ids.map { id ->
             async {
-              // Get the shop to retrieve the owner ID before deletion
-              val shop = getShop(id)
+              // Try to get the shop to retrieve the owner ID before deletion
+              // If it fails (e.g. document doesn't exist), we fallback to the provided ownerId
+              val shop =
+                  try {
+                    getShop(id)
+                  } catch (e: Exception) {
+                    null
+                  }
 
-              geoPinRepository.deleteGeoPin(id)
-              collection.document(id).delete().await()
+              // Best effort deletion of geopins
+              try {
+                geoPinRepository.deleteGeoPin(id)
+              } catch (_: Exception) {}
+
+              // Best effort deletion of the document
+              try {
+                collection.document(id).delete().await()
+              } catch (_: Exception) {}
 
               // Remove the shop ID from the owner's businesses
-              accountRepository.removeShopId(shop.owner.uid, id)
+              // Use the owner from the document if available, otherwise use the provided fallback
+              val uidToRemoveFrom = shop?.owner?.uid ?: ownerId
+              if (uidToRemoveFrom != null) {
+                try {
+                  accountRepository.removeShopId(uidToRemoveFrom, id)
+                } catch (_: Exception) {}
+              }
             }
           }
           .awaitAll()

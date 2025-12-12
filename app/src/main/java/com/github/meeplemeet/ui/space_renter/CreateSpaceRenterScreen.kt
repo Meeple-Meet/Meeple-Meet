@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,6 +22,7 @@ import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
+import com.github.meeplemeet.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 /* ================================================================================================
@@ -315,21 +315,6 @@ internal fun AddSpaceRenterContent(
                           initiallyExpanded = false,
                           expanded = spacesExpanded,
                           onExpandedChange = { spacesExpanded = it },
-                          header = {
-                            TextButton(
-                                onClick = { addSpace() },
-                                modifier =
-                                    Modifier.testTag(
-                                        CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(AddSpaceRenterUi.Dimensions.between))
-                                  Text(
-                                      AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
-                                      modifier =
-                                          Modifier.testTag(
-                                              CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL))
-                                }
-                          },
                           content = {
                             SpacesList(
                                 spaces = spaces,
@@ -341,10 +326,14 @@ internal fun AddSpaceRenterContent(
                                   spaces = spaces.filterIndexed { i, _ -> i != idx }
                                 },
                             )
+                            AddButton(
+                                onClick = { addSpace() },
+                                buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                buttonTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
+                                labelTestTag = CreateSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
                           },
                           testTag = CreateSpaceRenterScreenTestTags.SECTION_SPACES)
                     }
-
                     item {
                       Spacer(
                           Modifier.height(AddSpaceRenterUi.Dimensions.bottomSpacer)
