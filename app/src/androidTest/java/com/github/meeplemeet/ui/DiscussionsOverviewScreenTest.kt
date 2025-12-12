@@ -314,7 +314,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun search_functionality() = runBlocking {
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = me, navigation = nav) }
+        AppTheme { DiscussionsOverviewScreen(account = me, verified = true, navigation = nav) }
       }
     }
 

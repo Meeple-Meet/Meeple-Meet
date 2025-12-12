@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -188,14 +190,9 @@ fun SessionsOverviewScreen(
         }) { innerPadding ->
           Box(
               modifier =
-                  Modifier.fillMaxSize().padding(innerPadding).clickable(
-                      indication = null,
-                      interactionSource =
-                          remember {
-                            androidx.compose.foundation.interaction.MutableInteractionSource()
-                          }) {
-                        focusManager.clearFocus()
-                      }) {
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  }) {
                 when {
                   showHistory -> {
                     val filteredArchived =

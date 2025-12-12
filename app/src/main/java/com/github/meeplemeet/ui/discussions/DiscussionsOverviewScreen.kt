@@ -5,6 +5,7 @@ package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -163,14 +165,9 @@ fun DiscussionsOverviewScreen(
         if (discussionPreviewsSorted.isEmpty()) {
           Box(
               modifier =
-                  Modifier.fillMaxSize().padding(innerPadding).clickable(
-                      indication = null,
-                      interactionSource =
-                          remember {
-                            androidx.compose.foundation.interaction.MutableInteractionSource()
-                          }) {
-                        focusManager.clearFocus()
-                      }) {
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  }) {
                 EmptyDiscussionsListText()
               }
         } else {
@@ -179,14 +176,9 @@ fun DiscussionsOverviewScreen(
                   Modifier.fillMaxSize()
                       .background(MaterialTheme.colorScheme.background)
                       .padding(innerPadding)
-                      .clickable(
-                          indication = null,
-                          interactionSource =
-                              remember {
-                                androidx.compose.foundation.interaction.MutableInteractionSource()
-                              }) {
-                            focusManager.clearFocus()
-                          }) {
+                      .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                      }) {
                 items(discussionPreviewsSorted, key = { it.uid }) { preview ->
                   val discussion = offline.discussions[preview.uid]?.first
                   val discussionName = discussion?.name ?: DEFAULT_DISCUSSION_NAME

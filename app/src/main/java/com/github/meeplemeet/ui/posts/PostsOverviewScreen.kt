@@ -7,6 +7,7 @@ package com.github.meeplemeet.ui.posts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -125,27 +127,17 @@ fun PostsOverviewScreen(
         if (postsSorted.isEmpty()) {
           Box(
               modifier =
-                  Modifier.fillMaxSize().padding(innerPadding).clickable(
-                      indication = null,
-                      interactionSource =
-                          remember {
-                            androidx.compose.foundation.interaction.MutableInteractionSource()
-                          }) {
-                        focusManager.clearFocus()
-                      }) {
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  }) {
                 EmptyFeedListText()
               }
         } else {
           LazyColumn(
               modifier =
-                  Modifier.fillMaxSize().padding(innerPadding).clickable(
-                      indication = null,
-                      interactionSource =
-                          remember {
-                            androidx.compose.foundation.interaction.MutableInteractionSource()
-                          }) {
-                        focusManager.clearFocus()
-                      },
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  },
               verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
                 items(postsSorted, key = { it.id }) { post ->
                   if (account.relationships[post.authorId] == RelationshipStatus.BLOCKED)

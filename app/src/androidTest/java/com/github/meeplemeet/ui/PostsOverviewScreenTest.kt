@@ -81,7 +81,10 @@ class PostsOverviewScreenTest : FirestoreTests() {
 
     compose.setContent {
       CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { PostsOverviewScreen(viewModel = viewModel, navigation = nav, account = account) }
+        AppTheme {
+          PostsOverviewScreen(
+              viewModel = viewModel, verified = true, navigation = nav, account = account)
+        }
       }
     }
   }
