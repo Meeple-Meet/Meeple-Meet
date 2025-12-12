@@ -38,32 +38,6 @@ interface GameRepository {
   suspend fun getGamesById(vararg gameIDs: String): List<Game>
 
   /**
-   * Searches for games whose names contain the specified [query].
-   *
-   * This method performs a substring search on the game names, allowing the caller to choose
-   * whether the comparison should ignore case sensitivity.
-   *
-   * For example, searching for `"cat"` with [ignoreCase] set to `true` will match `"Catan"`, `"Cat
-   * Lady"`, and `"Concatenate"`. When [ignoreCase] is `false`,only exact casing matches are
-   * returned.
-   *
-   * Returns up to [maxResults] results, making it suitable for live search or autocomplete.
-   *
-   * @param query the substring of the game name to search for.
-   * @param maxResults the maximum number of results to return (default: 5).
-   * @param ignoreCase whether to ignore case when matching names (default: true).
-   * @return a [List] of [Game] objects whose names contain the specified substring.
-   * @throws GameSearchException If the search operation fails.
-   * @throws GameFetchException If loading the full game objects fails.
-   */
-  @Deprecated("Use searchGameByName for lightweight results instead")
-  suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int = 10,
-      ignoreCase: Boolean = true
-  ): List<Game>
-
-  /**
    * Searches for games by name and returns lightweight search results.
    *
    * Search is case-insensitive by default.

@@ -99,31 +99,6 @@ class CloudBggGameRepository(
   }
 
   /**
-   * Deprecated full search method that returns complete [Game] objects.
-   *
-   * This method remains available for backward compatibility but will be removed in the future. It
-   * now delegates to [searchGamesByName], then resolves the returned IDs via [getGamesById].
-   *
-   * @param query The text query to match in game names.
-   * @param maxResults Maximum number of results to return.
-   * @param ignoreCase (Unused) Provided for legacy signature compatibility.
-   * @return A list of full [Game] objects matching the query.
-   * @throws GameSearchException If the search operation fails.
-   * @throws GameFetchException If loading the full game objects fails.
-   */
-  @Deprecated("Use searchGamesByNameLight for partial search results")
-  override suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int,
-      ignoreCase: Boolean
-  ): List<Game> =
-      withContext(ioDispatcher) {
-        val lightResults = searchGamesByName(query, maxResults)
-        if (lightResults.isEmpty()) return@withContext emptyList()
-        return@withContext getGamesById(*lightResults.map { it.id }.toTypedArray())
-      }
-
-  /**
    * Searches for games by name and returns lightweight results containing only ID and name.
    *
    * This method is recommended over the deprecated full search, as it reduces backend load and

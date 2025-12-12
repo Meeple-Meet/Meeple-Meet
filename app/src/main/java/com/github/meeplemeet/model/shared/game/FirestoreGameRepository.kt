@@ -58,37 +58,6 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
   /**
    * Searches for games whose names contain the specified [query].
    *
-   * This search is performed locally after fetching all games, and supports optional
-   * case-insensitive matching. Results are limited to [maxResults].
-   */
-  @Deprecated("Use searchGameByName for lightweight results instead")
-  override suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int,
-      ignoreCase: Boolean
-  ): List<Game> {
-    if (query.isBlank()) return emptyList()
-
-    val snapshot = games.get().await()
-    val allGames = mapSnapshotToGames(snapshot.documents)
-
-    // Filter games based on whether their names contain the query
-    val filteredGames =
-        if (ignoreCase) {
-          allGames.filter { it.name.contains(query, ignoreCase = true) }
-        } else {
-          allGames.filter { it.name.contains(query) }
-        }
-
-    // Sort results to prioritize names starting with the query
-    val sortedGames = filteredGames.sortedBy { !it.name.startsWith(query, ignoreCase) }
-
-    return sortedGames.take(maxResults)
-  }
-
-  /**
-   * Searches for games whose names contain the specified [query].
-   *
    * This search is performed locally after fetching all games. Results are limited to [maxResults].
    */
   override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> {

@@ -4,6 +4,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -28,11 +29,7 @@ import org.junit.Test
 class CountingGameRepository : GameRepository {
   var callCount = 0
 
-  override suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int,
-      ignoreCase: Boolean
-  ): List<Game> {
+  override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> {
     callCount++
     return emptyList()
   }
@@ -108,7 +105,7 @@ class ShopSearchViewModelTest : FirestoreTests() {
 
   @Test(expected = PermissionDeniedException::class)
   fun setGameThrowsIfNotOwner() {
-    shopViewModel.setGame(shop, intruder, game)
+    shopViewModel.setGame(shop, intruder, GameSearchResult("", ""))
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -130,7 +127,7 @@ class ShopSearchViewModelTest : FirestoreTests() {
 
   @Test
   fun setGameSucceedsIfOwner() {
-    shopViewModel.setGame(shop, owner, game)
+    shopViewModel.setGame(shop, owner, GameSearchResult("", ""))
   }
 
   @Test
