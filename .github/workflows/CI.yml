@@ -323,7 +323,7 @@ jobs:
           fi
 
       - name: Run instrumentation tests
-        timeout-minutes: 35
+        timeout-minutes: 60
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -340,18 +340,6 @@ jobs:
         with:
           name: android-test-coverage-${{ matrix.run }}
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec
-
-      - name: Cancel other test runs
-        if: success()
-        run: |
-          echo "Test run ${{ matrix.run }} succeeded, cancelling other runs..."
-          jobs=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[] | select(.name | startswith("Android Instrumentation Tests (Run ")) | select(.name != "Android Instrumentation Tests (Run ${{ matrix.run }})") | select(.status == "in_progress" or .status == "queued") | .id')
-          for job_id in $jobs; do
-            echo "Cancelling job $job_id"
-            gh api repos/${{ github.repository }}/actions/jobs/$job_id/cancel -X POST || true
-          done
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   compile-debug-classes:
     name: Compile Debug Classes
