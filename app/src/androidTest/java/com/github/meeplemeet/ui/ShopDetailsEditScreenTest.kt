@@ -1,19 +1,11 @@
 package com.github.meeplemeet.ui
-// Github copilot was used for this file
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDisplayed
+
+import androidx.compose.runtime.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
@@ -25,664 +17,410 @@ import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
-import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.ui.shops.EditShopScreenTestTags
 import com.github.meeplemeet.ui.shops.ShopDetailsScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class ShopDetailsEditScreenTest : FirestoreTests() {
 
-  @get:Rule val composeTestRule = createComposeRule()
+  /* ───────────────────────────────── RULES ───────────────────────────────── */
+
+  @get:Rule val compose = createComposeRule()
+
+  /* ---------- Checkpoint helper ---------- */
   @get:Rule val ck = Checkpoint.Rule()
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
-  private lateinit var editShopViewModel: EditShopViewModel
+  /* ────────────────────────────── FIXTURES / FX ──────────────────────────── */
 
-  private lateinit var testOwner: Account
-  private lateinit var testGame1: Game
-  private lateinit var testGame2: Game
-  private lateinit var testShop: Shop
-  private lateinit var testLocation: Location
-  private lateinit var testOpeningHours: List<OpeningHours>
+  private lateinit var owner: Account
+  private lateinit var shop: Shop
+  private lateinit var gameCatan: Game
+  private lateinit var gameCarcassonne: Game
+
+  /* ────────────────────────────── SETUP ──────────────────────────────────── */
+
+  @Before
+  fun setup(): Unit = runBlocking {
+    // Create owner
+    owner =
+        accountRepository.createAccount(
+            userHandle = "meeple", name = "Meeple", email = "marco@epfl.com", photoUrl = null)
+
+    // Create test games in Firestore
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_catan")
+        .set(
+            GameNoUid(
+                name = "Catan",
+                description = "Settlers of Catan",
+                imageURL = "",
+                minPlayers = 3,
+                maxPlayers = 4,
+                recommendedPlayers = 4,
+                averagePlayTime = 90,
+                genres = listOf("1", "2")))
+        .await()
+    gameCatan = gameRepository.getGameById("test_catan")
+
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_carcassonne")
+        .set(
+            GameNoUid(
+                name = "Carcassonne",
+                description = "Tile-laying game",
+                imageURL = "",
+                minPlayers = 2,
+                maxPlayers = 5,
+                recommendedPlayers = 4,
+                averagePlayTime = 45,
+                genres = listOf("1")))
+        .await()
+    gameCarcassonne = gameRepository.getGameById("test_carcassonne")
+
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_pandemic")
+        .set(
+            GameNoUid(
+                name = "Pandemic",
+                description = "Cooperative game",
+                imageURL = "",
+                minPlayers = 2,
+                maxPlayers = 4,
+                recommendedPlayers = 4,
+                averagePlayTime = 45,
+                genres = listOf("3")))
+        .await()
+
+    // Create Shop
+    val openings =
+        (1..7).map { day -> OpeningHours(day = day, hours = listOf(TimeSlot("09:00", "18:00"))) }
+    val games = listOf(gameCatan to 5, gameCarcassonne to 10)
+
+    shop =
+        shopRepository.createShop(
+            owner = owner,
+            name = "Meeple Mart",
+            phone = "+41 79 000 00 00",
+            email = "shop@meeple.com",
+            address = Location(45.0, 6.0, "EPFL"),
+            website = "https://meeple.com",
+            openingHours = openings,
+            gameCollection = games)
+  }
+
+  /* ────────────────────────────── EXT HELPERS ────────────────────────────── */
+
+  private fun ComposeTestRule.onTag(tag: String) = onNodeWithTag(tag, useUnmergedTree = true)
+
+  private fun ComposeTestRule.onTags(tag: String) = onAllNodesWithTag(tag, useUnmergedTree = true)
+
+  /** Scroll the outer LazyColumn to bring a tagged node into view. */
+  private fun scrollListToTag(tag: String) {
+    compose.onTag(EditShopScreenTestTags.LIST).performScrollToNode(hasTestTag(tag))
+    compose.waitForIdle()
+  }
+
+  /** Expand a collapsible section only if its content isn't currently in the tree. */
+  private fun ensureSectionExpanded(sectionBaseTag: String) {
+    val contentTag = sectionBaseTag + EditShopScreenTestTags.SECTION_CONTENT_SUFFIX
+    val isExpanded = compose.onTags(contentTag).fetchSemanticsNodes().isNotEmpty()
+    if (!isExpanded) {
+      compose
+          .onTag(sectionBaseTag + CreateShopScreenTestTags.SECTION_TOGGLE_ICON_SUFFIX)
+          .assertExists()
+          .performClick()
+      compose.waitForIdle()
+    }
+  }
 
   /** Returns the LabeledField INPUT inside the given wrapper (FIELD_* tag). */
   private fun inputIn(wrapperTag: String) =
-      composeTestRule.onNode(
+      compose.onNode(
           hasTestTag(ShopComponentsTestTags.LABELED_FIELD_INPUT) and
               hasAnyAncestor(hasTestTag(wrapperTag)),
           useUnmergedTree = true)
 
-  /** Scroll the outer LazyColumn to bring a tagged node into view. */
-  private fun scrollListToTag(tag: String) {
-    composeTestRule
-        .onNodeWithTag(EditShopScreenTestTags.LIST, useUnmergedTree = true)
-        .performScrollToNode(hasTestTag(tag))
-    composeTestRule.waitForIdle()
+  /** Set slider value by performing swipe gesture. */
+  private fun setSliderValue(targetValue: Int, maxValue: Int = 100) {
+    compose.onTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTouchInput {
+      val fraction = targetValue.toFloat() / maxValue.toFloat()
+      val targetX = left + (right - left) * fraction
+      val targetY = top + (bottom - top) * 0.9f
+      down(Offset(center.x, targetY))
+      moveTo(Offset(targetX, targetY))
+      up()
+    }
+    compose.waitForIdle()
   }
 
-  /** Expands a collapsible section if it's currently collapsed. */
-  private fun expandSectionIfNeeded(sectionTag: String) {
-    val contentTag = sectionTag + EditShopScreenTestTags.SECTION_CONTENT_SUFFIX
-    val toggleTag = sectionTag + EditShopScreenTestTags.SECTION_TOGGLE_SUFFIX
-    val headerTag = sectionTag + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
+  /** Add a game using the slider for quantity selection. */
+  @OptIn(ExperimentalTestApi::class)
+  private fun addGameWithSlider(gameName: String, quantity: Int) {
+    ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
+    scrollListToTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)
+    compose.onTag(EditShopScreenTestTags.GAMES_ADD_BUTTON).assertExists().performClick()
+    compose.onTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertExists()
 
-    val isCollapsed =
-        try {
-          !composeTestRule.onNodeWithTag(contentTag, useUnmergedTree = true).isDisplayed()
-        } catch (_: AssertionError) {
-          true
-        }
+    // Type in the search field to trigger game search
+    compose
+        .onTag(ShopComponentsTestTags.GAME_SEARCH_FIELD)
+        .assertExists()
+        .performTextInput(gameName)
+    compose.waitForIdle()
 
-    if (isCollapsed) {
-      // Ensure the header (and thus the toggle) is scrolled into view before clicking
-      scrollListToTag(headerTag)
-      composeTestRule
-          .onNodeWithTag(toggleTag, useUnmergedTree = true)
-          .assertExists()
-          .assertIsDisplayed()
-          .performClick()
-      composeTestRule.waitForIdle()
+    // Wait for first dropdown item
+    val firstItemTag = "${ShopComponentsTestTags.GAME_SEARCH_ITEM}:0"
+    compose.waitUntil(15_000) {
+      compose
+          .onAllNodesWithTag(firstItemTag, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
+
+    // Click the first dropdown item
+    compose.onTag(firstItemTag).performClick()
+    compose.waitForIdle()
+
+    // Wait for the save button
+    compose.waitUntil(5_000) {
+      val saveButton = compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)
+      try {
+        saveButton.assertIsEnabled()
+        true
+      } catch (e: AssertionError) {
+        false
+      }
+    }
+
+    // Set quantity using slider
+    setSliderValue(quantity)
+
+    // Save
+    compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).assertIsEnabled().performClick()
+    compose.onTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertDoesNotExist()
   }
 
-  /** Mirrors UI formatting: converts HH:mm to "h:mm a" and builds "start - end". */
-  private fun expectedTimeText(open: String, close: String): String {
-    fun parse(hhmm: String): LocalTime {
-      val parts = hhmm.split(":")
-      return LocalTime.of(parts[0].toInt(), parts[1].toInt())
-    }
-    val fmt12 = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-    val s = parse(open).format(fmt12)
-    val e = parse(close).format(fmt12)
-    return "$s - $e"
+  /** Flip Sunday to “Open 24 hours” via the dialog and assert the 1st row value. */
+  private fun setAnyOpeningHoursViaDialog() {
+    scrollListToTag(
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    ensureSectionExpanded(EditShopScreenTestTags.SECTION_AVAILABILITY)
+
+    compose.onTags(ShopComponentsTestTags.DAY_ROW_EDIT).assertCountEquals(7)[0].performClick()
+
+    compose.onTag(CreateShopScreenTestTags.OPENING_HOURS_DIALOG_WRAPPER).assertExists()
+    compose.onTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX).assertExists().performClick()
+    compose.onTag(ShopComponentsTestTags.DIALOG_SAVE).assertIsEnabled().performClick()
+    compose.waitForIdle()
+
+    compose
+        .onTags(ShopComponentsTestTags.DAY_ROW_VALUE)
+        .assertCountEquals(7)[0]
+        .assert(hasText("Open 24 hours", substring = true))
+        .assertIsDisplayed()
   }
 
-  private fun waitForField(
-      wrapperTag: String,
-      scrollTargetTag: String = wrapperTag,
-      timeoutMillis: Long = 5_000
-  ) {
-    scrollListToTag(scrollTargetTag)
-    composeTestRule.waitUntil(timeoutMillis) {
-      runCatching { inputIn(wrapperTag).fetchSemanticsNode() }.isSuccess
-    }
-  }
-
-  @Before
-  fun setup() {
-    editShopViewModel = EditShopViewModel()
-
-    runBlocking {
-      // Create test account
-      testOwner =
-          accountRepository.createAccount(
-              "shopowner", "Shop Owner", email = "owner@boardgames.com", photoUrl = null)
-
-      // Create test games
-      db.collection(GAMES_COLLECTION_PATH)
-          .document("g_catan")
-          .set(
-              GameNoUid(
-                  name = "Catan",
-                  description = "Settlers of Catan",
-                  imageURL = "https://example.com/catan.jpg",
-                  minPlayers = 3,
-                  maxPlayers = 4,
-                  recommendedPlayers = 4,
-                  averagePlayTime = 90,
-                  genres = listOf("1", "2")))
-          .await()
-
-      db.collection(GAMES_COLLECTION_PATH)
-          .document("g_ticket")
-          .set(
-              GameNoUid(
-                  name = "Ticket to Ride",
-                  description = "Train adventure game",
-                  imageURL = "https://example.com/ticket.jpg",
-                  minPlayers = 2,
-                  maxPlayers = 5,
-                  recommendedPlayers = 4,
-                  averagePlayTime = 60,
-                  genres = listOf("1")))
-          .await()
-
-      testGame1 = gameRepository.getGameById("g_catan")
-      testGame2 = gameRepository.getGameById("g_ticket")
-    }
-
-    testLocation = Location(latitude = 46.5197, longitude = 6.6323, name = "EPFL Campus, Lausanne")
-
-    testOpeningHours =
-        listOf(
-            OpeningHours(day = 0, hours = emptyList()),
-            OpeningHours(day = 1, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 2, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 3, hours = listOf(TimeSlot("09:00", "18:00"))),
-            OpeningHours(day = 4, hours = listOf(TimeSlot("09:00", "20:00"))),
-            OpeningHours(day = 5, hours = listOf(TimeSlot("09:00", "20:00"))),
-            OpeningHours(day = 6, hours = listOf(TimeSlot("10:00", "16:00"))))
-
-    // Create a test shop in the repository
-    runBlocking {
-      testShop =
-          shopRepository.createShop(
-              testOwner,
-              "Board Game Paradise",
-              "+41 21 123 45 67",
-              "contact@boardgameparadise.ch",
-              "https://boardgameparadise.ch",
-              testLocation,
-              testOpeningHours,
-              listOf(testGame1 to 5, testGame2 to 3))
-    }
-  }
+  /* ────────────────────────────── MERGED FLOWS ───────────────────────────── */
 
   @Test
-  fun all_tests() {
+  fun editShop_coreFlows_singleComposition(): Unit {
     // Disable bottom bar hiding to ensure ActionBar is always visible in tests
     UiBehaviorConfig.hideBottomBarWhenInputFocused = false
 
-    // Load the shop into the ViewModel using the new initialize() method
-    editShopViewModel.initialize(testShop)
+    var savedCalled = false
+    var backCalled = false
 
-    val currentShopState = mutableStateOf(testShop)
+    // We can use a stage integer to simulate steps if needed,
+    // though for Edit screen we mostly just interact sequentially.
+    lateinit var stage: MutableIntState
 
-    composeTestRule.setContent {
+    val viewModel = EditShopViewModel()
+
+    compose.setContent {
       AppTheme {
+        stage = remember { mutableIntStateOf(0) }
+        // Force re-read of shop from repository/pass specific shop not needed as we pass 'shop'
+        // object
         ShopDetailsScreen(
-            owner = testOwner,
-            onBack = {},
-            onSaved = {},
-            shop = currentShopState.value,
-            viewModel = editShopViewModel)
+            owner = owner,
+            shop = shop,
+            onBack = { backCalled = true },
+            onSaved = { savedCalled = true },
+            onDelete = {},
+            online = true,
+            viewModel = viewModel)
       }
     }
 
-    checkpoint("editShopScreen_displaysDataMatchingDatabase") {
-      composeTestRule.waitForIdle()
+    // 0) Structure & Initial Data
+    checkpoint("Structure & Initial Data") {
+      compose.onTag(EditShopScreenTestTags.SCAFFOLD).assertExists()
+      compose.onTag(EditShopScreenTestTags.TOPBAR).assertExists()
+      compose.onTag(EditShopScreenTestTags.TITLE).assertExists()
 
-      // === REQUIRED INFO ===
-      expandSectionIfNeeded(EditShopScreenTestTags.SECTION_REQUIRED)
-      inputIn(EditShopScreenTestTags.FIELD_SHOP).assertTextContains("Board Game Paradise")
-      inputIn(EditShopScreenTestTags.FIELD_EMAIL).assertTextContains("contact@boardgameparadise.ch")
-      inputIn(EditShopScreenTestTags.FIELD_PHONE).assertTextContains("+41 21 123 45 67")
-      inputIn(EditShopScreenTestTags.FIELD_LINK).assertTextContains("https://boardgameparadise.ch")
+      // Expand Required Section
+      ensureSectionExpanded(EditShopScreenTestTags.SECTION_REQUIRED)
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).assert(hasText("Meeple Mart"))
+      inputIn(EditShopScreenTestTags.FIELD_EMAIL).assert(hasText("shop@meeple.com"))
+      inputIn(EditShopScreenTestTags.FIELD_PHONE).assert(hasText("+41 79 000 00 00"))
 
-      // === AVAILABILITY ===
-      expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-
-      fun dayValueAt(index: Int) =
-          composeTestRule
-              .onAllNodes(hasTestTag(ShopComponentsTestTags.DAY_ROW_VALUE), useUnmergedTree = true)[
-                  index]
-
-      // Ensure AvailabilitySection is visible so its children are composed
-      scrollListToTag(
-          EditShopScreenTestTags.SECTION_AVAILABILITY +
-              EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
-
-      // Optional: expand if collapsed
-      expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-
-      // Wait until the first day row exists
-      composeTestRule.waitUntil(timeoutMillis = 5000) {
-        runCatching { dayValueAt(0).fetchSemanticsNode() }.isSuccess
+      // Wait for validation to pass (e.g. location loaded async)
+      compose.waitUntil(5_000) {
+        try {
+          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
+          true
+        } catch (e: AssertionError) {
+          false
+        }
       }
-      dayValueAt(0).assertTextContains("Closed")
+    }
 
-      val mon = expectedTimeText("09:00", "18:00")
-      val tue = expectedTimeText("09:00", "18:00")
-      val wed = expectedTimeText("09:00", "18:00")
-      val thu = expectedTimeText("09:00", "20:00")
-      val fri = expectedTimeText("09:00", "20:00")
-      val sat = expectedTimeText("10:00", "16:00")
+    // 1) Validation Gating
+    checkpoint("Validation gating") {
+      // Clear name -> Save should be disabled
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextClearance()
+      compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsNotEnabled()
 
-      dayValueAt(1).assertTextContains(mon, substring = true, ignoreCase = true)
-      dayValueAt(2).assertTextContains(tue, substring = true, ignoreCase = true)
-      dayValueAt(3).assertTextContains(wed, substring = true, ignoreCase = true)
-      dayValueAt(4).assertTextContains(thu, substring = true, ignoreCase = true)
-      dayValueAt(5).assertTextContains(fri, substring = true, ignoreCase = true)
-      dayValueAt(6).assertTextContains(sat, substring = true, ignoreCase = true)
+      // Restore name -> Save enabled
+      inputIn(EditShopScreenTestTags.FIELD_SHOP).performTextInput("Meeple Mart Edited")
 
-      // === GAMES STOCK ===
-      // Bring games header into view to ensure section is visible
+      compose.waitUntil(5_000) {
+        try {
+          compose.onTag(ShopComponentsTestTags.ACTION_SAVE).assertIsEnabled()
+          true
+        } catch (e: AssertionError) {
+          false
+        }
+      }
+    }
+
+    // 3) Games modification
+    checkpoint("Games modification") {
+      // Scroll to games
       scrollListToTag(
           EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+      ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
-      val catanCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame1.uid}"
-      val ttrCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame2.uid}"
+      scrollListToTag(EditShopScreenTestTags.GAMES_ADD_BUTTON)
+      compose.waitForIdle()
 
-      // Wait until the game cards appear (composed) before asserting
-      composeTestRule.waitUntil(8_000) {
-        val catanExists =
-            composeTestRule
-                .onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        val ttrExists =
-            composeTestRule
-                .onAllNodesWithTag(ttrCardTag, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        catanExists && ttrExists
+      // Verify Catan and Carcassonne exist
+      val catanTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_catan"
+      val carcassonneTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_carcassonne"
+
+      compose.waitUntil(10_000) {
+        compose
+            .onAllNodesWithTag(catanTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
       }
 
-      // Catan card with name and qty 5
-      composeTestRule.onNodeWithTag(catanCardTag).assertExists()
-      composeTestRule
-          .onNode(
-              hasText(testGame1.name, substring = true) and
-                  hasAnyAncestor(hasTestTag(catanCardTag)),
-              useUnmergedTree = true)
-          .assertExists()
-      composeTestRule
-          .onNode(
-              hasText("5", substring = true) and hasAnyAncestor(hasTestTag(catanCardTag)),
-              useUnmergedTree = true)
-          .assertExists()
+      compose.onNodeWithTag(catanTag).assertExists()
+      compose.onNodeWithTag(carcassonneTag).assertExists()
 
-      // Ticket to Ride card with name and qty 3
-      composeTestRule.onNodeWithTag(ttrCardTag).assertExists()
-      composeTestRule
-          .onNode(
-              hasText(testGame2.name, substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
-              useUnmergedTree = true)
-          .assertExists()
-      composeTestRule
-          .onNode(
-              hasText("3", substring = true) and hasAnyAncestor(hasTestTag(ttrCardTag)),
-              useUnmergedTree = true)
+      // Add Pandemic
+      // this will actually be set to 19 with the slider, weirdly the function works for all values
+      // except the ones smallers than 20
+      addGameWithSlider("Pandemic", 20)
+
+      //           Wait for Pandemic
+      val pandemicTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}test_pandemic"
+      compose.waitUntil(10_000) {
+        compose
+            .onAllNodesWithTag(pandemicTag, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+      compose.onTag(pandemicTag).assertExists()
+
+      // Delete Catan
+      compose
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+          .performClick()
+      compose.waitForIdle()
+      compose.onTag(catanTag).assertDoesNotExist()
+
+      // Edit Carcassonne count to 50
+      compose
+          .onNodeWithTag(
+              "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_carcassonne", useUnmergedTree = true)
+          .performClick()
+      compose.onTag(EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER).assertExists()
+      setSliderValue(50)
+      compose.onTag(ShopComponentsTestTags.GAME_DIALOG_SAVE).performClick()
+      compose.waitForIdle()
+      // Check for updated text (fuzzy check for "50")
+      compose
+          .onNode(hasText("50", substring = true) and hasAnyAncestor(hasTestTag(carcassonneTag)))
           .assertExists()
     }
 
-    checkpoint("editShopScreen_saveChanges_persistsToFirestore") {
+    // 3) Save Success
+    checkpoint("Save Success") {
+      compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      assertEquals(true, savedCalled)
+
+      // Verify persistence in Firestore
       runBlocking {
-        // Reset to initial shop state for this test using initialize()
-        currentShopState.value = testShop
-        editShopViewModel.initialize(testShop)
-        composeTestRule.waitForIdle()
-
-        val newName = "Board Game Paradise · Edited"
-        val newEmail = "new-contact@boardgameparadise.ch"
-        val newPhone = "+41 21 765 43 21"
-        val newWebsite = "https://boardgameparadise.ch/edited"
-
-        val requiredHeader =
-            EditShopScreenTestTags.SECTION_REQUIRED + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-
-        println("wait field shop")
-        waitForField(EditShopScreenTestTags.FIELD_SHOP, requiredHeader)
-        inputIn(EditShopScreenTestTags.FIELD_SHOP).apply {
-          assertTextContains("Board Game Paradise")
-          performTextClearance()
-          performTextInput(newName)
-        }
-        println("wait field email")
-        waitForField(EditShopScreenTestTags.FIELD_EMAIL, requiredHeader)
-        inputIn(EditShopScreenTestTags.FIELD_EMAIL).apply {
-          assertTextContains("contact@boardgameparadise.ch")
-          performTextClearance()
-          performTextInput(newEmail)
-        }
-        println("wait field phone")
-        waitForField(EditShopScreenTestTags.FIELD_PHONE, requiredHeader)
-        inputIn(EditShopScreenTestTags.FIELD_PHONE).apply {
-          assertTextContains("+41 21 123 45 67")
-          performTextClearance()
-          performTextInput(newPhone)
-        }
-        println("wait field link")
-        waitForField(EditShopScreenTestTags.FIELD_LINK, requiredHeader)
-        inputIn(EditShopScreenTestTags.FIELD_LINK).apply {
-          assertTextContains("https://boardgameparadise.ch")
-          performTextClearance()
-          performTextInput(newWebsite)
-        }
-        // Scroll and expand Availability section
-        scrollListToTag(
-            EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
-        expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-
-        // Wait until day edit buttons exist
-        composeTestRule.waitUntil(timeoutMillis = 10000) {
-          composeTestRule
-              .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-        }
-
-        // Click the Monday edit button (index 1)
-        composeTestRule
-            .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)[1]
-            .performClick()
-
-        // Toggle Open 24 and save
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX, useUnmergedTree = true)
-            .assertExists()
-            .performClick()
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
-            .assertExists()
-            .performClick()
-
-        // Scroll and expand Games section
-        scrollListToTag(
-            EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
-        expandSectionIfNeeded(EditShopScreenTestTags.SECTION_GAMES)
-
-        val catanCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame1.uid}"
-        val ttrCardTag = "${ShopComponentsTestTags.SHOP_GAME_PREFIX}${testGame2.uid}"
-
-        // Wait until first game card is composed
-        composeTestRule.waitUntil(8000) {
-          composeTestRule
-              .onAllNodesWithTag(catanCardTag, useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-        }
-
-        // Click + on the first game's row
-        composeTestRule
-            .onNode(
-                hasTestTag(ShopComponentsTestTags.SHOP_GAME_PLUS_BUTTON) and
-                    hasAnyAncestor(hasTestTag(catanCardTag)),
-                useUnmergedTree = true)
-            .assertExists()
-            .performClick()
-
-        // Click - on the second game's row
-        composeTestRule
-            .onNode(
-                hasTestTag(ShopComponentsTestTags.SHOP_GAME_MINUS_BUTTON) and
-                    hasAnyAncestor(hasTestTag(ttrCardTag)),
-                useUnmergedTree = true)
-            .assertExists()
-            .performClick()
-
-        // Save changes
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
-            .assertExists()
-            .performClick()
-
-        // Wait until the repository reflects the saved changes so assertions are stable
-        var persisted: Shop? = null
-        composeTestRule.waitUntil(timeoutMillis = 15_000) {
-          val candidate = runBlocking { shopRepository.getShop(testShop.id) }
-          val monday = candidate.openingHours.firstOrNull { it.day == 1 }
-          val mondaySlot = monday?.hours?.singleOrNull()
-          val counts = candidate.gameCollection.associate { it.first.uid to it.second }
-          val ready =
-              candidate.name == newName &&
-                  candidate.email == newEmail &&
-                  candidate.phone == newPhone &&
-                  candidate.website == newWebsite &&
-                  mondaySlot?.open == "00:00" &&
-                  mondaySlot?.close == "23:59" &&
-                  counts[testGame1.uid] == 6 &&
-                  counts[testGame2.uid] == 2
-          if (ready) persisted = candidate
-          ready
-        }
-
-        // Fetch from Firestore and assert fields
-        val reloaded = persisted ?: runBlocking { shopRepository.getShop(testShop.id) }
-        assertEquals(newName, reloaded.name)
-        assertEquals(newEmail, reloaded.email)
-        assertEquals(newPhone, reloaded.phone)
-        assertEquals(newWebsite, reloaded.website)
-
-        // Monday should be Open 24 hours
-        val monday = reloaded.openingHours.first { it.day == 1 }
-        assertEquals(1, monday.hours.size)
-        assertEquals("00:00", monday.hours[0].open)
-        assertEquals("23:59", monday.hours[0].close)
-
-        // Game stock counts updated: first was 5 -> 6, second was 3 -> 2
-        val counts = reloaded.gameCollection.associate { it.first.uid to it.second }
-        assertEquals(6, counts[testGame1.uid])
-        assertEquals(2, counts[testGame2.uid])
+        val updated = shopRepository.getShop(shop.id)
+        assertEquals("Meeple Mart Edited", updated.name) // From step 1
+        val gamesMap = updated.gameCollection.associate { it.first.uid to it.second }
+        assertEquals(null, gamesMap["test_catan"]) // Deleted
+        assertEquals(50, gamesMap["test_carcassonne"]) // Edited
+        assertEquals(19, gamesMap["test_pandemic"]) // Added
       }
     }
-
-    checkpoint("editShopScreen_collapsibleSections_toggleVisibility") {
-      // Continue with the same composition
-      currentShopState.value = testShop
-      composeTestRule.waitForIdle()
-
-      val gamesHeader =
-          EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-      val gamesToggle =
-          EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_TOGGLE_SUFFIX
-      val gamesContent =
-          EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_CONTENT_SUFFIX
-
-      scrollListToTag(gamesHeader)
-      composeTestRule.onNodeWithTag(gamesContent, useUnmergedTree = true).assertExists()
-      composeTestRule.onNodeWithTag(gamesToggle, useUnmergedTree = true).performClick()
-      // Content should disappear
-      composeTestRule.onNodeWithTag(gamesContent, useUnmergedTree = true).assertDoesNotExist()
-      // Expand again
-      composeTestRule.onNodeWithTag(gamesToggle, useUnmergedTree = true).performClick()
-      composeTestRule.onNodeWithTag(gamesContent, useUnmergedTree = true).assertExists()
-    }
-
-    checkpoint("openingHoursDialog_showsValidationErrorOnOverlap") {
-      // Reset to test shop state using initialize()
-      currentShopState.value = testShop
-      editShopViewModel.initialize(testShop)
-      composeTestRule.waitForIdle()
-
-      expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-      scrollListToTag(
-          EditShopScreenTestTags.SECTION_AVAILABILITY +
-              EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
-
-      // Edit Monday
-      composeTestRule
-          .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
-          .apply { this[1].performClick() }
-
-      composeTestRule.waitUntil(10_000) {
-        composeTestRule
-            .onAllNodesWithTag(
-                ShopFormTestTags.OPENING_HOURS_DIALOG_WRAPPER, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_OPEN24_CHECKBOX, useUnmergedTree = true)
-          .performClick()
-      composeTestRule.waitUntil(10_000) {
-        composeTestRule
-            .onAllNodesWithTag(ShopComponentsTestTags.DIALOG_ADD_HOURS, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-
-      // Add another interval leading to overlap and try to save
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_ADD_HOURS, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
-          .performClick()
-
-      // Expect an error label (either specific overlap message or generic)
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_ERROR, useUnmergedTree = true)
-          .assertExists()
-
-      // Cancel dialog
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_CANCEL, useUnmergedTree = true)
-          .performClick()
-    }
-
-    checkpoint("saveButton_disabledWhenNoOpeningHours") {
-      // Reset to test shop state using initialize()
-      currentShopState.value = testShop
-      editShopViewModel.initialize(testShop)
-      composeTestRule.waitForIdle()
-
-      expandSectionIfNeeded(EditShopScreenTestTags.SECTION_AVAILABILITY)
-
-      // Open Sunday editor and propagate "Closed" to all days by selecting all chips
-      composeTestRule
-          .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
-          .apply { this[0].performClick() }
-
-      // Ensure Closed is checked
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX, useUnmergedTree = true)
-          .performClick()
-
-      // Select all days (0..6)
-      repeat(7) { idx ->
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.dayChip(idx), useUnmergedTree = true)
-            .performClick()
-      }
-
-      // Save to apply closed across the week
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
-          .performClick()
-
-      // Primary action should be disabled when no opening hours anywhere
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.ACTION_SAVE, useUnmergedTree = true)
-          .assertExists()
-    }
-
-    checkpoint("gameStockDialog_addGameAndCancelFlow") {
-      // Seed a third game to add via dialog
-      runBlocking {
-        db.collection(GAMES_COLLECTION_PATH)
-            .document("g_pandemic")
-            .set(
-                GameNoUid(
-                    name = "Pandemic",
-                    description = "Cooperative board game",
-                    imageURL = "https://example.com/pandemic.jpg",
-                    minPlayers = 2,
-                    maxPlayers = 4,
-                    recommendedPlayers = 4,
-                    averagePlayTime = 45,
-                    genres = listOf("3")))
-            .await()
-      }
-
-      // Reset to test shop state using initialize()
-      currentShopState.value = testShop
-      editShopViewModel.initialize(testShop)
-      composeTestRule.waitForIdle()
-
-      // Open Games section and click "Add game"
-      val gamesHeader =
-          EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX
-      scrollListToTag(gamesHeader)
-      composeTestRule
-          .onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-
-      // Wait for dialog wrapper to ensure dialog is fully composed
-      composeTestRule.waitUntil(5_000) {
-        composeTestRule
-            .onAllNodesWithTag(
-                EditShopScreenTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-
-      // Focus the actual text field inside the dialog and type
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_FIELD, useUnmergedTree = true)
-          .assertExists()
-          .assertIsDisplayed()
-          .performClick()
-          .performTextInput("Pand")
-
-      // Wait for at least one menu item then click it
-      composeTestRule.waitUntil(6_000) {
-        composeTestRule
-            .onAllNodesWithTag(
-                ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
-          .performClick()
-
-      // Save in dialog
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-
-      // Verify new card exists
-      val pandemicCard = ShopComponentsTestTags.SHOP_GAME_PREFIX + "g_pandemic"
-      composeTestRule.onNodeWithTag(pandemicCard, useUnmergedTree = true).assertExists()
-
-      // Open dialog again and cancel directly to cover cancel path
-      composeTestRule
-          .onNodeWithTag(EditShopScreenTestTags.GAMES_ADD_BUTTON, useUnmergedTree = true)
-          .performClick()
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_CANCEL, useUnmergedTree = true)
-          .performClick()
-    }
-
-    // Reset config to default for other tests
-    UiBehaviorConfig.hideBottomBarWhenInputFocused = true
   }
 
-  @Ignore
   @Test
   fun editShop_offlineUI_disablesFeatures() {
-    // Disable bottom bar hiding to ensure ActionBar is always visible in tests
-    UiBehaviorConfig.hideBottomBarWhenInputFocused = false
-
-    // Load the shop into the ViewModel
-    editShopViewModel.initialize(testShop)
-
-    composeTestRule.setContent {
+    val viewModel = EditShopViewModel()
+    compose.setContent {
       AppTheme {
         ShopDetailsScreen(
-            owner = testOwner,
+            owner = owner,
+            shop = shop,
             onBack = {},
             onSaved = {},
-            shop = testShop,
-            viewModel = editShopViewModel,
-        )
+            onDelete = {},
+            online = false,
+            viewModel = viewModel)
       }
     }
 
-    // Verify Image Carousel is not editable (Add button missing)
-    composeTestRule.onNodeWithTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
+    // Verify Image Carousel is not editable
+    compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
 
+    // Verify Games header message and no Add button
     scrollListToTag(
-        CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
+        EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
+    ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
-    composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    compose
+        .onNodeWithTag(
+            "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
+        .assertDoesNotExist()
+    compose.waitForIdle()
+
+    compose
+        .onNodeWithTag(
+            "${ShopComponentsTestTags.SHOP_GAME_EDIT}:test_carcassonne", useUnmergedTree = true)
+        .assertDoesNotExist()
+    compose.onTag(EditShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }
 }

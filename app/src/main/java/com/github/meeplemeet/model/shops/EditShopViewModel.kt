@@ -35,6 +35,7 @@ class EditShopViewModel(
    */
   fun initialize(shop: Shop) {
     _currentShop.value = shop
+    setLocation(shop.address)
 
     // Load latest version from cache or repository
     viewModelScope.launch {

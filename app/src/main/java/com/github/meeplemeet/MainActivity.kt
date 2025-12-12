@@ -485,6 +485,7 @@ fun MeepleMeetApp(
                 account = account!!,
                 verified = uiState.isEmailVerified,
                 navigation = navigationActions,
+                onUserLocationChange = { userLocation = it },
                 onFABCLick = { geoPin ->
                   when (geoPin) {
                     PinType.SHOP -> {
@@ -565,8 +566,9 @@ fun MeepleMeetApp(
           composable(MeepleMeetScreen.CreateShop.name) {
             CreateShopScreen(
                 owner = account!!,
-                onBack = { navigationActions.goBack() },
-                onCreated = { navigationActions.navigateTo(MeepleMeetScreen.Map) })
+                online = online,
+                userLocation = userLocation,
+                onBack = { navigationActions.goBack() })
           }
 
           composable(MeepleMeetScreen.EditShop.name) {
@@ -575,6 +577,7 @@ fun MeepleMeetApp(
                   owner = account!!,
                   shop = shop!!,
                   onBack = { navigationActions.goBack() },
+                  online = online,
                   onSaved = { navigationActions.goBack() })
             } else {
               LoadingScreen()
