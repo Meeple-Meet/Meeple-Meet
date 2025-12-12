@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
@@ -127,7 +128,9 @@ fun ShopScreen(
                     Modifier.padding(innerPadding)
                         .padding(Dimensions.Padding.extraLarge)
                         .fillMaxSize(),
-                onGameClick = { game -> popupGame = game },
+                onGameClick = { game ->
+                  popupGame = null
+                }, // TODO fix -> gameItem.gameId resolve game in fetchedGame
             )
           }
               ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -176,7 +179,7 @@ fun ShopScreen(
 fun ShopDetails(
     shop: Shop,
     modifier: Modifier = Modifier,
-    onGameClick: (Game) -> Unit,
+    onGameClick: (GameItem) -> Unit,
     photoCollectionUrl: List<String> = shop.photoCollectionUrl
 ) {
   LazyColumn(

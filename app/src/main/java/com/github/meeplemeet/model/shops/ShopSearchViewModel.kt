@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,13 +74,13 @@ open class ShopSearchViewModel(
    *
    * @param shop The shop to add the game to.
    * @param requester The account requesting the game selection.
-   * @param game The game to select.
+   * @param searchResult The game to select.
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
-  fun setGame(shop: Shop, requester: Account, game: Game) {
+  fun setGame(shop: Shop, requester: Account, searchResult: GameSearchResult) {
     if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
-    setGame(game)
+    setGame(searchResult)
   }
 
   /**
