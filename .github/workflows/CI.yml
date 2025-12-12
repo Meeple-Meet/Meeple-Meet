@@ -333,7 +333,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedAndroidTest --no-parallel --build-cache
+          script: ./gradlew connectedAndroidTest --no-parallel --build-cache --fail-fast
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
