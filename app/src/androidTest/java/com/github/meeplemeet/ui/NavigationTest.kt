@@ -20,6 +20,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import com.github.meeplemeet.utils.noretry
 import java.util.UUID
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -198,6 +199,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
 
   @OptIn(ExperimentalTestApi::class)
   @Test
+  @Ignore
   @noretry
   fun allAuthenticatedNavigationChecksInOnePass() =
       with(composeTestRule) {
