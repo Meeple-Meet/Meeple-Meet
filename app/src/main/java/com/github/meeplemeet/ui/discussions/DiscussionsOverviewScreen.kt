@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -444,7 +445,7 @@ fun DiscussionsTopBar(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        androidx.compose.foundation.text.BasicTextField(
+        BasicTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier =

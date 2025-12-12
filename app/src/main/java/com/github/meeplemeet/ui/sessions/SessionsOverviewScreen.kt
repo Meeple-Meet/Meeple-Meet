@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Close
@@ -790,7 +791,7 @@ fun SessionsTopBar(
 
           Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-          androidx.compose.foundation.text.BasicTextField(
+          BasicTextField(
               value = query,
               onValueChange = onQueryChange,
               modifier =
