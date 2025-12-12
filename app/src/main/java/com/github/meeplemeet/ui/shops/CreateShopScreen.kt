@@ -406,6 +406,8 @@ internal fun ShopGamesSection(
     online: Boolean,
     viewModel: ShopSearchViewModel
 ) {
+  val fetchedGames by viewModel.fetchedGames.collectAsState()
+
   CollapsibleSection(
       title = AddShopUi.Strings.SECTION_GAMES,
       initiallyExpanded = state.stock.isEmpty(),
@@ -434,13 +436,22 @@ internal fun ShopGamesSection(
               modifier = Modifier.testTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG))
         }
 
-        // TODO reflechir (add url ??????)
         GameImageListSection(
             games = state.stock,
             clickableGames = true,
             editable = true,
             online = online,
             title = "",
+            fetchedGames = fetchedGames,
+            onPageChanged = { pageIndex ->
+              val start = pageIndex * ShopScreenDefaults.Pager.GAMES_PER_PAGE
+              val end = minOf(start + ShopScreenDefaults.Pager.GAMES_PER_PAGE, state.stock.size)
+              if (start < state.stock.size) {
+                val gameIds = state.stock.subList(start, end).map { it.gameId }
+                viewModel.fetchGames(gameIds)
+              }
+            },
+            periodicFetch = true,
             onDelete = { state.removeFromStock(it) },
             onEdit = { game ->
               viewModel.setGame(GameSearchResult(game.gameId, game.gameName))

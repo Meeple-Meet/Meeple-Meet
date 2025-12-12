@@ -65,6 +65,7 @@ import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 interface ShopFormActions {
@@ -815,8 +816,13 @@ fun GameItemImage(
     onEdit: (GameItem) -> Unit = {},
     onDelete: (GameItem) -> Unit = {},
     imageHeight: Dp? = null,
+    fetchedGames: Map<String, Game> = emptyMap()
 ) {
   Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.gameId))
+
+  val fetchedGame = fetchedGames[game.gameId]
+  val imageUrl = fetchedGame?.imageURL ?: ""
+
   Box(modifier = modifier.testTag(ShopFormTestTags.gameTestTag(game.gameId))) {
     Column(
         modifier =
@@ -826,7 +832,7 @@ fun GameItemImage(
                 .clickable(enabled = clickable) { onClick(game) },
         horizontalAlignment = Alignment.CenterHorizontally) {
           AsyncImage(
-              model = "",
+              model = imageUrl,
               contentDescription = game.gameName,
               contentScale = ContentScale.Crop,
               modifier =
@@ -932,7 +938,10 @@ fun GameImageListSection(
     online: Boolean,
     onClick: (GameItem) -> Unit = {},
     onEdit: (GameItem) -> Unit = {},
-    onDelete: (GameItem) -> Unit = {}
+    onDelete: (GameItem) -> Unit = {},
+    fetchedGames: Map<String, Game> = emptyMap(),
+    onPageChanged: (Int) -> Unit = {},
+    periodicFetch: Boolean = false
 ) {
   val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
   if (clampedGames.isEmpty()) return
@@ -947,6 +956,23 @@ fun GameImageListSection(
 
   val pagerState = rememberPagerState(pageCount = { pageCount })
   val scope = rememberCoroutineScope()
+
+  if (periodicFetch) {
+    LaunchedEffect(pagerState.currentPage) {
+      // Initial fetch
+      onPageChanged(pagerState.currentPage)
+
+      // Periodic fetch
+      while (true) {
+        delay(ShopScreenDefaults.Pager.PERIODIC_FETCH_INTERVAL_MS)
+        // Re-fetch la page courante
+        onPageChanged(pagerState.currentPage)
+      }
+    }
+  } else {
+    // Boot-up fetch (only one)
+    LaunchedEffect(pagerState.currentPage) { onPageChanged(pagerState.currentPage) }
+  }
 
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
@@ -986,6 +1012,7 @@ fun GameImageListSection(
                             onEdit = onEdit,
                             imageHeight = imageHeight,
                             online = online,
+                            fetchedGames = fetchedGames,
                             modifier = Modifier.height(rowHeight))
                       }
                     }
