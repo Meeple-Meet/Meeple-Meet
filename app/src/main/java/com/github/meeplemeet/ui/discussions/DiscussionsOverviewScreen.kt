@@ -413,14 +413,7 @@ fun DiscussionsTopBar(
       modifier =
           Modifier.fillMaxWidth()
               .background(AppColors.primary)
-              .clickable(
-                  indication = null,
-                  interactionSource =
-                      remember {
-                        androidx.compose.foundation.interaction.MutableInteractionSource()
-                      }) {
-                    focusManager.clearFocus()
-                  }
+              .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
               .padding(
                   horizontal = Dimensions.Padding.extraLarge,
                   vertical = Dimensions.Spacing.large)) {
