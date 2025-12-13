@@ -350,21 +350,21 @@ fun MeepleMeetApp(
           }
         }
 
-          composable(MeepleMeetScreen.DiscussionsOverview.name) {
-            DiscussionsOverviewScreen(
-                account!!,
-                uiState.isEmailVerified,
-                navigationActions,
-                unreadCount = unreadCount,
-                onClickAddDiscussion = {
-                  navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
-                },
-                onSelectDiscussion = {
-                  discussionId = it.uid
-                  navigationActions.navigateTo(MeepleMeetScreen.Discussion)
-                },
-            )
-          }
+        composable(MeepleMeetScreen.DiscussionsOverview.name) {
+          DiscussionsOverviewScreen(
+              account!!,
+              uiState.isEmailVerified,
+              navigationActions,
+              unreadCount = unreadCount,
+              onClickAddDiscussion = {
+                navigationActions.navigateTo(MeepleMeetScreen.CreateDiscussion)
+              },
+              onSelectDiscussion = {
+                discussionId = it.uid
+                navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+              },
+          )
+        }
 
         composable(MeepleMeetScreen.CreateDiscussion.name) {
           CreateDiscussionScreen(
@@ -373,30 +373,27 @@ fun MeepleMeetApp(
               onCreate = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
         }
 
-          composable(MeepleMeetScreen.Discussion.name) {
-            if (discussion != null) {
-              if (discussion!!.participants.contains(account!!.uid))
-                  DiscussionScreen(
-                      account!!,
-                      discussion!!,
-                      uiState.isEmailVerified,
-                      onBack = {
-                        navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-                      },
-                      onOpenDiscussionInfo = {
-                        navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
-                      },
-                      onCreateSessionClick = {
-                        discussionId = it.uid
-                        navigationActions.navigateTo(
-                            if (it.session != null) MeepleMeetScreen.SessionViewer
-                            else MeepleMeetScreen.CreateSession)
-                      },
-                      onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) }
-                  )
-              else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
-            } else LoadingScreen()
-          }
+        composable(MeepleMeetScreen.Discussion.name) {
+          if (discussion != null) {
+            if (discussion!!.participants.contains(account!!.uid))
+                DiscussionScreen(
+                    account!!,
+                    discussion!!,
+                    uiState.isEmailVerified,
+                    onBack = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) },
+                    onOpenDiscussionInfo = {
+                      navigationActions.navigateTo(MeepleMeetScreen.DiscussionDetails)
+                    },
+                    onCreateSessionClick = {
+                      discussionId = it.uid
+                      navigationActions.navigateTo(
+                          if (it.session != null) MeepleMeetScreen.SessionViewer
+                          else MeepleMeetScreen.CreateSession)
+                    },
+                    onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
+            else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
+          } else LoadingScreen()
+        }
 
         composable(MeepleMeetScreen.DiscussionDetails.name) {
           if (discussion != null && discussion!!.participants.contains(account!!.uid))
@@ -436,17 +433,17 @@ fun MeepleMeetApp(
           }
         }
 
-          composable(MeepleMeetScreen.SessionsOverview.name) {
-            SessionsOverviewScreen(
-                navigation = navigationActions,
-                account = account!!,
-                verified = uiState.isEmailVerified,
-                unreadCount = unreadCount,
-                onSelectSession = {
-                  discussionId = it
-                  navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
-                })
-          }
+        composable(MeepleMeetScreen.SessionsOverview.name) {
+          SessionsOverviewScreen(
+              navigation = navigationActions,
+              account = account!!,
+              verified = uiState.isEmailVerified,
+              unreadCount = unreadCount,
+              onSelectSession = {
+                discussionId = it
+                navigationActions.navigateTo(MeepleMeetScreen.SessionViewer)
+              })
+        }
 
         composable(MeepleMeetScreen.PostsOverview.name) {
           PostsOverviewScreen(
@@ -461,14 +458,14 @@ fun MeepleMeetApp(
               })
         }
 
-          composable(MeepleMeetScreen.Post.name) {
-            PostScreen(
-                account = account!!,
-                postId = postId,
-                verified = uiState.isEmailVerified,
-                onBack = { navigationActions.goBack() },
-                onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
-          }
+        composable(MeepleMeetScreen.Post.name) {
+          PostScreen(
+              account = account!!,
+              postId = postId,
+              verified = uiState.isEmailVerified,
+              onBack = { navigationActions.goBack() },
+              onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
+        }
 
         composable(MeepleMeetScreen.CreatePost.name) {
           CreatePostScreen(
@@ -481,7 +478,8 @@ fun MeepleMeetApp(
         composable(MeepleMeetScreen.Map.name) {
           MapScreen(
               account = account!!,
-                verified = uiState.isEmailVerified,navigation = navigationActions,
+              verified = uiState.isEmailVerified,
+              navigation = navigationActions,
               onUserLocationChange = { userLocation = it },
               onFABCLick = { geoPin ->
                 when (geoPin) {
@@ -514,36 +512,36 @@ fun MeepleMeetApp(
               })
         }
 
-          composable(MeepleMeetScreen.Profile.name) {
-            account?.let {
-              ProfileScreen(
-                  navigation = navigationActions,
-                  account = account!!,
-                  verified = uiState.isEmailVerified,
-                  unreadCount = unreadCount,
-                  onSignOutOrDel = {
-                    navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-                    signedOut = true
-                  },
-                  onDelete = {
-                    // Sign out the user before deleting his account, avoiding an infinite loading
-                    // screen
-                    FirebaseProvider.auth.signOut()
-                  },
-                  onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
-                  onNotificationClick = {
-                    navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
-                  },
-                  onShopClick = {
-                      shopId = it
-                      navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
-                  },
-                  onSpaceRenterClick = {
-                      spaceId = it
-                      navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
-                  })
-            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          }
+        composable(MeepleMeetScreen.Profile.name) {
+          account?.let {
+            ProfileScreen(
+                navigation = navigationActions,
+                account = account!!,
+                verified = uiState.isEmailVerified,
+                unreadCount = unreadCount,
+                onSignOutOrDel = {
+                  navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+                  signedOut = true
+                },
+                onDelete = {
+                  // Sign out the user before deleting his account, avoiding an infinite loading
+                  // screen
+                  FirebaseProvider.auth.signOut()
+                },
+                onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
+                onNotificationClick = {
+                  navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
+                },
+                onShopClick = {
+                  shopId = it
+                  navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
+                },
+                onSpaceRenterClick = {
+                  spaceId = it
+                  navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
+                })
+          } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+        }
 
         composable(MeepleMeetScreen.NotificationsTab.name) {
           account?.let {
@@ -575,9 +573,8 @@ fun MeepleMeetApp(
           CreateShopScreen(
               owner = account!!,
               online = online,
-                userLocation = userLocation,
-                onBack = { navigationActions.goBack() })
-
+              userLocation = userLocation,
+              onBack = { navigationActions.goBack() })
         }
 
         composable(MeepleMeetScreen.EditShop.name) {
@@ -586,7 +583,8 @@ fun MeepleMeetApp(
                 owner = account!!,
                 shop = shop!!,
                 onBack = { navigationActions.goBack() },
-                online = online,onSaved = { navigationActions.goBack() })
+                online = online,
+                onSaved = { navigationActions.goBack() })
           } else {
             LoadingScreen()
           }
@@ -658,17 +656,17 @@ fun MeepleMeetApp(
               onFinished = { navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview) })
         }
 
-          composable(MeepleMeetScreen.Friends.name) {
-            account?.let { currentAccount ->
-              FriendsScreen(
-                  account = currentAccount,
-                  verified = uiState.isEmailVerified,
-                  navigationActions = navigationActions,
-                  onBack = { navigationActions.goBack() },
-                  unreadCount = unreadCount,
-                  onNavigate = { navigationActions.navigateTo(it) })
-            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          }
+        composable(MeepleMeetScreen.Friends.name) {
+          account?.let { currentAccount ->
+            FriendsScreen(
+                account = currentAccount,
+                verified = uiState.isEmailVerified,
+                navigationActions = navigationActions,
+                onBack = { navigationActions.goBack() },
+                unreadCount = unreadCount,
+                onNavigate = { navigationActions.navigateTo(it) })
+          } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
+        }
 
         composable(MeepleMeetScreen.SessionViewer.name) {
           if (discussion == null) {

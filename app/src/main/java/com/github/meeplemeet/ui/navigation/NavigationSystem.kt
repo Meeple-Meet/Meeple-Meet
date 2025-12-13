@@ -29,7 +29,6 @@ import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -248,7 +247,7 @@ fun BottomNavigationMenu(
 fun BottomBarWithVerification(
     currentScreen: MeepleMeetScreen,
     verified: Boolean,
-    // todo: Give unreadCount to this as well
+    unreadCount: Int,
     onTabSelected: (MeepleMeetScreen) -> Unit,
     onVerifyClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -257,7 +256,8 @@ fun BottomBarWithVerification(
     if (!verified) {
       EmailVerificationBanner(onVerifyClick = onVerifyClick)
     }
-    BottomNavigationMenu(currentScreen = currentScreen, onTabSelected = onTabSelected)
+    BottomNavigationMenu(
+        currentScreen = currentScreen, onTabSelected = onTabSelected, unreadCount = unreadCount)
   }
 }
 

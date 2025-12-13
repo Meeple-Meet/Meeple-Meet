@@ -430,7 +430,7 @@ fun MapScreen(
             currentScreen = MeepleMeetScreen.Map,
             unreadCount = unreadCount,
             verified = verified,
-            onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile)},
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) },
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->

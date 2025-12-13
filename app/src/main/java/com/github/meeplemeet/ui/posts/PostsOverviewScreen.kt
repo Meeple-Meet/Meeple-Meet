@@ -126,7 +126,7 @@ fun PostsOverviewScreen(
             unreadCount = unreadCount,
             onTabSelected = { screen -> navigation.navigateTo(screen) },
             verified = verified,
-            onVerifyClick = {navigation.navigateTo(MeepleMeetScreen.Profile) })
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
         if (postsSorted.isEmpty()) {
           Box(
