@@ -6,12 +6,14 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,15 +27,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,13 +62,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -559,4 +573,162 @@ fun ConfirmationDialog(
         },
         modifier = Modifier.testTag(dialogTestTag))
   }
+}
+
+@Composable
+fun UserProfilePopup(
+    visible: Boolean,
+    account: Account,
+    isFriend: Boolean,
+    onDismiss: () -> Unit,
+    onBlock: () -> Unit = {},
+    onSendFriendRequest: () -> Unit = {}
+) {
+  if (!visible) return
+
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
+              Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top) {
+                      Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = account.name,
+                            color = AppColors.textIcons,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+
+                        Text(
+                            text = "@" + account.handle,
+                            color = AppColors.textIcons,
+                            fontSize = 18.sp,
+                            modifier = Modifier.padding(top = 8.dp))
+                      }
+
+                      // Profile image
+                      if (account.photoUrl.isNullOrBlank()) {
+                        Box(
+                            modifier =
+                                Modifier.size(90.dp)
+                                    .clip(CircleShape)
+                                    .background(AppColors.textIconsFade),
+                            contentAlignment = Alignment.Center) {
+                              Icon(
+                                  imageVector = Icons.Default.Person,
+                                  contentDescription = "No avatar for display",
+                                  tint = AppColors.divider,
+                                  modifier = Modifier.size(Dimensions.IconSize.giant))
+                            }
+                      } else {
+                        Image(
+                            painter = rememberAsyncImagePainter(account.photoUrl),
+                            contentDescription = "User's avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(90.dp).clip(CircleShape))
+                      }
+                    }
+
+                var isExpanded by remember { mutableStateOf(false) }
+                var showShowMore by remember { mutableStateOf(false) }
+                val maxLinesNotExpanded = 3
+                val maxLinesExpanded = 5
+                val description = account.description ?: "This user does not have a description."
+
+                // Bio
+                Text(
+                    text = description,
+                    color = AppColors.textIcons,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    fontSize = 16.sp,
+                    maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                      showShowMore = textLayoutResult.hasVisualOverflow
+                    })
+
+                if (showShowMore || isExpanded) {
+                  Text(
+                      text = if (isExpanded) "Show less" else "Show more",
+                      color = AppColors.textIcons.copy(alpha = 0.7f),
+                      fontSize = 14.sp,
+                      modifier =
+                          Modifier.padding(top = 4.dp).clickable { isExpanded = !isExpanded })
+                }
+
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      // Block button
+                      Button(
+                          onClick = onBlock,
+                          modifier = Modifier.weight(1f),
+                          colors = ButtonDefaults.buttonColors(containerColor = AppColors.primary),
+                          shape = RoundedCornerShape(8.dp),
+                          contentPadding = PaddingValues(vertical = 16.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Block,
+                                contentDescription = "Block",
+                                tint = AppColors.textIcons,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Block", color = AppColors.textIcons, fontSize = 16.sp)
+                          }
+
+                      // Send friend request button
+                      if (isFriend) {
+                        Button(
+                            onClick = onSendFriendRequest,
+                            modifier = Modifier.weight(1f),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.primary,
+                                    contentColor = AppColors.textIcons),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp)) {
+                              Icon(
+                                  imageVector = Icons.Default.PersonAdd,
+                                  contentDescription = "Send friend request",
+                                  tint = AppColors.textIcons,
+                                  modifier = Modifier.size(20.dp))
+                              Spacer(modifier = Modifier.width(8.dp))
+                              Text(
+                                  text = "Send friend request",
+                                  color = AppColors.textIcons,
+                                  fontSize = 16.sp)
+                            }
+                      } else {
+                        Button(
+                            onClick = onBlock,
+                            modifier = Modifier.weight(1f),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.primary,
+                                    contentColor = AppColors.textIcons),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(vertical = 16.dp)) {
+                              Icon(
+                                  imageVector = Icons.Default.PersonRemove,
+                                  contentDescription = "Remove friend",
+                                  tint = AppColors.textIcons,
+                                  modifier = Modifier.size(20.dp))
+                              Spacer(modifier = Modifier.width(8.dp))
+                              Text(
+                                  text = "Remove friend",
+                                  color = AppColors.textIcons,
+                                  fontSize = 16.sp)
+                            }
+                      }
+                    }
+              }
+            }
+      }
 }
