@@ -1,6 +1,5 @@
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.model.GameNotFoundException
 import com.github.meeplemeet.model.InvalidHandleFormatException
 import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
@@ -8,7 +7,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
-import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
@@ -71,11 +70,6 @@ class FirestoreSessionTests : FirestoreTests() {
   @Test(expected = InvalidHandleFormatException::class)
   fun lol() {
     throw InvalidHandleFormatException()
-  }
-
-  @Test(expected = GameNotFoundException::class)
-  fun lol2() {
-    throw GameNotFoundException()
   }
 
   @Test(expected = NotSignedInException::class)
@@ -923,42 +917,21 @@ class FirestoreSessionTests : FirestoreTests() {
 
   @Test
   fun setGame_updates_selectedGameUid_and_query_when_admin() = runTest {
-    val game =
-        Game(
-            uid = "g_1",
-            name = "Catan",
-            description = "",
-            imageURL = "",
-            minPlayers = 1,
-            maxPlayers = 4,
-            recommendedPlayers = null,
-            averagePlayTime = null,
-            minAge = null,
-            genres = emptyList())
+    val searchResult = GameSearchResult(id = "g_1", name = "Catan")
 
-    viewModel.setGame(account1, baseDiscussion, game)
+    viewModel.setGame(account1, baseDiscussion, searchResult)
 
     val state = viewModel.gameUIState.value
-    assertEquals(game.uid, state.selectedGameUid)
-    assertEquals(game.name, state.gameQuery)
+    assertEquals(searchResult.id, state.selectedGameSearchResult?.id)
+    assertEquals(searchResult.name, state.selectedGameSearchResult?.name)
+    assertEquals(searchResult.name, state.gameQuery)
   }
 
   @Test(expected = PermissionDeniedException::class)
   fun setGame_throws_when_not_admin() = runTest {
-    val game =
-        Game(
-            uid = "g_2",
-            name = "Azul",
-            description = "",
-            imageURL = "",
-            minPlayers = 2,
-            maxPlayers = 4,
-            recommendedPlayers = null,
-            averagePlayTime = null,
-            minAge = null,
-            genres = emptyList())
+    val searchResult = GameSearchResult(id = "g_2", name = "Azul")
 
-    viewModel.setGame(account3, baseDiscussion, game)
+    viewModel.setGame(account3, baseDiscussion, searchResult)
   }
 
   @Test
