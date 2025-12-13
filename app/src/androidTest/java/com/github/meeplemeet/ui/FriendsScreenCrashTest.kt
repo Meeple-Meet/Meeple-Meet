@@ -32,7 +32,7 @@ class FriendsScreenCrashTest : FirestoreTests() {
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
-      navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()

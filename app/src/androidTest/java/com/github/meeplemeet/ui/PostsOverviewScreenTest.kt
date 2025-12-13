@@ -1,7 +1,6 @@
 // Test file for PostsOverviewScreen search functionality
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -51,10 +50,9 @@ class PostsOverviewScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     viewModel = PostOverviewViewModel()
     nav = mockk(relaxed = true)
-      navVM = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
+    navVM = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
-
-      val uid = "uid_" + UUID.randomUUID().toString().take(8)
+    val uid = "uid_" + UUID.randomUUID().toString().take(8)
     account = accountRepository.createAccount(uid, "Tester", "test@x.com", null)
 
     // Create test posts
@@ -80,11 +78,15 @@ class PostsOverviewScreenTest : FirestoreTests() {
             tags = listOf("planning"))
 
     compose.setContent {
-        AppTheme {
-          PostsOverviewScreen(
-              viewModel = viewModel, verified = true, navigation = nav, account = account, unreadCount = 0)
-        }
+      AppTheme {
+        PostsOverviewScreen(
+            viewModel = viewModel,
+            verified = true,
+            navigation = nav,
+            account = account,
+            unreadCount = 0)
       }
+    }
   }
 
   @After

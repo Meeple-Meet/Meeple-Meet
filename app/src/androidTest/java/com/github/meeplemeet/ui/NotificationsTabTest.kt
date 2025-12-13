@@ -90,7 +90,7 @@ class NotificationsTabTest : FirestoreTests() {
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
             discussionRepository = discussionRepository)
-      navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       // Create current user
