@@ -86,6 +86,7 @@ fun PostsOverviewScreen(
     account: Account,
     onClickAddPost: () -> Unit = {},
     onSelectPost: (Post) -> Unit = {},
+    unreadCount: Int,
 ) {
   val context = LocalContext.current
   val posts by viewModel.posts.collectAsState()
@@ -121,6 +122,8 @@ fun PostsOverviewScreen(
       bottomBar = {
         BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.PostsOverview,
+            modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
+            unreadCount = unreadCount,
             onTabSelected = { screen -> navigation.navigateTo(screen) },
             verified = verified,
             onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })

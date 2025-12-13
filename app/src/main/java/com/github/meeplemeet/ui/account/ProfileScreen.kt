@@ -47,6 +47,7 @@ fun ProfileScreen(
     onDelete: () -> Unit,
     onFriendClick: () -> Unit,
     onNotificationClick: () -> Unit,
+    unreadCount: Int,
     onSpaceRenterClick: (String) -> Unit,
     onShopClick: (String) -> Unit
 ) {
@@ -61,6 +62,7 @@ fun ProfileScreen(
         if (!(shouldHide && isInputFocused)) {
           BottomBarWithVerification(
               currentScreen = MeepleMeetScreen.Profile,
+              unreadCount = unreadCount,
               onTabSelected = { screen -> navigation.navigateTo(screen) },
               verified = verified,
               onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })

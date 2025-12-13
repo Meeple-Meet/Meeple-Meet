@@ -2,7 +2,6 @@
 // Tests were partially done using ChatGPT-5 Thinking Extended and partially done manually
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -12,12 +11,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.discussions.DiscussionsOverviewScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
@@ -42,7 +40,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
   private lateinit var vm: DiscussionViewModel
   private lateinit var nav: NavigationActions
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
 
   private lateinit var me: Account
   private lateinit var bob: Account
@@ -56,7 +54,7 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     vm = DiscussionViewModel()
     nav = mockk(relaxed = true)
-    navVM = NavigationViewModel()
+    navVM = MainActivityViewModel()
 
     // Create test users using repository
     me =
@@ -206,14 +204,13 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   fun all_tests() = runBlocking {
     // Set content once at the beginning
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme {
-          DiscussionsOverviewScreen(
-              account = me,
-              navigation = nav,
-              verified = true,
-          )
-        }
+      AppTheme {
+        DiscussionsOverviewScreen(
+            account = me,
+            navigation = nav,
+            verified = true,
+            unreadCount = me.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -293,10 +290,9 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
         me.copy(relationships = me.relationships + (bob.uid to RelationshipStatus.BLOCKED))
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme {
-          DiscussionsOverviewScreen(account = meWithBlockedBob, verified = true, navigation = nav)
-        }
+      AppTheme {
+        DiscussionsOverviewScreen(
+            account = meWithBlockedBob, navigation = nav, unreadCount = 0, verified = true)
       }
     }
 
@@ -316,8 +312,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @Test
   fun search_functionality() = runBlocking {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme { DiscussionsOverviewScreen(account = me, verified = true, navigation = nav) }
+      AppTheme {
+        DiscussionsOverviewScreen(account = me, verified = true, unreadCount = 0, navigation = nav)
       }
     }
 

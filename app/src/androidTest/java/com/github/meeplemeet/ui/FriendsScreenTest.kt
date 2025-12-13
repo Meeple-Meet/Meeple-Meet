@@ -2,7 +2,6 @@
 // and finally completed by copilot. Comments were done by ChatGPT-5
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -16,11 +15,10 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -42,7 +40,7 @@ class FriendsScreenTest : FirestoreTests() {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
   private lateinit var viewModel: FriendsScreenViewModel
-  private lateinit var navViewModel: NavigationViewModel
+  private lateinit var navViewModel: MainActivityViewModel
 
   private lateinit var currentUser: Account
   private lateinit var friend1: Account
@@ -61,7 +59,7 @@ class FriendsScreenTest : FirestoreTests() {
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
-    navViewModel = NavigationViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
     mockNavigation = mockk(relaxed = true)
 
     runBlocking {
@@ -200,16 +198,15 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_smoke_showsTopBarSearchAndFriendList() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            verified = true,
+            navigationActions = mockNavigation,
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -375,16 +372,15 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_search_showsDropdownAndHidesFriendsSection() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -530,16 +526,15 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_removeFriend_updatesRepository() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -599,18 +594,17 @@ class FriendsScreenTest : FirestoreTests() {
   @Test
   fun friendsScreen_blockFromSearch_updatesRepository() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account =
-                  currentUser.copy( // ensure we start without relationship to stranger
-                      relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account =
+                currentUser.copy( // ensure we start without relationship to stranger
+                    relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
+            viewModel = viewModel,
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -663,16 +657,15 @@ class FriendsScreenTest : FirestoreTests() {
   fun friendsScreen_unblockFromSearch_updatesRepository() {
     // currentUser already has blockedUser as BLOCKED in setup()
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          FriendsScreen(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        FriendsScreen(
+            account = currentUser,
+            viewModel = viewModel,
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 

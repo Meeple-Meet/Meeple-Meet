@@ -313,6 +313,8 @@ fun NotificationsTab(
     verified: Boolean,
     navigationActions: NavigationActions,
     onBack: () -> Unit,
+    onNavigate: (MeepleMeetScreen) -> Unit = {},
+    unreadCount: Int,
     viewModel: NotificationsViewModel = viewModel(),
 ) {
   val filters = NotificationFilter.entries
@@ -379,6 +381,7 @@ fun NotificationsTab(
       },
       bottomBar = {
         BottomBarWithVerification(
+            unreadCount = unreadCount,
             currentScreen = MeepleMeetScreen.Profile,
             onTabSelected = { navigationActions.navigateTo(it) },
             verified = verified,
