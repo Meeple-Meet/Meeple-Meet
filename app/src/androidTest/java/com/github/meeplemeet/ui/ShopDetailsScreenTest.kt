@@ -326,7 +326,6 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
       // Initial state
       compose.waitForIdle()
-      Thread.sleep(500)
 
       val initialFetchedCount = compose.runOnIdle { vm.fetchedGames.value.size }
       assert(initialFetchedCount in 1..10) {
@@ -336,7 +335,6 @@ class ShopDetailsScreenTest : FirestoreTests() {
       // Swipe to next page
       pagerNode.performTouchInput { swipeLeft() }
       compose.waitForIdle()
-      Thread.sleep(500)
 
       val afterSwipeFetchedCount = compose.runOnIdle { vm.fetchedGames.value.size }
       assert(afterSwipeFetchedCount > initialFetchedCount) {
