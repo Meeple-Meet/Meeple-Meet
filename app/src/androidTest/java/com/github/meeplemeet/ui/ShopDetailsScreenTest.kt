@@ -20,6 +20,7 @@ import androidx.compose.ui.test.swipeLeft
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
@@ -66,7 +67,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
           OpeningHours(day = 5, hours = listOf(TimeSlot("10:00", "16:00"))),
           OpeningHours(day = 6, hours = emptyList()))
 
-  private lateinit var dummyGames: List<Pair<Game, Int>>
+  private lateinit var dummyGames: List<GameItem>
 
   // --- helpers for reading text from semantics ---
 
@@ -137,7 +138,7 @@ class ShopDetailsScreenTest : FirestoreTests() {
     dummyGames =
         gamesList.mapIndexed { index, game ->
           val stock = if (index == 0) 100 else 5
-          game to stock
+          GameItem(gameId = game.uid, gameName = game.name, quantity = stock)
         }
 
     currentUser = runBlocking {
@@ -303,6 +304,44 @@ class ShopDetailsScreenTest : FirestoreTests() {
 
       // onEdit should have been invoked
       assert(editCalled)
+    }
+  }
+
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun shopScreen_autoFetch_onPageChange() {
+    compose.setContent {
+      AppTheme(themeMode = ThemeMode.DARK) {
+        ShopScreen(
+            shopId = shop.id, account = currentUser, onBack = {}, onEdit = {}, viewModel = vm)
+      }
+    }
+
+    compose.waitForIdle()
+    compose.waitUntilAtLeastOneExists(hasText(dummyShop.name), timeoutMillis = 5_000)
+
+    checkpoint("Auto-fetch loads games progressively on page change") {
+      val pagerNode = compose.onNodeWithTag(ShopTestTags.SHOP_GAME_PAGER)
+      pagerNode.assertExists()
+
+      // Initial state
+      compose.waitForIdle()
+      Thread.sleep(500)
+
+      val initialFetchedCount = compose.runOnIdle { vm.fetchedGames.value.size }
+      assert(initialFetchedCount in 1..10) {
+        "Should fetch first page only, got $initialFetchedCount"
+      }
+
+      // Swipe to next page
+      pagerNode.performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      Thread.sleep(500)
+
+      val afterSwipeFetchedCount = compose.runOnIdle { vm.fetchedGames.value.size }
+      assert(afterSwipeFetchedCount > initialFetchedCount) {
+        "Should fetch more games after swipe. Initial: $initialFetchedCount, After: $afterSwipeFetchedCount"
+      }
     }
   }
 }

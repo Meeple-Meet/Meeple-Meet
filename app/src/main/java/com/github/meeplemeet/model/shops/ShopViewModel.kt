@@ -74,22 +74,4 @@ class ShopViewModel(private val repository: ShopRepository = RepositoryProvider.
   suspend fun getShopByOwnerId(ownerId: String): Shop? {
     return repository.getShopByOwnerId(ownerId)
   }
-
-  /**
-   * Fetches games for a specific page of the shop's game collection.
-   *
-   * @param pageIndex The page index to fetch games for (0-based).
-   * @param gamesPerPage Number of games per page.
-   */
-  fun fetchGamesForPage(pageIndex: Int, gamesPerPage: Int) {
-    val shop = _shop.value ?: return
-    val start = pageIndex * gamesPerPage
-    val end = minOf(start + gamesPerPage, shop.gameCollection.size)
-
-    if (start >= shop.gameCollection.size) return
-
-    val gameIds = shop.gameCollection.subList(start, end).map { it.gameId }
-
-    fetchGames(gameIds)
-  }
 }
