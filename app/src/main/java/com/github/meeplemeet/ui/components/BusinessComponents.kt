@@ -242,6 +242,11 @@ object ShopUiDefaults {
 
     // Game stock dialog
     const val GAME_DIALOG_TITLE = "Add game in stock"
+    const val GAME_DIALOG_EDIT_TITLE = "Edit game quantity"
+
+    fun quantityUpdateDialog(gameName: String?) =
+        "Adjust the quantity for ${gameName ?: "this game"}"
+
     const val DUPLICATE_GAME = "This game is already in stock."
 
     // Availability

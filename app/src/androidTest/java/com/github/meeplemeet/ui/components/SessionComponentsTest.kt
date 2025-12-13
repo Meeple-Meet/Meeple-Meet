@@ -28,6 +28,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
@@ -736,7 +737,13 @@ class SessionComponentsTest : FirestoreTests() {
             averagePlayTime = 45,
             minAge = 10)
 
-    set { SessionGameSearchBar(account, discussion, createSessionViewModel, initial = initialGame) }
+    set {
+      SessionGameSearchBar(
+          account,
+          discussion,
+          createSessionViewModel,
+          initial = GameSearchResult(initialGame.uid, initialGame.name))
+    }
 
     // Verify initial game name is displayed
     composeRule.onNodeWithText("Ticket to Ride").assertExists()

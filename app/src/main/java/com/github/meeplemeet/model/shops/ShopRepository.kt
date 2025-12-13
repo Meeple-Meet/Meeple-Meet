@@ -8,8 +8,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.AccountRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,14 +17,13 @@ import kotlinx.coroutines.tasks.await
 /**
  * Repository for managing board game shops in Firestore.
  *
- * Handles CRUD operations for shop documents, including fetching owner accounts and game
- * collections from their respective repositories.
+ * Handles CRUD operations for shop documents, including fetching owner accounts. Game collections
+ * are now stored as GameItem (id + name + quantity) and not resolved to full Game objects.
  *
  * @property db The Firestore database instance to use for operations.
  */
 class ShopRepository(
     val accountRepository: AccountRepository = RepositoryProvider.accounts,
-    val gameRepository: GameRepository = RepositoryProvider.games,
     val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
 ) : FirestoreRepository("shops") {
   /**
@@ -51,7 +48,7 @@ class ShopRepository(
       website: String = "",
       address: Location,
       openingHours: List<OpeningHours>,
-      gameCollection: List<Pair<Game, Int>> = emptyList(),
+      gameCollection: List<GameItem> = emptyList(),
       photoCollectionUrl: List<String> = emptyList()
   ): Shop {
     val shop =
@@ -78,8 +75,8 @@ class ShopRepository(
   /**
    * Retrieves a list of shops from Firestore.
    *
-   * Fetches up to N shops, then retrieves owner accounts and game collections for each shop in
-   * parallel for optimal performance.
+   * Fetches up to N shops, then retrieves owner accounts for each shop in parallel. Game
+   * collections are returned as GameItem and not resolved to full Game objects.
    *
    * @param maxResults The maximum number of shops to retrieve.
    * @return A list of Shop objects, up to maxResults in size.
@@ -96,18 +93,7 @@ class ShopRepository(
               // Fetch the owner account
               val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
-              // Fetch all games in the game collection
-              val gameCollection =
-                  shopNoUid.gameCollection
-                      .map { gameItem ->
-                        async {
-                          val game = gameRepository.getGameById(gameItem.gameId)
-                          game to gameItem.quantity
-                        }
-                      }
-                      .awaitAll()
-
-              fromNoUid(doc.id, shopNoUid, owner, gameCollection)
+              fromNoUid(doc.id, shopNoUid, owner)
             }
           }
           .awaitAll()
@@ -118,8 +104,8 @@ class ShopRepository(
   /**
    * Retrieves a shop by its ID from Firestore.
    *
-   * Fetches the shop document, then retrieves the owner account and all games in the game
-   * collection in parallel for optimal performance.
+   * Fetches the shop document and the owner account. Game collections are returned as GameItem and
+   * not resolved to full Game objects.
    *
    * @param id The unique identifier of the shop to retrieve.
    * @return The Shop with the specified ID.
@@ -136,19 +122,7 @@ class ShopRepository(
     // Fetch the owner account
     val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
-    // Fetch all games in the game collection
-    val gameCollection = coroutineScope {
-      shopNoUid.gameCollection
-          .map { gameItem ->
-            async {
-              val game = gameRepository.getGameById(gameItem.gameId)
-              game to gameItem.quantity
-            }
-          }
-          .awaitAll()
-    }
-
-    return fromNoUid(id, shopNoUid, owner, gameCollection)
+    return fromNoUid(id, shopNoUid, owner)
   }
 
   /**
@@ -175,7 +149,7 @@ class ShopRepository(
       website: String? = null,
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
-      gameCollection: List<Pair<Game, Int>>? = null,
+      gameCollection: List<GameItem>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
     val updates = mutableMapOf<String, Any>()
@@ -187,10 +161,7 @@ class ShopRepository(
     website?.let { updates[ShopNoUid::website.name] = website }
     address?.let { updates[ShopNoUid::address.name] = address }
     openingHours?.let { updates[ShopNoUid::openingHours.name] = openingHours }
-    gameCollection?.let {
-      updates[ShopNoUid::gameCollection.name] =
-          gameCollection.map { (game, count) -> GameItem(game.uid, count) }
-    }
+    gameCollection?.let { updates[ShopNoUid::gameCollection.name] = gameCollection }
     photoCollectionUrl?.let { updates[ShopNoUid::photoCollectionUrl.name] = photoCollectionUrl }
 
     if (updates.isEmpty())
@@ -280,19 +251,7 @@ class ShopRepository(
     // Fetch the owner account
     val owner = accountRepository.getAccount(shopNoUid.ownerId)
 
-    // Fetch all games in the game collection
-    val gameCollection = coroutineScope {
-      shopNoUid.gameCollection
-          .map { gameItem ->
-            async {
-              val game = gameRepository.getGameById(gameItem.gameId)
-              game to gameItem.quantity
-            }
-          }
-          .awaitAll()
-    }
-
-    return fromNoUid(doc.id, shopNoUid, owner, gameCollection)
+    return fromNoUid(doc.id, shopNoUid, owner)
   }
   /**
    * Attempts to retrieve a shop by its ID from Firestore.

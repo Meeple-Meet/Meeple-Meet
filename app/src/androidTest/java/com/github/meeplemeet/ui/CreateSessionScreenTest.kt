@@ -13,6 +13,7 @@ import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.ui.components.SessionComponentsTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
@@ -87,11 +88,7 @@ class CreateSessionScreenTest : FirestoreTests() {
       throw RuntimeException("not used")
     }
 
-    override suspend fun searchGamesByNameContains(
-        query: String,
-        maxResults: Int,
-        ignoreCase: Boolean
-    ): List<Game> {
+    override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> {
       if (throwOnSearch) throw RuntimeException("boom")
       return emptyList()
     }

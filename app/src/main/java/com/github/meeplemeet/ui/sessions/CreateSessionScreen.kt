@@ -239,16 +239,18 @@ fun CreateSessionScreen(
                     enabled = canCreate,
                     onCreate = {
                       runCatching {
-                            val selectedGameId = viewModel.gameUIState.value.selectedGameUid
+                            val selectedResult =
+                                viewModel.gameUIState.value.selectedGameSearchResult
                             viewModel.createSession(
                                 requester = account,
                                 discussion = discussion,
                                 name = form.title,
                                 gameId =
-                                    selectedGameId.ifBlank {
-                                      form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME }
-                                    },
-                                gameName = "Temp game name",
+                                    selectedResult?.id
+                                        ?: form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME },
+                                gameName =
+                                    selectedResult?.name
+                                        ?: form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME },
                                 date = toTimestamp(form.date, form.time),
                                 location = locationUi.selectedLocation ?: Location(),
                                 *form.participants.toTypedArray())
@@ -445,7 +447,7 @@ fun OrganisationSection(
 
         // Game search section
         Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionGameSearchBar(account, discussion, viewModel, gameUi.fetchedGame)
+          SessionGameSearchBar(account, discussion, viewModel, gameUi.selectedGameSearchResult)
         }
 
         Spacer(Modifier.height(Dimensions.Spacing.xLarge))

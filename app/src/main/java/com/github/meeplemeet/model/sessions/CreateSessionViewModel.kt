@@ -11,8 +11,8 @@ import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.shared.SearchViewModel
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
@@ -153,11 +153,11 @@ open class CreateSessionViewModel(
    *
    * @param requester The account requesting to update the session
    * @param discussion The discussion containing the session
-   * @param game The [Game] object to select
+   * @param searchResult The [GameSearchResult] object to select
    */
-  fun setGame(requester: Account, discussion: Discussion, game: Game) {
+  fun setGame(requester: Account, discussion: Discussion, searchResult: GameSearchResult) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
-    setGame(game)
+    setGame(searchResult, true)
   }
 
   /**

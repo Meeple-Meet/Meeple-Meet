@@ -5,7 +5,6 @@ import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,7 +83,7 @@ class EditShopViewModel(
       website: String? = null,
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
-      gameCollection: List<Pair<Game, Int>>? = null,
+      gameCollection: List<GameItem>? = null,
       photoCollectionUrl: List<String>? = null
   ) {
     val params =
@@ -235,6 +234,6 @@ private data class ShopUpdateParams(
     val website: String? = null,
     val address: Location? = null,
     val openingHours: List<OpeningHours>? = null,
-    val gameCollection: List<Pair<Game, Int>>? = null,
+    val gameCollection: List<GameItem>? = null,
     val photoCollectionUrl: List<String>? = null
 )

@@ -206,10 +206,10 @@ class CloudBggGameRepositoryTest {
     assertTrue(exception.message!!.contains("Failed parsing JSON"))
   }
 
-  // ==================== searchGamesByNameLight Tests ====================
+  // ==================== searchGamesByName Tests ====================
 
   @Test
-  fun searchGamesByNameLightReturnsResults() = runTest {
+  fun searchGamesByNameReturnsResults() = runTest {
     val responseData =
         listOf(
             mapOf("id" to "1406", "name" to "Monopoly"),
@@ -219,7 +219,7 @@ class CloudBggGameRepositoryTest {
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(responseData)
 
-    val results = repository.searchGamesByNameLight("mono", 10)
+    val results = repository.searchGamesByName("mono", 10)
 
     assertEquals(3, results.size)
     assertTrue(results.any { it.name == "Monopoly" })
@@ -228,11 +228,11 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameLightPassesCorrectParameters() = runTest {
+  fun searchGamesByNamePassesCorrectParameters() = runTest {
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(emptyList<Any>())
 
-    repository.searchGamesByNameLight("test query", 25)
+    repository.searchGamesByName("test query", 25)
 
     val capturedParams = slot<Any>()
     verify { mockFunctionsWrapper.call<List<*>>("searchGames", capture(capturedParams)) }
@@ -243,92 +243,36 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameLightThrowsOnCloudFunctionError() = runTest {
+  fun searchGamesByNameThrowsOnCloudFunctionError() = runTest {
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockFailedCall(RuntimeException("Cloud Function failed"))
 
     val exception =
-        assertFailsWith<GameSearchException> { repository.searchGamesByNameLight("test", 10) }
+        assertFailsWith<GameSearchException> { repository.searchGamesByName("test", 10) }
 
     assertTrue(exception.message!!.contains("Failed calling Cloud Function"))
   }
 
   @Test
-  fun searchGamesByNameLightReturnsEmptyListOnNoResults() = runTest {
+  fun searchGamesByNameReturnsEmptyListOnNoResults() = runTest {
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(emptyList<Any>())
 
-    val results = repository.searchGamesByNameLight("nonexistentgame", 10)
+    val results = repository.searchGamesByName("nonexistentgame", 10)
 
     assertEquals(0, results.size)
   }
 
   @Test
-  fun searchGamesByNameLightThrowsOnInvalidResponseType() = runTest {
+  fun searchGamesByNameThrowsOnInvalidResponseType() = runTest {
     // Return a list with null elements to trigger parsing error
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(listOf(null))
 
     val exception =
-        assertFailsWith<GameSearchException> { repository.searchGamesByNameLight("query", 10) }
+        assertFailsWith<GameSearchException> { repository.searchGamesByName("query", 10) }
 
     assertTrue(exception.message!!.contains("Failed parsing JSON"))
-  }
-
-  // ==================== Deprecated Method Test ====================
-
-  @Test
-  fun searchGamesByNameContainsReturnsFullGames() = runTest {
-    val searchResponseData = listOf(mapOf("id" to "181", "name" to "Risk"))
-
-    val fetchResponseData =
-        listOf(
-            mapOf(
-                "uid" to "181",
-                "name" to "Risk",
-                "description" to "A classic war game.",
-                "imageURL" to "https://cf.geekdo-images.com/example.jpg",
-                "minPlayers" to 2,
-                "maxPlayers" to 6,
-                "genres" to listOf("Wargame")))
-
-    every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
-        mockSuccessfulCall(searchResponseData)
-    every { mockFunctionsWrapper.call<List<*>>("getGamesByIds", any()) } returns
-        mockSuccessfulCall(fetchResponseData)
-
-    @Suppress("DEPRECATION")
-    val games = repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
-
-    assertEquals(1, games.size)
-    assertEquals("Risk", games[0].name)
-    assertEquals(2, games[0].minPlayers)
-  }
-
-  @Test
-  fun searchGamesByNameContainsReturnsEmptyListWhenNoResults() = runTest {
-    every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
-        mockSuccessfulCall(emptyList<Any>())
-
-    @Suppress("DEPRECATION")
-    val games = repository.searchGamesByNameContains("unknown", 5, ignoreCase = true)
-
-    assertTrue(games.isEmpty())
-  }
-
-  @Test
-  fun searchGamesByNameContainsThrowsOnSearchError() = runTest {
-    every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
-        mockFailedCall(RuntimeException("Search failed"))
-
-    @Suppress("DEPRECATION")
-    val exception = assertFails {
-      repository.searchGamesByNameContains("risk", 5, ignoreCase = true)
-    }
-
-    assertTrue(
-        exception is GameFetchException || exception is GameSearchException,
-        "Expected GameFetchException or GameSearchException, but got ${exception::class}")
   }
 
   // ==================== JSON Parsing Edge Cases ====================
@@ -418,43 +362,6 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameContainsCallsBothEndpoints() = runTest {
-    val searchResponseData =
-        listOf(mapOf("id" to "1", "name" to "Game 1"), mapOf("id" to "2", "name" to "Game 2"))
-
-    val fetchResponseData =
-        listOf(
-            mapOf(
-                "uid" to "1",
-                "name" to "Game 1",
-                "description" to "Desc 1",
-                "imageURL" to "url1",
-                "minPlayers" to 2,
-                "maxPlayers" to 4,
-                "genres" to emptyList<String>()),
-            mapOf(
-                "uid" to "2",
-                "name" to "Game 2",
-                "description" to "Desc 2",
-                "imageURL" to "url2",
-                "minPlayers" to 1,
-                "maxPlayers" to 6,
-                "genres" to emptyList<String>()))
-
-    every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
-        mockSuccessfulCall(searchResponseData)
-    every { mockFunctionsWrapper.call<List<*>>("getGamesByIds", any()) } returns
-        mockSuccessfulCall(fetchResponseData)
-
-    @Suppress("DEPRECATION")
-    val games = repository.searchGamesByNameContains("game", 10, ignoreCase = true)
-
-    verify(exactly = 1) { mockFunctionsWrapper.call<List<*>>("searchGames", any()) }
-    verify(exactly = 1) { mockFunctionsWrapper.call<List<*>>("getGamesByIds", any()) }
-    assertEquals(2, games.size)
-  }
-
-  @Test
   fun getGamesByIdWithMaximumAllowedIds() = runTest {
     val ids = (1..20).map { it.toString() }.toTypedArray()
     val responseData =
@@ -479,13 +386,13 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameLightWithSingleResult() = runTest {
+  fun searchGamesByNameWithSingleResult() = runTest {
     val responseData = listOf(mapOf("id" to "123", "name" to "Unique Game"))
 
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(responseData)
 
-    val results = repository.searchGamesByNameLight("unique", 1)
+    val results = repository.searchGamesByName("unique", 1)
 
     assertEquals(1, results.size)
     assertEquals("123", results[0].id)
@@ -533,13 +440,12 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameLightHandlesExceptionWithCause() = runTest {
+  fun searchGamesByNameHandlesExceptionWithCause() = runTest {
     val originalException = RuntimeException("Network issue")
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockFailedCall(originalException)
 
-    val exception =
-        assertFailsWith<GameSearchException> { repository.searchGamesByNameLight("test", 5) }
+    val exception = assertFailsWith<GameSearchException> { repository.searchGamesByName("test", 5) }
 
     assertNotNull(exception.cause)
     assertTrue(exception.message!!.contains("Failed calling Cloud Function"))
@@ -563,7 +469,7 @@ class CloudBggGameRepositoryTest {
   }
 
   @Test
-  fun searchGamesByNameLightHandlesParsingException() = runTest {
+  fun searchGamesByNameHandlesParsingException() = runTest {
     val responseData =
         listOf(
             mapOf("wrong_key" to "value") // Missing 'id' and 'name' fields
@@ -572,8 +478,7 @@ class CloudBggGameRepositoryTest {
     every { mockFunctionsWrapper.call<List<*>>("searchGames", any()) } returns
         mockSuccessfulCall(responseData)
 
-    val exception =
-        assertFailsWith<GameSearchException> { repository.searchGamesByNameLight("test", 5) }
+    val exception = assertFailsWith<GameSearchException> { repository.searchGamesByName("test", 5) }
 
     assertTrue(exception.message!!.contains("Failed parsing JSON"))
   }

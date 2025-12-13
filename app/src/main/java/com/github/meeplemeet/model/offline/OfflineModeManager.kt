@@ -14,8 +14,8 @@ import com.github.meeplemeet.model.offline.OfflineModeManager.hasInternetConnect
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostRepository
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
@@ -511,11 +511,15 @@ object OfflineModeManager {
         val list = value as? List<*>
         val castValue =
             list?.mapNotNull { item ->
-              if (item is Pair<*, *> && item.first is Game && item.second is Int) {
-                @Suppress("UNCHECKED_CAST")
-                (item.first as Game) to (item.second as Int)
-              } else {
-                null
+              when (item) {
+                is GameItem -> item
+                is Map<*, *> -> {
+                  val id = item["gameId"] as? String ?: return@mapNotNull null
+                  val name = item["gameName"] as? String ?: ""
+                  val qty = (item["quantity"] as? Number)?.toInt() ?: 0
+                  GameItem(id, name, qty)
+                }
+                else -> null
               }
             } ?: t.gameCollection
         if (list != null && castValue.size == list.size) {
@@ -1335,7 +1339,7 @@ object OfflineModeManager {
           val refreshed = RepositoryProvider.shops.getShop(shop.id)
           updateShopCache(refreshed)
 
-          clearSpaceRenterChanges(shop.id)
+          clearShopChanges(shop.id)
         }
       } catch (_: Exception) {
         // Log or handle error - silent failure for now

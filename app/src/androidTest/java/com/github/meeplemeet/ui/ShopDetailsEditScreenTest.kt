@@ -12,6 +12,7 @@ import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.EditShopViewModel
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.TimeSlot
@@ -107,7 +108,10 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // Create Shop
     val openings =
         (1..7).map { day -> OpeningHours(day = day, hours = listOf(TimeSlot("09:00", "18:00"))) }
-    val games = listOf(gameCatan to 5, gameCarcassonne to 10)
+    val games =
+        listOf(
+            GameItem(gameCatan.uid, gameCatan.name, 5),
+            GameItem(gameCarcassonne.uid, gameCarcassonne.name, 10))
 
     shop =
         shopRepository.createShop(
@@ -378,7 +382,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
       runBlocking {
         val updated = shopRepository.getShop(shop.id)
         assertEquals("Meeple Mart Edited", updated.name) // From step 1
-        val gamesMap = updated.gameCollection.associate { it.first.uid to it.second }
+        val gamesMap = updated.gameCollection.associate { it.gameId to it.quantity }
         assertEquals(null, gamesMap["test_catan"]) // Deleted
         assertEquals(50, gamesMap["test_carcassonne"]) // Edited
         assertEquals(19, gamesMap["test_pandemic"]) // Added

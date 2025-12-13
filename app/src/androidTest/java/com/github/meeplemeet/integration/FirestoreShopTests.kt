@@ -8,6 +8,7 @@ import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
 import com.github.meeplemeet.model.shops.EditShopViewModel
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.model.shops.TimeSlot
@@ -107,7 +108,9 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Test
   fun createShopCreatesNewShop() = runTest {
-    val gameCollection = listOf(testGame1 to 5, testGame2 to 3)
+    val gameCollection =
+        listOf(
+            GameItem(testGame1.uid, testGame1.name, 5), GameItem(testGame2.uid, testGame2.name, 3))
 
     val shop =
         shopRepository.createShop(
@@ -129,8 +132,8 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(testLocation1, shop.address)
     assertEquals(testOpeningHours.size, shop.openingHours.size)
     assertEquals(2, shop.gameCollection.size)
-    assertEquals(5, shop.gameCollection.find { it.first.uid == testGame1.uid }?.second)
-    assertEquals(3, shop.gameCollection.find { it.first.uid == testGame2.uid }?.second)
+    assertEquals(5, shop.gameCollection.find { it.gameId == testGame1.uid }?.quantity)
+    assertEquals(3, shop.gameCollection.find { it.gameId == testGame2.uid }?.quantity)
   }
 
   @Test
@@ -152,7 +155,7 @@ class FirestoreShopTests : FirestoreTests() {
 
   @Test
   fun getShopRetrievesExistingShop() = runTest {
-    val gameCollection = listOf(testGame1 to 10)
+    val gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 10))
 
     val created =
         shopRepository.createShop(
@@ -176,8 +179,8 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(testLocation1, fetched.address)
     assertEquals(testOpeningHours.size, fetched.openingHours.size)
     assertEquals(1, fetched.gameCollection.size)
-    assertEquals(testGame1.uid, fetched.gameCollection[0].first.uid)
-    assertEquals(10, fetched.gameCollection[0].second)
+    assertEquals(testGame1.uid, fetched.gameCollection[0].gameId)
+    assertEquals(10, fetched.gameCollection[0].quantity)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -239,7 +242,7 @@ class FirestoreShopTests : FirestoreTests() {
             website = "https://old.com",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5))
+            gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
     // Update name
     shopRepository.updateShop(shop.id, name = "New Name")
@@ -277,11 +280,13 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals("10:00", updated.openingHours[0].hours[0].open)
 
     // Update game collection
-    val newGameCollection = listOf(testGame2 to 8, testGame1 to 3)
+    val newGameCollection =
+        listOf(
+            GameItem(testGame2.uid, testGame2.name, 8), GameItem(testGame1.uid, testGame1.name, 3))
     shopRepository.updateShop(shop.id, gameCollection = newGameCollection)
     updated = shopRepository.getShop(shop.id)
     assertEquals(2, updated.gameCollection.size)
-    assertEquals(8, updated.gameCollection.find { it.first.uid == testGame2.uid }?.second)
+    assertEquals(8, updated.gameCollection.find { it.gameId == testGame2.uid }?.quantity)
 
     // Update owner
     shopRepository.updateShop(shop.id, ownerId = testAccount2.uid)
@@ -300,10 +305,10 @@ class FirestoreShopTests : FirestoreTests() {
             website = "https://old.com",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5))
+            gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
     val newOpeningHours = listOf(OpeningHours(day = 1, hours = listOf(TimeSlot("08:00", "22:00"))))
-    val newGameCollection = listOf(testGame2 to 10)
+    val newGameCollection = listOf(GameItem(testGame2.uid, testGame2.name, 10))
 
     shopRepository.updateShop(
         shop.id,
@@ -324,7 +329,7 @@ class FirestoreShopTests : FirestoreTests() {
     assertEquals(1, updated.openingHours.size)
     assertEquals("08:00", updated.openingHours[0].hours[0].open)
     assertEquals(1, updated.gameCollection.size)
-    assertEquals(testGame2.uid, updated.gameCollection[0].first.uid)
+    assertEquals(testGame2.uid, updated.gameCollection[0].gameId)
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -422,7 +427,7 @@ class FirestoreShopTests : FirestoreTests() {
             website = "https://original.com",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5))
+            gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
     // Update only the phone
     shopRepository.updateShop(shop.id, phone = "+41 99 999 9999")
@@ -443,7 +448,10 @@ class FirestoreShopTests : FirestoreTests() {
   fun createShopWithLargeGameCollectionWorks() = runTest {
     // Create a shop with multiple games
     val largeCollection =
-        listOf(testGame1 to 50, testGame2 to 30, testGame1 to 20) // Note: duplicate game IDs
+        listOf(
+            GameItem(testGame1.uid, testGame1.name, 50),
+            GameItem(testGame2.uid, testGame2.name, 30),
+            GameItem(testGame1.uid, testGame1.name, 20)) // Note: duplicate game IDs
 
     val shop =
         shopRepository.createShop(
@@ -492,7 +500,10 @@ class FirestoreShopTests : FirestoreTests() {
             name = "Test Shop",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5, testGame2 to 3))
+            gameCollection =
+                listOf(
+                    GameItem(testGame1.uid, testGame1.name, 5),
+                    GameItem(testGame2.uid, testGame2.name, 3)))
 
     shopRepository.updateShop(shop.id, gameCollection = emptyList())
 
@@ -731,7 +742,7 @@ class FirestoreShopTests : FirestoreTests() {
         website = "https://shop.example.com",
         address = testLocation1,
         openingHours = fullWeekHours,
-        gameCollection = listOf(testGame1 to 10))
+        gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 10)))
 
     // Give it time to complete the async operation
     delay(300)
@@ -816,7 +827,10 @@ class FirestoreShopTests : FirestoreTests() {
             website = "https://vmtest.com",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5, testGame2 to 3))
+            gameCollection =
+                listOf(
+                    GameItem(testGame1.uid, testGame1.name, 5),
+                    GameItem(testGame2.uid, testGame2.name, 3)))
 
     // Load the shop through ViewModel
     shopViewModel.getShop(shop.id)
@@ -829,7 +843,7 @@ class FirestoreShopTests : FirestoreTests() {
           shopViewModel.shop.value!!
         }
     assertNotNull(loadedShop)
-    assertEquals(shop.id, loadedShop!!.id)
+    assertEquals(shop.id, loadedShop.id)
     assertEquals("Test Shop for ViewModel", loadedShop.name)
     assertEquals(testAccount1.uid, loadedShop.owner.uid)
     assertEquals("+41 21 555 0100", loadedShop.phone)
@@ -907,7 +921,10 @@ class FirestoreShopTests : FirestoreTests() {
             name = "Game Shop",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 10, testGame2 to 5))
+            gameCollection =
+                listOf(
+                    GameItem(testGame1.uid, testGame1.name, 10),
+                    GameItem(testGame2.uid, testGame2.name, 5)))
 
     // Load the shop through ViewModel
     shopViewModel.getShop(shop.id)
@@ -918,15 +935,15 @@ class FirestoreShopTests : FirestoreTests() {
     assertNotNull(loadedShop)
     assertEquals(2, loadedShop!!.gameCollection.size)
 
-    val game1Entry = loadedShop.gameCollection.find { it.first.uid == testGame1.uid }
-    val game2Entry = loadedShop.gameCollection.find { it.first.uid == testGame2.uid }
+    val game1Entry = loadedShop.gameCollection.find { it.gameId == testGame1.uid }
+    val game2Entry = loadedShop.gameCollection.find { it.gameId == testGame2.uid }
 
     assertNotNull(game1Entry)
     assertNotNull(game2Entry)
-    assertEquals(10, game1Entry!!.second)
-    assertEquals(5, game2Entry!!.second)
-    assertEquals("Catan", game1Entry.first.name)
-    assertEquals("Chess", game2Entry.first.name)
+    assertEquals(10, game1Entry!!.quantity)
+    assertEquals(5, game2Entry!!.quantity)
+    assertEquals("Catan", game1Entry.gameName)
+    assertEquals("Chess", game2Entry.gameName)
   }
 
   @Test
@@ -1178,16 +1195,18 @@ class FirestoreShopTests : FirestoreTests() {
             name = "Test Shop",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5))
+            gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
-    val newGameCollection = listOf(testGame2 to 10, testGame1 to 3)
+    val newGameCollection =
+        listOf(
+            GameItem(testGame2.uid, testGame2.name, 10), GameItem(testGame1.uid, testGame1.name, 3))
     editShopViewModel.updateShop(shop, testAccount1, gameCollection = newGameCollection)
     delay(100)
 
     val updated = shopRepository.getShop(shop.id)
     assertEquals(2, updated.gameCollection.size)
-    assertEquals(10, updated.gameCollection.find { it.first.uid == testGame2.uid }?.second)
-    assertEquals(3, updated.gameCollection.find { it.first.uid == testGame1.uid }?.second)
+    assertEquals(10, updated.gameCollection.find { it.gameId == testGame2.uid }?.quantity)
+    assertEquals(3, updated.gameCollection.find { it.gameId == testGame1.uid }?.quantity)
   }
 
   @Test
@@ -1264,7 +1283,7 @@ class FirestoreShopTests : FirestoreTests() {
             website = "https://original.com",
             address = testLocation1,
             openingHours = testOpeningHours,
-            gameCollection = listOf(testGame1 to 5))
+            gameCollection = listOf(GameItem(testGame1.uid, testGame1.name, 5)))
 
     // Update only the phone
     editShopViewModel.updateShop(shop, testAccount1, phone = "+41 99 999 9999")
