@@ -30,7 +30,7 @@ class NotificationsTabCrashTest : FirestoreTests() {
   @Before
   fun setup() {
     viewModel = NotificationsViewModel(accountRepository, handlesRepository)
-    navViewModel = MainActivityViewModel(accountRepository)
+      navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()
@@ -76,7 +76,7 @@ class NotificationsTabCrashTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             unreadCount = currentUser.notifications.count { it -> !it.read },
-            verified  = true,
+            verified = true,
             navigationActions = mockNavigation,
             onBack = {},
         )

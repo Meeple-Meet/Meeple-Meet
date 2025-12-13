@@ -90,7 +90,7 @@ class NotificationsTabTest : FirestoreTests() {
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
             discussionRepository = discussionRepository)
-    navViewModel = MainActivityViewModel(accountRepository)
+      navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       // Create current user
@@ -222,7 +222,7 @@ class NotificationsTabTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
-            verified  = true,
+            verified = true,
             navigationActions = mockNavigation,
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
@@ -398,9 +398,9 @@ class NotificationsTabTest : FirestoreTests() {
         NotificationsTab(
             account = emptyAccount,
             viewModel = viewModel,
-           verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }

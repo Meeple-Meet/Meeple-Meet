@@ -11,9 +11,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -41,7 +40,7 @@ class PostsOverviewScreenTest : FirestoreTests() {
 
   private lateinit var viewModel: PostOverviewViewModel
   private lateinit var nav: NavigationActions
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
   private lateinit var account: Account
 
   private lateinit var post1: Post
@@ -52,9 +51,10 @@ class PostsOverviewScreenTest : FirestoreTests() {
   fun setup() = runBlocking {
     viewModel = PostOverviewViewModel()
     nav = mockk(relaxed = true)
-    navVM = NavigationViewModel()
+      navVM = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
-    val uid = "uid_" + UUID.randomUUID().toString().take(8)
+
+      val uid = "uid_" + UUID.randomUUID().toString().take(8)
     account = accountRepository.createAccount(uid, "Tester", "test@x.com", null)
 
     // Create test posts
@@ -80,13 +80,11 @@ class PostsOverviewScreenTest : FirestoreTests() {
             tags = listOf("planning"))
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
         AppTheme {
           PostsOverviewScreen(
-              viewModel = viewModel, verified = true, navigation = nav, account = account)
+              viewModel = viewModel, verified = true, navigation = nav, account = account, unreadCount = 0)
         }
       }
-    }
   }
 
   @After

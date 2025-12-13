@@ -59,7 +59,7 @@ class FriendsScreenTest : FirestoreTests() {
   @Before
   fun setup() {
     viewModel = FriendsScreenViewModel(accountRepository, handlesRepository)
-    navViewModel = MainActivityViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
     mockNavigation = mockk(relaxed = true)
 
     runBlocking {
@@ -203,7 +203,7 @@ class FriendsScreenTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
-            verified  = true,
+            verified = true,
             navigationActions = mockNavigation,
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
@@ -377,7 +377,8 @@ class FriendsScreenTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             verified = true,
-              navigationActions = mockNavigation,onBack = {},
+            navigationActions = mockNavigation,
+            onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }
@@ -530,7 +531,8 @@ class FriendsScreenTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             verified = true,
-              navigationActions = mockNavigation,onBack = {},
+            navigationActions = mockNavigation,
+            onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }
@@ -599,7 +601,8 @@ class FriendsScreenTest : FirestoreTests() {
                     relationships = currentUser.relationships.filterKeys { it != stranger.uid }),
             viewModel = viewModel,
             verified = true,
-              navigationActions = mockNavigation,onBack = {},
+            navigationActions = mockNavigation,
+            onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }
@@ -659,7 +662,8 @@ class FriendsScreenTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             verified = true,
-              navigationActions = mockNavigation,onBack = {},
+            navigationActions = mockNavigation,
+            onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }

@@ -291,7 +291,8 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
 
     compose.setContent {
       AppTheme {
-        DiscussionsOverviewScreen(account = meWithBlockedBob, navigation = nav, unreadCount = 0, verified = true)
+        DiscussionsOverviewScreen(
+            account = meWithBlockedBob, navigation = nav, unreadCount = 0, verified = true)
       }
     }
 
@@ -311,8 +312,10 @@ class DiscussionsOverviewScreenTest : FirestoreTests() {
   @Test
   fun search_functionality() = runBlocking {
     compose.setContent {
-        AppTheme { DiscussionsOverviewScreen(account = me, verified = true, unreadCount = 0, navigation = nav) }
+      AppTheme {
+        DiscussionsOverviewScreen(account = me, verified = true, unreadCount = 0, navigation = nav)
       }
+    }
 
     checkpoint("Search bar is displayed") {
       compose
