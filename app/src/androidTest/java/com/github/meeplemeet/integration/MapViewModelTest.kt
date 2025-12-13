@@ -166,6 +166,7 @@ class MapViewModelTest : FirestoreTests() {
         discussion.uid,
         "Chess Night",
         testGame.uid,
+        testGame.name,
         Timestamp.now(),
         testLocation,
         testAccount1.uid)

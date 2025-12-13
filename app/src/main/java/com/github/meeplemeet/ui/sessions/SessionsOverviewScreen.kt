@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -27,15 +28,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,16 +48,21 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -66,7 +75,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -90,6 +99,8 @@ object SessionsOverviewScreenTestTags {
   const val TEST_TAG_ARCHIVE_BUTTON = "archiveButton"
   const val TEST_TAG_NEXT_SESSIONS = "nextSessionsToggle"
   const val TEST_TAG_HISTORY = "historyToggle"
+  const val SEARCH_TEXT_FIELD = "SessionSearchTextField"
+  const val SEARCH_CLEAR = "SessionSearchClear"
 }
 /**
  * Main screen that lists gaming sessions for the logged-in user.
@@ -105,15 +116,16 @@ object SessionsOverviewScreenTestTags {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionsOverviewScreen(
-    viewModel: SessionOverviewViewModel = viewModel(),
+    account: Account,
+    verified: Boolean,
     navigation: NavigationActions,
-    account: Account?,
+    viewModel: SessionOverviewViewModel = viewModel(),
     onSelectSession: (String) -> Unit = {},
     unreadCount: Int
 ) {
   val context = LocalContext.current
   val sessionMap by
-      viewModel.sessionMapFlow(account?.uid ?: "", context).collectAsState(initial = emptyMap())
+      viewModel.sessionMapFlow(account.uid, context).collectAsState(initial = emptyMap())
 
   /* --------------  NEW: toggle state  -------------- */
   var showHistory by remember { mutableStateOf(false) }
@@ -121,12 +133,12 @@ fun SessionsOverviewScreen(
   var archivedSessions by remember { mutableStateOf<List<Session>>(emptyList()) }
 
   // Refresh counter to force re-fetching when switching to history tab
-  var historyRefreshTrigger by remember { mutableStateOf(0) }
+  var historyRefreshTrigger by remember { mutableIntStateOf(0) }
 
   // Fetch archived sessions when history tab is active
   // Refresh whenever showHistory becomes true (by using historyRefreshTrigger)
   LaunchedEffect(showHistory, account, historyRefreshTrigger) {
-    if (showHistory && account != null) {
+    if (showHistory) {
       viewModel.getArchivedSessions(account.uid) { sessions -> archivedSessions = sessions }
     }
   }
@@ -154,69 +166,97 @@ fun SessionsOverviewScreen(
     onDispose { timer.cancel() }
   }
 
+  var searchQuery by rememberSaveable { mutableStateOf("") }
+
+  val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
-          Column(Modifier.fillMaxWidth()) {
-            /* 1. original top-bar (kept) */
-            CenterAlignedTopAppBar(
-                title = {
-                  Text(
-                      text = MeepleMeetScreen.SessionsOverview.title,
-                      style = MaterialTheme.typography.bodyMedium,
-                      color = MaterialTheme.colorScheme.onPrimary,
-                      modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
-                })
-
-            SessionToggle(
-                showHistory = showHistory,
-                onNext = { showHistory = false },
-                onHistory = { showHistory = true })
-          }
+          SessionsTopBar(
+              title = MeepleMeetScreen.SessionsOverview.title,
+              showHistory = showHistory,
+              onNext = { showHistory = false },
+              onHistory = { showHistory = true },
+              query = searchQuery,
+              onQueryChange = { searchQuery = it },
+              onClearQuery = { searchQuery = "" },
+              focusManager = focusManager)
         },
         bottomBar = {
-          BottomNavigationMenu(
+          BottomBarWithVerification(
               currentScreen = MeepleMeetScreen.SessionsOverview,
               unreadCount = unreadCount,
-              onTabSelected = { navigation.navigateTo(it) })
+              onTabSelected = { navigation.navigateTo(it) },
+              verified = verified,
+              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
         }) { innerPadding ->
-          Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-              showHistory -> {
-                if (archivedSessions.isEmpty()) {
-                  EmptySessionsListText(isHistory = true)
-                } else {
-                  HistoryGrid(sessions = archivedSessions, onSessionClick = { popupSession = it })
-                }
-              }
-              sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
-              else -> {
-                // Show all active sessions (future + past < 24h)
-                val activeSessions =
-                    sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
-
-                if (activeSessions.isEmpty()) {
-                  EmptySessionsListText(isHistory = false)
-                } else {
-                  /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
-                  LazyColumn(
-                      modifier = Modifier.fillMaxSize(),
-                      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
-                        items(activeSessions, key = { it.first }) { (id, session) ->
-                          SessionCard(
-                              id = id,
-                              session = session,
-                              viewModel = viewModel,
-                              currentUserId = account?.uid ?: "",
-                              currentTime = currentTime,
-                              modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
-                              onClick = { onSelectSession(id) })
+          Box(
+              modifier =
+                  Modifier.fillMaxSize().padding(innerPadding).pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                  }) {
+                when {
+                  showHistory -> {
+                    val filteredArchived =
+                        remember(archivedSessions, searchQuery) {
+                          if (searchQuery.isBlank()) {
+                            archivedSessions
+                          } else {
+                            val query = searchQuery.trim().lowercase()
+                            archivedSessions.filter { session ->
+                              session.name.lowercase().contains(query)
+                            }
+                          }
                         }
-                      }
+
+                    if (filteredArchived.isEmpty()) {
+                      EmptySessionsListText(isHistory = true)
+                    } else {
+                      HistoryGrid(
+                          sessions = filteredArchived, onSessionClick = { popupSession = it })
+                    }
+                  }
+                  sessionMap.isEmpty() -> EmptySessionsListText(isHistory = false)
+                  else -> {
+                    // Show all active sessions (future + past < 24h)
+                    val activeSessions =
+                        sessionMap.toList().sortedBy { (_, session) -> session.date.toDate().time }
+
+                    val filteredActive =
+                        remember(activeSessions, searchQuery) {
+                          if (searchQuery.isBlank()) {
+                            activeSessions
+                          } else {
+                            val query = searchQuery.trim().lowercase()
+                            activeSessions.filter { (_, session) ->
+                              session.name.lowercase().contains(query)
+                            }
+                          }
+                        }
+
+                    if (filteredActive.isEmpty()) {
+                      EmptySessionsListText(isHistory = false)
+                    } else {
+                      /* ----------------  NEXT SESSIONS (existing list)  ---------------- */
+                      LazyColumn(
+                          modifier = Modifier.fillMaxSize(),
+                          verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
+                            items(filteredActive, key = { it.first }) { (id, session) ->
+                              SessionCard(
+                                  id = id,
+                                  session = session,
+                                  viewModel = viewModel,
+                                  currentUserId = account.uid,
+                                  currentTime = currentTime,
+                                  modifier = Modifier.fillMaxWidth().testTag("sessionCard_$id"),
+                                  onClick = { onSelectSession(id) })
+                            }
+                          }
+                    }
+                  }
                 }
               }
-            }
-          }
         }
   }
   if (popupSession != null) {
@@ -503,16 +543,7 @@ fun SessionCard(
                 }
               }
 
-          val gameName by
-              produceState(
-                  key1 = session.gameId,
-                  initialValue = session.gameId // fallback: show id while loading
-                  ) {
-                    val name =
-                        if (session.gameId == LABEL_UNKNOWN_GAME) null
-                        else viewModel.getGameNameByGameId(session.gameId)
-                    value = name ?: "No game selected" // suspend call
-              }
+          val gameName = session.gameName.takeIf { it.isNotBlank() } ?: "No game selected"
 
           SessionOverCard(
               session = session,
@@ -684,13 +715,12 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
                     contentScale = ContentScale.Crop)
               } else {
                 Box(
-                    modifier =
-                        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black),
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
                     contentAlignment = Alignment.Center) {
                       Icon(
                           imageVector = Icons.Default.SentimentDissatisfied,
                           contentDescription = null,
-                          tint = androidx.compose.ui.graphics.Color.Gray,
+                          tint = Color.Gray,
                           modifier = Modifier.size(Dimensions.IconSize.large))
                     }
               }
@@ -718,4 +748,105 @@ private fun HistoryCard(session: Session, modifier: Modifier = Modifier) {
  */
 private fun getSessionPicture(session: Session): String? {
   return session.photoUrl?.takeIf { it.isNotBlank() }
+}
+
+/**
+ * Top bar for the sessions overview screen.
+ *
+ * @param title The title text shown in the top bar.
+ * @param showHistory Whether to show the history toggle as active.
+ * @param onNext Callback when the "Next" toggle is clicked.
+ * @param onHistory Callback when the "History" toggle is clicked.
+ * @param query The current search query.
+ * @param onQueryChange Callback when the search query changes.
+ * @param onClearQuery Callback to clear the search query.
+ * @param focusManager FocusManager to handle clearing focus.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SessionsTopBar(
+    title: String,
+    showHistory: Boolean,
+    onNext: () -> Unit,
+    onHistory: () -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClearQuery: () -> Unit,
+    focusManager: FocusManager
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    // Top section with title and search
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .background(AppColors.primary)
+                .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
+                .padding(
+                    horizontal = Dimensions.Padding.extraLarge,
+                    vertical = Dimensions.Spacing.large)) {
+          Text(
+              text = title,
+              color = AppColors.textIcons,
+              fontSize = Dimensions.TextSize.extraLarge,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.testTag(NavigationTestTags.SCREEN_TITLE))
+
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+          BasicTextField(
+              value = query,
+              onValueChange = onQueryChange,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .height(Dimensions.ContainerSize.searchFieldHeight)
+                      .background(
+                          AppColors.secondary,
+                          androidx.compose.foundation.shape.RoundedCornerShape(
+                              Dimensions.CornerRadius.round))
+                      .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
+              singleLine = true,
+              textStyle =
+                  androidx.compose.ui.text.TextStyle(
+                      color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
+              cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
+              decorationBox = { innerTextField ->
+                Row(
+                    modifier =
+                        Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                          imageVector = Icons.Default.Search,
+                          contentDescription = "Search",
+                          tint = AppColors.textIconsFade,
+                          modifier = Modifier.size(Dimensions.IconSize.standard))
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                      Box(modifier = Modifier.weight(1f)) {
+                        if (query.isEmpty()) {
+                          Text(
+                              text = "Search",
+                              color = AppColors.textIconsFade,
+                              fontSize = Dimensions.TextSize.subtitle)
+                        }
+                        innerTextField()
+                      }
+                      if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClearQuery,
+                            modifier =
+                                Modifier.size(Dimensions.IconSize.large)
+                                    .testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)) {
+                              Icon(
+                                  imageVector = Icons.Default.Close,
+                                  contentDescription = "Clear search",
+                                  tint = AppColors.textIconsFade,
+                                  modifier = Modifier.size(Dimensions.IconSize.standard))
+                            }
+                      }
+                    }
+              })
+        }
+
+    // Toggle section below
+    SessionToggle(showHistory = showHistory, onNext = onNext, onHistory = onHistory)
+  }
 }

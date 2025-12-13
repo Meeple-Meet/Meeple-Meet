@@ -114,7 +114,7 @@ import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
 import com.github.meeplemeet.model.shared.location.Location
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
@@ -269,9 +269,10 @@ private const val RGB_MAX_ALPHA = 255
 @OptIn(FlowPreview::class)
 @Composable
 fun MapScreen(
-    viewModel: MapViewModel = viewModel(),
-    navigation: NavigationActions,
     account: Account,
+    verified: Boolean,
+    navigation: NavigationActions,
+    viewModel: MapViewModel = viewModel(),
     onUserLocationChange: (Location?) -> Unit = {},
     onFABCLick: (PinType) -> Unit,
     onRedirect: (StorableGeoPin) -> Unit,
@@ -425,9 +426,11 @@ fun MapScreen(
   // --- UI scaffold ---
   Scaffold(
       bottomBar = {
-        BottomNavigationMenu(
+        BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.Map,
             unreadCount = unreadCount,
+            verified = verified,
+            onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile)},
             onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
@@ -608,7 +611,7 @@ fun MapScreen(
               modifier =
                   Modifier.align(Alignment.TopStart)
                       .padding(start = Dimensions.Padding.medium, top = Dimensions.Padding.medium),
-              showCreateButton = account.shopOwner || account.spaceRenter,
+              showCreateButton = verified && (account.shopOwner || account.spaceRenter),
               onToggleFilters = { showFilterButtons = !showFilterButtons },
               onAddClick = {
                 when (account.shopOwner to account.spaceRenter) {

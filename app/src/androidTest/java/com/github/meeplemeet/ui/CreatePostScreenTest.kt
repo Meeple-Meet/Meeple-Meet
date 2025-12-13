@@ -19,7 +19,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
 
-@Ignore("Will be fixed in another PR")
+@Ignore("Fails on the CI but not locally. Will be fixed in a future PR.")
 @RunWith(AndroidJUnit4::class)
 class CreatePostScreenTest : FirestoreTests() {
 

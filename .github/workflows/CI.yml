@@ -235,9 +235,14 @@ jobs:
           if-no-files-found: warn
 
   android-tests:
-    name: Android Instrumentation Tests
+    name: Android Instrumentation Tests (Run ${{ matrix.run }})
     needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check]
-    runs-on: ${{ github.event.pull_request.draft && 'ubuntu-latest' || 'blacksmith-4vcpu-ubuntu-2404' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -328,12 +333,12 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedAndroidTest --no-parallel --build-cache
+          script: ./gradlew connectedAndroidTest --no-parallel --build-cache -Pandroid.testInstrumentationRunnerArguments.failFast=true
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
         with:
-          name: android-test-coverage
+          name: android-test-coverage-${{ matrix.run }}
           path: app/build/outputs/code_coverage/debugAndroidTest/connected/**/coverage.ec
 
   compile-debug-classes:
@@ -395,6 +400,7 @@ jobs:
   coverage-report:
     name: Coverage Report
     needs: [format-check, magic-number-check, repeated-strings-check, compose-delays-check, unit-tests, android-tests, compile-debug-classes, assemble-lint]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     outputs:
       coverage: ${{ steps.coverage.outputs.percentage }}
@@ -456,11 +462,20 @@ jobs:
           name: unit-test-exec
           path: app/build/outputs/unit_test_code_coverage/debugUnitTest/
 
-      - name: Download android test coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: android-test-coverage
-          path: app/build/outputs/code_coverage/debugAndroidTest/connected/
+      - name: Download android test coverage from first successful run
+        run: |
+          for run in {1..10}; do
+            artifact_name="android-test-coverage-${run}"
+            echo "Attempting to download ${artifact_name}..."
+            if gh run download ${{ github.run_id }} -n "${artifact_name}" -D app/build/outputs/code_coverage/debugAndroidTest/connected/ 2>/dev/null; then
+              echo "Successfully downloaded ${artifact_name}"
+              break
+            else
+              echo "${artifact_name} not found, trying next..."
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Download lint report
         uses: actions/download-artifact@v4

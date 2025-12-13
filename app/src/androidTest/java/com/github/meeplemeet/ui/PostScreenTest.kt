@@ -114,6 +114,7 @@ class PostScreenTest : FirestoreTests() {
         PostScreen(
             account = marco,
             postId = postIdState.value,
+            verified = true,
             postViewModel = postVM,
             accountViewModel = postVM,
             onBack = { backCount++ })
@@ -233,6 +234,7 @@ class PostScreenTest : FirestoreTests() {
             postId = postId,
             postViewModel = postVM,
             accountViewModel = postVM,
+            verified = true,
             onBack = {})
       }
     }

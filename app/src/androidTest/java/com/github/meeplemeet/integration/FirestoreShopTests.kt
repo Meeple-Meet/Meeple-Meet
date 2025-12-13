@@ -1242,7 +1242,7 @@ class FirestoreShopTests : FirestoreTests() {
             openingHours = testOpeningHours)
 
     editShopViewModel.deleteShop(shop, testAccount1)
-    delay(100)
+    delay(500)
 
     // Verify shop is deleted
     try {

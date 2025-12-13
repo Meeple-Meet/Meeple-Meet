@@ -76,8 +76,9 @@ import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.Dimensions
 import okhttp3.internal.toImmutableList
 
@@ -318,11 +319,13 @@ private fun toggleBlock(current: Account, other: Account, viewModel: FriendsScre
  */
 @Composable
 fun FriendsScreen(
-    viewModel: FriendsScreenViewModel = viewModel(),
     account: Account,
+    verified: Boolean,
+    navigationActions: NavigationActions,
     onBack: () -> Unit,
     onNavigate: (MeepleMeetScreen) -> Unit = {},
-    unreadCount: Int
+    unreadCount: Int,
+    viewModel: FriendsScreenViewModel = viewModel(),
 ) {
   val context = LocalContext.current
 
@@ -376,10 +379,12 @@ fun FriendsScreen(
       bottomBar = {
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
-          BottomNavigationMenu(
+          BottomBarWithVerification(
               unreadCount = unreadCount,
               currentScreen = MeepleMeetScreen.Profile,
-              onTabSelected = { onNavigate(it) })
+              onTabSelected = { navigationActions.navigateTo(it) },
+              verified = verified,
+              onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
         }
       }) { innerPadding ->
         Column(

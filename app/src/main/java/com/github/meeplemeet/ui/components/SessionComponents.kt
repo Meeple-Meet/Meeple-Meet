@@ -175,6 +175,7 @@ private const val TITLE_SELECT_TIME = "Select Time"
 private const val LABEL_GAME = "Game"
 private const val OUTLINE_DEFAULT_ALPHA = 0.5f
 const val MAX_TITLE_LENGTH: Int = 100
+private const val MAX_LINES = 3
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -1119,15 +1120,30 @@ private fun LocationSearchBar(
   val results by viewModel.locationUIState.collectAsStateWithLifecycle()
 
   var menuOpen by rememberSaveable { mutableStateOf(false) }
-  var text by rememberSaveable { mutableStateOf(initial.name) }
+  var text by rememberSaveable(inputFieldTestTag) { mutableStateOf(initial.name) }
   val hasSuggestions = results.locationSuggestions.isNotEmpty()
 
   LaunchedEffect(Unit) { if (initial.name.isNotBlank()) setLocation(initial) }
+
+  // Sync text field with ViewModel's locationQuery/selection
+  LaunchedEffect(results.locationQuery, results.selectedLocation) {
+    val selectedName = results.selectedLocation?.name
+    val query = results.locationQuery
+    // Prefer the selected location name if available and query is empty or matches logic
+    // But mainly we want to ensure if query is updated from VM side (e.g. initialization), text
+    // reflects it.
+    if (query.isNotBlank() && text != query) {
+      text = query
+    } else if (selectedName != null && selectedName != text) {
+      text = selectedName
+    }
+  }
 
   ExposedDropdownMenuBox(
       expanded = menuOpen && hasSuggestions, onExpandedChange = { menuOpen = it }) {
         FocusableInputField(
             value = text,
+            maxLines = MAX_LINES,
             enabled = enabled,
             onValueChange = {
               menuOpen = true
@@ -1140,7 +1156,9 @@ private fun LocationSearchBar(
                 Modifier.menuAnchor(type = MenuAnchorType.PrimaryEditable, enabled = true)
                     .fillMaxWidth()
                     .testTag(inputFieldTestTag),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = {
+              Icon(Icons.Default.Search, tint = AppColors.neutral, contentDescription = null)
+            },
         )
 
         ExposedDropdownMenu(

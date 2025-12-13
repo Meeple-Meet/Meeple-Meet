@@ -205,18 +205,37 @@ class SpaceRenterRepository(
    *
    * @param ids The list of unique identifiers of the space renters to delete.
    */
-  suspend fun deleteSpaceRenters(ids: List<String>) {
+  suspend fun deleteSpaceRenters(ids: List<String>, ownerId: String? = null) {
     coroutineScope {
       ids.map { id ->
             async {
-              // Get the space renter to retrieve the owner ID before deletion
-              val spaceRenter = getSpaceRenter(id)
+              // Try to get the space renter to retrieve the owner ID before deletion
+              // If it fails (e.g. document doesn't exist), we fallback to the provided ownerId
+              val spaceRenter =
+                  try {
+                    getSpaceRenter(id)
+                  } catch (e: Exception) {
+                    null
+                  }
 
-              geoPinRepository.deleteGeoPin(id)
-              collection.document(id).delete().await()
+              // Best effort deletion of geopins
+              try {
+                geoPinRepository.deleteGeoPin(id)
+              } catch (_: Exception) {}
+
+              // Best effort deletion of the document
+              try {
+                collection.document(id).delete().await()
+              } catch (_: Exception) {}
 
               // Remove the space renter ID from the owner's businesses
-              accountRepository.removeSpaceRenterId(spaceRenter.owner.uid, id)
+              // Use the owner from the document if available, otherwise use the provided fallback
+              val uidToRemoveFrom = spaceRenter?.owner?.uid ?: ownerId
+              if (uidToRemoveFrom != null) {
+                try {
+                  accountRepository.removeSpaceRenterId(uidToRemoveFrom, id)
+                } catch (_: Exception) {}
+              }
             }
           }
           .awaitAll()

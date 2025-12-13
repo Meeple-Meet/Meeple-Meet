@@ -79,8 +79,9 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
-import com.github.meeplemeet.ui.navigation.BottomNavigationMenu
+import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -304,16 +305,17 @@ data class NotificationSheetState(
  * @param account The current user
  * @param viewModel VM used by this screen
  * @param onBack callback upon click of the back button
- * @param onNavigate callback upon navigation to another screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsTab(
     account: Account,
-    viewModel: NotificationsViewModel = viewModel(),
+    verified: Boolean,
+    navigationActions: NavigationActions,
     onBack: () -> Unit,
     onNavigate: (MeepleMeetScreen) -> Unit = {},
-    unreadCount: Int
+    unreadCount: Int,
+    viewModel: NotificationsViewModel = viewModel(),
 ) {
   val filters = NotificationFilter.entries
   var selectedFilter by remember { mutableStateOf(NotificationFilter.ALL) }
@@ -378,10 +380,12 @@ fun NotificationsTab(
             })
       },
       bottomBar = {
-        BottomNavigationMenu(
+        BottomBarWithVerification(
             unreadCount = unreadCount,
             currentScreen = MeepleMeetScreen.Profile,
-            onTabSelected = { onNavigate(it) })
+            onTabSelected = { navigationActions.navigateTo(it) },
+            verified = verified,
+            onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
       }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
           FilterRow(
@@ -914,33 +918,31 @@ fun NotificationSheet(
 
               val session = disc.session
               if (session != null) {
-                viewModel.getGame(session.gameId) { game ->
-                  val dateTime =
-                      session.date
-                          .toDate()
-                          .toInstant()
-                          .atZone(ZoneId.systemDefault())
-                          .toLocalDateTime()
+                val dateTime =
+                    session.date
+                        .toDate()
+                        .toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime()
 
-                  val dateLabel =
-                      dateTime.format(
-                          DateTimeFormatter.ofPattern(
-                              NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
-                  val timeLabel =
-                      dateTime.format(
-                          DateTimeFormatter.ofPattern(
-                              NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
+                val dateLabel =
+                    dateTime.format(
+                        DateTimeFormatter.ofPattern(
+                            NotificationsTabUi.NotificationSheet.Content.SESSION_DATE_PATTERN))
+                val timeLabel =
+                    dateTime.format(
+                        DateTimeFormatter.ofPattern(
+                            NotificationsTabUi.NotificationSheet.Content.SESSION_TIME_PATTERN))
 
-                  loadedData =
-                      NotificationPopupData.Session(
-                          title = session.name,
-                          participants = session.participants.size,
-                          dateLabel = dateLabel,
-                          description =
-                              NotificationsTabUi.NotificationSheet.Content.sessionDescription(
-                                  game.name, timeLabel, session.location.name),
-                          icon = avatar)
-                }
+                loadedData =
+                    NotificationPopupData.Session(
+                        title = session.name,
+                        participants = session.participants.size,
+                        dateLabel = dateLabel,
+                        description =
+                            NotificationsTabUi.NotificationSheet.Content.sessionDescription(
+                                session.gameName, timeLabel, session.location.name),
+                        icon = avatar)
               }
             })
       }

@@ -31,10 +31,10 @@ import kotlinx.coroutines.launch
  * @property discussionRepository Repository for discussion operations
  */
 class MainActivityViewModel(
+    inTests: Boolean = false,
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-) : AuthenticationViewModel() {
-
+) : AuthenticationViewModel(inTests) {
   /**
    * Signs out the current user and clears all cached flows.
    *

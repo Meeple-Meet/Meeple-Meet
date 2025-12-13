@@ -5,13 +5,10 @@ package com.github.meeplemeet.ui.shops
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,13 +18,17 @@ import com.github.meeplemeet.model.shared.LocationUIState
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
-import com.github.meeplemeet.model.shops.OpeningHours
+import com.github.meeplemeet.model.shops.Shop
+import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
+import com.github.meeplemeet.ui.components.AddButton
 import com.github.meeplemeet.ui.components.AvailabilitySection
 import com.github.meeplemeet.ui.components.CollapsibleSection
-import com.github.meeplemeet.ui.components.EditableGameItem
+import com.github.meeplemeet.ui.components.CreateShopFormState
+import com.github.meeplemeet.ui.components.EditableImageCarousel
+import com.github.meeplemeet.ui.components.GameImageListSection
 import com.github.meeplemeet.ui.components.GameStockPicker
 import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
@@ -37,9 +38,7 @@ import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
-import com.github.meeplemeet.ui.shops.AddShopUi.Strings
 import com.github.meeplemeet.ui.theme.Dimensions
-import kotlinx.coroutines.launch
 
 /* ================================================================================================
  * Test tags
@@ -55,6 +54,7 @@ object CreateShopScreenTestTags {
   // Reuse shared section suffixes
   const val SECTION_HEADER_SUFFIX = ShopFormTestTags.SECTION_HEADER_SUFFIX
   const val SECTION_TOGGLE_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_SUFFIX
+  const val SECTION_TOGGLE_ICON_SUFFIX = ShopFormTestTags.SECTION_TOGGLE_ICON_SUFFIX
   const val SECTION_CONTENT_SUFFIX = ShopFormTestTags.SECTION_CONTENT_SUFFIX
 
   const val SECTION_REQUIRED = "section_required"
@@ -76,33 +76,33 @@ object CreateShopScreenTestTags {
   const val GAME_STOCK_DIALOG_WRAPPER = ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER
 
   const val BOTTOM_SPACER = "bottom_spacer"
+  const val OFFLINE_GAMES_MSG = "games_section_message_offline"
 }
 
 /* ================================================================================================
  * UI Defaults
  * ================================================================================================ */
 private object AddShopUi {
+
   // Reuse shared dimensions
   object Dimensions {
     val contentHPadding = ShopFormUi.Dim.contentHPadding
     val contentVPadding = ShopFormUi.Dim.contentVPadding
     val bottomSpacer = ShopFormUi.Dim.bottomSpacer
-    val betweenControls = ShopFormUi.Dim.betweenControls
   }
 
   object Strings {
     const val REQUIREMENTS_SECTION = "Required Info"
     const val SECTION_AVAILABILITY = "Availability"
-    const val SECTION_GAMES = "Games in stock"
+    const val SECTION_GAMES = "Game Vitrine"
 
     const val BTN_ADD_GAME = "Add game"
     const val EMPTY_GAMES = "No games selected yet."
-    const val ERROR_VALIDATION = "Validation error"
-    const val ERROR_CREATE = "Failed to create shop"
+    const val OFFLINE_GAMES_MSG = "Go online to be able to add and edit games."
   }
 }
 
-const val maxNumberOfImages = 10
+const val IMAGE_COUNT = 10
 
 /* ================================================================================================
  * Screen
@@ -112,44 +112,34 @@ const val maxNumberOfImages = 10
  * Composable function representing the Create Shop screen.
  *
  * @param owner The account of the shop owner.
- * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created, receives
- *   the shop ID.
+ * @param onBack Callback function to be invoked when the back navigation is triggered. the shop ID.
+ *     @param online Whether the user is online or offline
+ *     @param userLocation User's current location
  * @param viewModel The ViewModel managing the state and logic for creating a shop.
  */
 @Composable
 fun CreateShopScreen(
     owner: Account,
     onBack: () -> Unit,
-    onCreated: (String) -> Unit,
+    online: Boolean,
+    userLocation: Location?,
     viewModel: CreateShopViewModel = viewModel()
 ) {
-  val ui by viewModel.gameUIState.collectAsState()
+  val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+
+  // Set default location when offline
+  LaunchedEffect(online, userLocation) {
+    if (!online && userLocation != null && locationUi.selectedLocation == null) {
+      viewModel.setLocation(userLocation)
+    }
+  }
 
   AddShopContent(
       onBack = onBack,
-      onCreated = onCreated,
-      onCreate = { name, email, address, week, stock ->
-        val shop =
-            viewModel.createShop(
-                owner = owner,
-                name = name,
-                phone = "",
-                email = email,
-                website = "",
-                address = address,
-                openingHours = week,
-                gameCollection = stock)
-        shop.id
-      },
-      gameUi = ui,
+      gameUi = gameUi,
       locationUi = locationUi,
-      gameQuery = ui.gameQuery,
-      gameSuggestions = ui.gameSuggestions,
-      isSearching = ui.isSearching,
-      onSetGameQuery = viewModel::setGameQuery,
-      onSetGame = viewModel::setGame,
+      online = online,
       viewModel = viewModel,
       owner = owner)
 }
@@ -162,91 +152,40 @@ fun CreateShopScreen(
  * Composable function representing the content of the Add Shop screen.
  *
  * @param onBack Callback function to be invoked when the back navigation is triggered.
- * @param onCreated Callback function to be invoked when the shop is successfully created, receives
- *   the shop ID.
- * @param onCreate Suspend function to handle the creation of a shop with provided details, returns
- *   shop ID.
- * @param gameQuery The current query string for searching games.
- * @param gameSuggestions List of game suggestions based on the current query.
- * @param isSearching Boolean indicating if a search operation is in progress.
- * @param onSetGameQuery Callback function to update the game search query.
- * @param onSetGame Callback function to set the selected game.
+ * @param gameUi The current game UI state.
+ * @param locationUi The current location UI state.
+ * @param online Whether the user is online or offline
  * @param initialStock Initial list of games and their quantities in stock.
+ * @param viewModel The ViewModel managing the state and logic for creating a shop.
+ * @param owner The account of the shop owner.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
-    onCreated: (String) -> Unit,
-    onCreate:
-        suspend (
-            name: String,
-            email: String,
-            address: Location,
-            week: List<OpeningHours>,
-            stock: List<Pair<Game, Int>>) -> String,
     gameUi: GameUIState,
     locationUi: LocationUIState,
-    gameQuery: String,
-    gameSuggestions: List<Game>,
-    isSearching: Boolean,
-    onSetGameQuery: (String) -> Unit,
-    onSetGame: (Game) -> Unit,
+    online: Boolean,
     initialStock: List<Pair<Game, Int>> = emptyList(),
     viewModel: CreateShopViewModel,
     owner: Account
 ) {
-  val snackbarHost = remember { SnackbarHostState() }
-  val scope = rememberCoroutineScope()
-
-  var shopName by rememberSaveable { mutableStateOf("") }
-  var photoCollectionUrl by remember { mutableStateOf(listOf<String>()) }
-  var email by rememberSaveable { mutableStateOf("") }
-  var addressText by rememberSaveable { mutableStateOf("") }
-  var phone by rememberSaveable { mutableStateOf("") }
-  var link by rememberSaveable { mutableStateOf("") }
-
-  var week by remember { mutableStateOf(emptyWeek()) }
-
-  var editingDay by remember { mutableStateOf<Int?>(null) }
-  var showHoursDialog by remember { mutableStateOf(false) }
-
-  var showGameDialog by remember { mutableStateOf(false) }
-  var qty by rememberSaveable { mutableIntStateOf(1) }
-  var stock by remember { mutableStateOf(initialStock) }
-
-  val hasOpeningHours by remember(week) { derivedStateOf { week.any { it.hours.isNotEmpty() } } }
-  val isValid by
-      remember(shopName, email, locationUi.selectedLocation, hasOpeningHours) {
-        derivedStateOf {
-          shopName.isNotBlank() &&
-              isValidEmail(email) &&
-              locationUi.selectedLocation != null &&
-              hasOpeningHours
-        }
-      }
+  val state =
+      rememberCreateShopFormState(
+          initialStock = initialStock,
+          onSetGameQuery = viewModel::setGameQuery,
+          onSetGame = viewModel::setGame)
+  val hasOpeningHours by
+      remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
 
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
-    if (locationUi.locationQuery.isNotEmpty() && addressText != locationUi.locationQuery) {
-      addressText = locationUi.locationQuery
+    val sel = locationUi.selectedLocation
+    if (sel != null && locationUi.locationQuery != sel.name) {
+      val typed = locationUi.locationQuery
+      viewModel.clearLocationSearch()
+      if (typed.isNotBlank()) viewModel.setLocationQuery(typed)
     }
-  }
-
-  fun onDiscard() {
-    shopName = ""
-    email = ""
-    addressText = ""
-    phone = ""
-    link = ""
-    week = emptyWeek()
-    editingDay = null
-    showHoursDialog = false
-    showGameDialog = false
-    qty = 1
-    stock = emptyList()
-    onSetGameQuery("")
-    onBack()
   }
 
   var isInputFocused by remember { mutableStateOf(false) }
@@ -259,7 +198,12 @@ fun AddShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        Scaffold(
+        ShopFormContent(
+            state = state,
+            viewModel = viewModel,
+            owner = owner,
+            online = online,
+            locationUi = locationUi,
             topBar = {
               CenterAlignedTopAppBar(
                   title = {
@@ -276,198 +220,263 @@ fun AddShopContent(
                   },
                   modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
             },
-            snackbarHost = {
-              SnackbarHost(
-                  snackbarHost, modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
-            },
             bottomBar = {
               val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-              if (!(shouldHide && isInputFocused)) {
-                ActionBar(
-                    onDiscard = { onDiscard() },
-                    onPrimary = {
-                      val addr = locationUi.selectedLocation ?: Location()
-                      scope.launch {
-                        try {
-                          val shopId = onCreate(shopName, email, addr, week, stock)
-                          onCreated(shopId)
-                        } catch (e: IllegalArgumentException) {
-                          snackbarHost.showSnackbar(e.message ?: Strings.ERROR_VALIDATION)
-                        } catch (_: Exception) {
-                          snackbarHost.showSnackbar(Strings.ERROR_CREATE)
+
+              val isValid by
+                  remember(
+                      state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
+                        derivedStateOf {
+                          state.shopName.isNotBlank() &&
+                              isValidEmail(state.email) &&
+                              locationUi.selectedLocation != null &&
+                              hasOpeningHours
                         }
                       }
+              if (!(shouldHide && isInputFocused)) {
+                ActionBar(
+                    onDiscard = { state.onDiscard(onBack) },
+                    onPrimary = {
+                      viewModel.createShop(
+                          owner = owner,
+                          name = state.shopName,
+                          email = state.email,
+                          phone = state.phone,
+                          website = state.website,
+                          address = locationUi.selectedLocation ?: Location(),
+                          openingHours = state.week,
+                          gameCollection = state.stock,
+                          photoCollectionUrl = state.photoCollectionUrl)
+                      onBack()
                     },
                     enabled = isValid)
               }
-            },
-            modifier = Modifier.testTag(CreateShopScreenTestTags.SCAFFOLD)) { padding ->
-              LazyColumn(
-                  modifier = Modifier.padding(padding).testTag(CreateShopScreenTestTags.LIST),
-                  contentPadding =
-                      PaddingValues(
-                          horizontal = AddShopUi.Dimensions.contentHPadding,
-                          vertical = AddShopUi.Dimensions.contentVPadding)) {
-                    item {
-                      ImageCarousel(
-                          photoCollectionUrl = photoCollectionUrl,
-                          maxNumberOfImages = maxNumberOfImages,
-                          onAdd = { path, index ->
-                            photoCollectionUrl =
-                                if (index < photoCollectionUrl.size &&
-                                    photoCollectionUrl[index].isNotEmpty()) {
-                                  photoCollectionUrl.mapIndexed { i, old ->
-                                    if (i == index) path else old
-                                  }
-                                } else {
-                                  photoCollectionUrl + path
-                                }
-                          },
-                          onRemove = { url ->
-                            photoCollectionUrl = photoCollectionUrl.filter { it != url }
-                          },
-                          editable = true)
-                    }
-                    item {
-                      CollapsibleSection(
-                          title = Strings.REQUIREMENTS_SECTION,
-                          initiallyExpanded = true,
-                          content = {
-                            RequiredInfoSection(
-                                shop = null,
-                                shopName = shopName,
-                                onShopName = { shopName = it },
-                                email = email,
-                                onEmail = { email = it },
-                                phone = phone,
-                                onPhone = { phone = it },
-                                link = link,
-                                onLink = { link = it },
-                                onPickLocation = { loc -> addressText = loc.name },
-                                viewModel = viewModel,
-                                owner = owner)
-                          },
-                          testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
-                    }
-
-                    item {
-                      CollapsibleSection(
-                          title = Strings.SECTION_AVAILABILITY,
-                          initiallyExpanded = false,
-                          content = {
-                            AvailabilitySection(
-                                week = week,
-                                onEdit = { day ->
-                                  editingDay = day
-                                  showHoursDialog = true
-                                })
-                          },
-                          testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
-                    }
-
-                    item {
-                      CollapsibleSection(
-                          title = Strings.SECTION_GAMES,
-                          initiallyExpanded = false,
-                          header = {
-                            TextButton(
-                                onClick = {
-                                  onSetGameQuery("")
-                                  showGameDialog = true
-                                },
-                                modifier =
-                                    Modifier.testTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)) {
-                                  Icon(Icons.Filled.Add, contentDescription = null)
-                                  Spacer(Modifier.width(AddShopUi.Dimensions.betweenControls))
-                                  Text(
-                                      Strings.BTN_ADD_GAME,
-                                      modifier =
-                                          Modifier.testTag(
-                                              CreateShopScreenTestTags.GAMES_ADD_LABEL))
-                                }
-                          },
-                          content = {
-                            GamesSection(
-                                stock = stock,
-                                onQuantityChange = { game, newQuantity ->
-                                  stock =
-                                      stock.map { (g, qty) ->
-                                        if (g.uid == game.uid) g to newQuantity else g to qty
-                                      }
-                                },
-                                onDelete = { gameToRemove ->
-                                  stock = stock.filterNot { it.first.uid == gameToRemove.uid }
-                                })
-                          },
-                          testTag = CreateShopScreenTestTags.SECTION_GAMES)
-                    }
-
-                    item {
-                      Spacer(
-                          Modifier.height(AddShopUi.Dimensions.bottomSpacer)
-                              .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
-                    }
-                  }
-            }
+            })
       }
 
   OpeningHoursEditor(
-      show = showHoursDialog,
-      day = editingDay,
-      week = week,
-      onWeekChange = { week = it },
-      onDismiss = { showHoursDialog = false })
+      show = state.showHoursDialog,
+      day = state.editingDay,
+      week = state.week,
+      onWeekChange = { state.week = it },
+      onDismiss = { state.showHoursDialog = false })
 
   GameStockPicker(
-      owner = owner,
-      shop = null,
-      viewModel = viewModel,
-      gameUIState = gameUi,
-      show = showGameDialog,
-      stock = stock,
-      onStockChange = { stock = it },
-      qty = qty,
-      onQtyChange = { qty = it },
-      onSetGameQuery = onSetGameQuery,
-      onSetGame = onSetGame,
-      onDismiss = { showGameDialog = false })
+      owner = owner, shop = null, viewModel = viewModel, gameUIState = gameUi, state = state)
+}
+
+/** Reusable content for Create and Edit shop screens. */
+@Composable
+fun ShopFormContent(
+    state: CreateShopFormState,
+    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel,
+    owner: Account,
+    online: Boolean,
+    locationUi: LocationUIState,
+    topBar: @Composable () -> Unit,
+    bottomBar: @Composable () -> Unit,
+    scaffoldTestTag: String = CreateShopScreenTestTags.SCAFFOLD,
+    listTestTag: String = CreateShopScreenTestTags.LIST
+) {
+  Scaffold(topBar = topBar, bottomBar = bottomBar, modifier = Modifier.testTag(scaffoldTestTag)) {
+      padding ->
+    LazyColumn(
+        modifier = Modifier.padding(padding).testTag(listTestTag),
+        contentPadding =
+            PaddingValues(
+                horizontal = AddShopUi.Dimensions.contentHPadding,
+                vertical = AddShopUi.Dimensions.contentVPadding)) {
+          item {
+            if (online) {
+              EditableImageCarousel(
+                  photoCollectionUrl = state.photoCollectionUrl,
+                  spacesCount = IMAGE_COUNT,
+                  setPhotoCollectionUrl = { state.photoCollectionUrl = it })
+            } else
+                ImageCarousel(
+                    photoCollectionUrl = state.photoCollectionUrl,
+                    maxNumberOfImages = IMAGE_COUNT,
+                    editable = false)
+          }
+          item {
+            ShopInfoSection(
+                state = state,
+                viewModel = viewModel,
+                owner = owner,
+                online = online,
+                locationUi = locationUi)
+          }
+          item { ShopAvailabilitySection(state) }
+          item { ShopGamesSection(state, online, viewModel) }
+          item {
+            Spacer(
+                Modifier.height(AddShopUi.Dimensions.bottomSpacer)
+                    .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
+          }
+        }
+  }
+}
+
+/**
+ * Section that renders basic shop info input fields.
+ *
+ * This composable builds a temporary draft Shop object from the current form state and delegates
+ * rendering to the shared RequiredInfoSection component.
+ *
+ * @param state Form state containing name, contact info, opening hours and stock.
+ * @param viewModel ViewModel used for search/autocomplete and other actions.
+ * @param online Whether the device is online (affects some field behavior).
+ * @param owner Account that will own the shop being created/edited.
+ * @param locationUi Current location UI state used to provide the selected address.
+ */
+@Composable
+internal fun ShopInfoSection(
+    state: CreateShopFormState,
+    viewModel: ShopSearchViewModel,
+    online: Boolean,
+    owner: Account,
+    locationUi: LocationUIState
+) {
+  // This is a purely UI-level draft, not persisted and only used to feed the form component.
+  val draftShop =
+      Shop(
+          id = "",
+          owner = owner,
+          name = state.shopName,
+          phone = state.phone,
+          email = state.email,
+          website = state.website,
+          address = locationUi.selectedLocation ?: Location(),
+          openingHours = state.week,
+          gameCollection = state.stock,
+          photoCollectionUrl = state.photoCollectionUrl)
+
+  CollapsibleSection(
+      title = AddShopUi.Strings.REQUIREMENTS_SECTION,
+      initiallyExpanded = true,
+      content = {
+        RequiredInfoSection(
+            shop = draftShop,
+            actions = state,
+            viewModel = viewModel,
+            online = online,
+            owner = owner)
+      },
+      testTag = CreateShopScreenTestTags.SECTION_REQUIRED)
+}
+
+/**
+ * Section that exposes the shop availability editor.
+ *
+ * Wraps the shared AvailabilitySection composable and routes edit actions to the form state so the
+ * opening hours dialog can be shown and the selected day edited.
+ *
+ * @param state Form state that holds the `week` (opening hours) and dialog flags.
+ */
+@Composable
+internal fun ShopAvailabilitySection(state: CreateShopFormState) {
+  CollapsibleSection(
+      title = AddShopUi.Strings.SECTION_AVAILABILITY,
+      initiallyExpanded = false,
+      content = {
+        AvailabilitySection(
+            week = state.week,
+            onEdit = { day ->
+              state.editingDay = day
+              state.showHoursDialog = true
+            })
+      },
+      testTag = CreateShopScreenTestTags.SECTION_AVAILABILITY)
+}
+
+/**
+ * Section that renders the shop's games list and related actions.
+ *
+ * Shows a "Add game" button and an offline message when appropriate, and hosts the
+ * GameImageListSection which lists current stock with edit/delete handlers.
+ *
+ * @param state Form state holding the current `stock` of games and dialog flags.
+ * @param online Whether the device is online; controls add/edit availability.
+ * @param viewModel ViewModel used to set the selected game for editing/search.
+ */
+@Composable
+internal fun ShopGamesSection(
+    state: CreateShopFormState,
+    online: Boolean,
+    viewModel: ShopSearchViewModel
+) {
+  CollapsibleSection(
+      title = AddShopUi.Strings.SECTION_GAMES,
+      initiallyExpanded = state.stock.isEmpty(),
+      content = {
+        if (online) {
+          if (state.stock.isEmpty()) {
+            Text(
+                text = AddShopUi.Strings.EMPTY_GAMES,
+                modifier =
+                    Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT)
+                        .padding(bottom = Dimensions.Padding.small))
+          }
+          AddButton(
+              onClick = {
+                state.onSetGameQuery("")
+                state.showGameDialog = true
+              },
+              buttonText = AddShopUi.Strings.BTN_ADD_GAME,
+              buttonTestTag = CreateShopScreenTestTags.GAMES_ADD_BUTTON,
+              labelTestTag = CreateShopScreenTestTags.GAMES_ADD_LABEL)
+        } else {
+          Text(
+              AddShopUi.Strings.OFFLINE_GAMES_MSG,
+              modifier = Modifier.testTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG))
+        }
+
+        GameImageListSection(
+            games = state.stock,
+            clickableGames = true,
+            editable = true,
+            online = online,
+            title = "",
+            onDelete = { state.removeFromStock(it) },
+            onEdit = { game ->
+              viewModel.setGame(game)
+              state.editingGame = game
+              state.qty = state.stock.find { it.first.uid == game.uid }?.second ?: 1
+              state.showGameDialog = true
+            })
+      },
+      testTag = CreateShopScreenTestTags.SECTION_GAMES)
 }
 
 /* ================================================================================================
- * Sections
+ * State Holder
  * ================================================================================================ */
 
 /**
- * Composable function representing the games section of the Add Shop screen.
+ * Creates and remembers the form state used by the Create/Edit shop screens.
  *
- * @param stock List of pairs containing games and their quantities in stock.
- * @param onQuantityChange Callback function to handle updating quantity of a game in the stock
- *   list.
- * @param onDelete Callback function to handle deletion of a game from the stock list.
+ * This helper wraps `CreateShopFormState` construction in `remember` so the state instance survives
+ * recompositions. Provides callbacks used by nested components.
+ *
+ * @param initialStock Initial selection of games and quantities.
+ * @param initialShop Optional initial shop to edit; null for create flows.
+ * @param onSetGameQuery Callback invoked when the user types a game search query.
+ * @param onSetGame Callback invoked when a game is selected to be added to the form.
+ * @return A remembered [CreateShopFormState] instance.
  */
 @Composable
-private fun GamesSection(
-    stock: List<Pair<Game, Int>>,
-    onQuantityChange: (Game, Int) -> Unit,
-    onDelete: (Game) -> Unit
-) {
-  if (stock.isNotEmpty()) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium),
-        contentPadding = PaddingValues(bottom = Dimensions.Padding.extraLarge),
-        modifier = Modifier.heightIn(max = Dimensions.ContainerSize.maxListHeight)) {
-          items(items = stock, key = { it.first.uid }) { (game, count) ->
-            EditableGameItem(
-                game = game,
-                count = count,
-                onQuantityChange = onQuantityChange,
-                onDelete = onDelete)
-          }
-        }
-  } else {
-    Text(
-        Strings.EMPTY_GAMES,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(CreateShopScreenTestTags.GAMES_EMPTY_TEXT))
+fun rememberCreateShopFormState(
+    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialShop: Shop? = null,
+    onSetGameQuery: (String) -> Unit,
+    onSetGame: (Game) -> Unit
+): CreateShopFormState {
+  return remember {
+    CreateShopFormState(
+        initialStock = initialStock,
+        initialWeek = emptyWeek(),
+        initialShop = initialShop,
+        onSetGameQueryCallback = onSetGameQuery,
+        onSetGameCallback = onSetGame)
   }
 }

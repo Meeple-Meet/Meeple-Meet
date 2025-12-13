@@ -103,6 +103,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
               baseDiscussion.uid,
               "Epic Game Night",
               testGame1.uid,
+              testGame1.name,
               testTimestamp,
               testLocation,
               testAccount.uid)
@@ -555,6 +556,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
             discussion.uid,
             "Specific Session",
             testGame1.uid,
+            testGame1.name,
             specificDate,
             testLocation,
             testAccount.uid)
@@ -603,6 +605,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
             discussion2.uid,
             "Train Game Night",
             testGame2.uid,
+            testGame2.name,
             testTimestamp,
             testLocation,
             testAccount.uid)
@@ -703,7 +706,13 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
       val disc = discussionRepository.createDiscussion("Session $i", "Test", testAccount.uid)
       sessions.add(
           sessionRepository.createSession(
-              disc.uid, "Game $i", testGame1.uid, testTimestamp, testLocation, testAccount.uid))
+              disc.uid,
+              "Game $i",
+              testGame1.uid,
+              testGame1.name,
+              testTimestamp,
+              testLocation,
+              testAccount.uid))
     }
 
     // Create mixed list of all pins

@@ -54,19 +54,22 @@ class SessionViewModel(
    * @param date Optional new scheduled date and time
    * @param location Optional new location
    * @throws PermissionDeniedException if requester is not a discussion admin
+   * @throws IllegalArgumentException if if only one of {@code gameId} or {@code gameName} is
+   *   provided
    */
   fun updateSession(
       requester: Account,
       discussion: Discussion,
       name: String? = null,
       gameId: String? = null,
+      gameName: String? = null,
       date: Timestamp? = null,
       location: Location? = null
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
 
     viewModelScope.launch {
-      sessionRepository.updateSession(discussion.uid, name, gameId, date, location, null)
+      sessionRepository.updateSession(discussion.uid, name, gameId, gameName, date, location, null)
     }
   }
 
@@ -97,7 +100,8 @@ class SessionViewModel(
           (user.notificationSettings == NotificationSettings.FRIENDS_ONLY &&
               changeRequester.relationships[user.uid] == RelationshipStatus.FRIEND)) {
         val updatedParticipants = (currentParticipants + user.uid).toSet().toList()
-        sessionRepository.updateSession(discussion.uid, null, null, null, null, updatedParticipants)
+        sessionRepository.updateSession(
+            discussion.uid, null, null, null, null, null, updatedParticipants)
       } else {
         accountRepository.sendJoinSessionNotification(changeRequester.uid, user.uid, discussion)
       }
@@ -132,7 +136,8 @@ class SessionViewModel(
         // No admin in the new participant list, delete the session instead
         sessionRepository.deleteSession(discussion.uid)
       } else {
-        sessionRepository.updateSession(discussion.uid, null, null, null, null, updatedParticipants)
+        sessionRepository.updateSession(
+            discussion.uid, null, null, null, null, null, updatedParticipants)
       }
     }
   }

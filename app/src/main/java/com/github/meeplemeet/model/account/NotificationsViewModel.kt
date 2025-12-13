@@ -5,11 +5,11 @@ package com.github.meeplemeet.model.account
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.AccountNotFoundException
+import com.github.meeplemeet.model.DiscussionNotFoundException
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
-import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.ui.account.NotificationPopupData
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,7 +30,6 @@ class NotificationsViewModel(
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
-    private val gameRepository: GameRepository = RepositoryProvider.games
 ) : CreateAccountViewModel(handlesRepository) {
 
   /**
@@ -49,7 +48,7 @@ class NotificationsViewModel(
       val disc =
           try {
             discussionRepository.getDiscussion(discussionId)
-          } catch (e: com.github.meeplemeet.model.DiscussionNotFoundException) {
+          } catch (_: DiscussionNotFoundException) {
             onDeleted()
             return@launch
           } catch (_: Exception) {
@@ -73,7 +72,7 @@ class NotificationsViewModel(
       val acc =
           try {
             accountRepository.getAccount(id, false)
-          } catch (e: com.github.meeplemeet.model.AccountNotFoundException) {
+          } catch (_: AccountNotFoundException) {
             onDeleted()
             return@launch
           } catch (_: Exception) {
@@ -83,19 +82,6 @@ class NotificationsViewModel(
       if (acc != null) {
         onResult(acc)
       }
-    }
-  }
-
-  /**
-   * Used to fetch a game for its data
-   *
-   * @param gameId Game id to fetch data from
-   * @param onResult callback for access to fetched game
-   */
-  fun getGame(gameId: String, onResult: (Game) -> Unit) {
-    viewModelScope.launch {
-      val game = gameRepository.getGameById(gameId)
-      onResult(game)
     }
   }
 
@@ -235,24 +221,21 @@ class NotificationsViewModel(
               loadDiscussionImage(disc.uid, context) { bytes ->
                 val session = disc.session
                 if (session != null) {
+                  val dateTime =
+                      session.date
+                          .toDate()
+                          .toInstant()
+                          .atZone(ZoneId.systemDefault())
+                          .toLocalDateTime()
 
-                  getGame(session.gameId) { game ->
-                    val dateTime =
-                        session.date
-                            .toDate()
-                            .toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDateTime()
-
-                    onReady(
-                        NotificationPopupData.Session(
-                            title = session.name,
-                            participants = session.participants.size,
-                            dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
-                            description =
-                                "Play ${game.name} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
-                            icon = bytes))
-                  }
+                  onReady(
+                      NotificationPopupData.Session(
+                          title = session.name,
+                          participants = session.participants.size,
+                          dateLabel = dateTime.format(DateTimeFormatter.ofPattern("MMM d")),
+                          description =
+                              "Play ${session.gameName} at ${dateTime.format(DateTimeFormatter.ofPattern("h:mm a"))} at ${session.location.name}.",
+                          icon = bytes))
                 } else {
                   // If session is null but discussion exists, we might want to delete notification
                   // or handle it differently.

@@ -40,11 +40,12 @@ class SessionRepository(
       discussionId: String,
       name: String,
       gameId: String,
+      gameName: String,
       date: Timestamp,
       location: Location,
       vararg participants: String
   ): Discussion {
-    val session = Session(name, gameId, date, location, participants.toList())
+    val session = Session(name, gameId, gameName, date, location, participants.toList())
     discussions.document(discussionId).update(DiscussionNoUid::session.name, session).await()
 
     geoPinsRepo.upsertGeoPin(ref = discussionId, type = PinType.SESSION, location = location)
@@ -56,21 +57,28 @@ class SessionRepository(
    * Updates one or more fields of a session. Only provided (non-null) fields are updated.
    *
    * @return The updated discussion with modified session
-   * @throws IllegalArgumentException if no fields are provided for update
+   * @throws IllegalArgumentException if no fields are provided for update, or if only one of {@code
+   *   gameId} or {@code gameName} is provided.
    */
   suspend fun updateSession(
       discussionId: String,
       name: String? = null,
       gameId: String? = null,
+      gameName: String? = null,
       date: Timestamp? = null,
       location: Location? = null,
       newParticipantList: List<String>? = null,
       photoUrl: String? = null
   ): Discussion {
+    require((gameId == null) == (gameName == null)) {
+      "gameId and gameName must be provided together"
+    }
+
     val updates = mutableMapOf<String, Any>()
 
     name?.let { updates["${DiscussionNoUid::session.name}.${Session::name.name}"] = it }
     gameId?.let { updates["${DiscussionNoUid::session.name}.${Session::gameId.name}"] = it }
+    gameName?.let { updates["${DiscussionNoUid::session.name}.${Session::gameName.name}"] = it }
     date?.let { updates["${DiscussionNoUid::session.name}.${Session::date.name}"] = it }
     location?.let { updates["${DiscussionNoUid::session.name}.${Session::location.name}"] = it }
     newParticipantList?.let {

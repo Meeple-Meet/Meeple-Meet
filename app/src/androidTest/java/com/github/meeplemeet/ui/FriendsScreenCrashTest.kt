@@ -10,9 +10,11 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.FriendsScreen
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.FirestoreTests
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -24,6 +26,7 @@ class FriendsScreenCrashTest : FirestoreTests() {
 
   private lateinit var viewModel: FriendsScreenViewModel
   private lateinit var navViewModel: MainActivityViewModel
+  private lateinit var mockNavigation: NavigationActions
   private lateinit var currentUser: Account
 
   @Before
@@ -55,6 +58,7 @@ class FriendsScreenCrashTest : FirestoreTests() {
       accountRepository.deleteAccount(friendToDelete.uid)
 
       currentUser = accountRepository.getAccount(currentUser.uid)
+      mockNavigation = mockk(relaxed = true)
     }
   }
 
@@ -67,6 +71,8 @@ class FriendsScreenCrashTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             unreadCount = currentUser.notifications.count { it -> !it.read },
+            verified = true,
+            navigationActions = mockNavigation,
             onBack = {},
         )
       }

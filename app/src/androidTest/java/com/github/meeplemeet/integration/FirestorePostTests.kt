@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.posts.PostOverviewViewModel
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.github.meeplemeet.utils.noretry
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
@@ -65,6 +66,7 @@ class FirestorePostTests : FirestoreTests() {
     runBlocking { postRepository.getPost(post.id) }
   }
 
+  @noretry
   @Test
   fun smoke_comments() = runTest {
     checkpoint("Add top-level comment") {
@@ -236,6 +238,7 @@ class FirestorePostTests : FirestoreTests() {
   }
 
   @Test(expected = PermissionDeniedException::class)
+  @noretry
   fun testRemoveCommentAsNonAuthor() = runTest {
     val postVM = PostViewModel()
     val post = postRepository.createPost("Post", "Content", testAccount1.uid)

@@ -139,8 +139,6 @@ open class FirestoreTests {
 
   @Before
   fun testsSetup() {
-    RepositoryProvider.games = FirestoreGameRepository()
-
     InstrumentationRegistry.getInstrumentation().runOnMainSync {
       UiBehaviorConfig.hideBottomBarWhenInputFocused = false
       UiBehaviorConfig.clearFocusOnKeyboardHide = false

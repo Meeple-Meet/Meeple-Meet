@@ -23,10 +23,12 @@ import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
+import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
+import io.mockk.mockk
 import java.util.Date
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
@@ -41,6 +43,7 @@ class NotificationsTabTest : FirestoreTests() {
 
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block)
 
+  private lateinit var mockNavigation: NavigationActions
   private lateinit var viewModel: NotificationsViewModel
   private lateinit var navViewModel: MainActivityViewModel
   private lateinit var currentUser: Account
@@ -86,8 +89,7 @@ class NotificationsTabTest : FirestoreTests() {
             accountRepository = accountRepository,
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
-            discussionRepository = discussionRepository,
-            gameRepository = gameRepository)
+            discussionRepository = discussionRepository)
     navViewModel = MainActivityViewModel(accountRepository)
 
     runBlocking {
@@ -134,6 +136,7 @@ class NotificationsTabTest : FirestoreTests() {
                   sessionDiscussion.uid,
                   "Catan Session",
                   gameId,
+                  game.name,
                   Timestamp(Date(System.currentTimeMillis() + 86400000)),
                   location = Location(0.0, 0.0, "Game Store"),
                   participants = arrayOf(otherUser.uid))
@@ -206,6 +209,8 @@ class NotificationsTabTest : FirestoreTests() {
 
       // Update current user with notifications
       currentUser = currentUser.copy(notifications = notifications)
+
+      mockNavigation = mockk(relaxed = true)
     }
   }
 
@@ -217,6 +222,8 @@ class NotificationsTabTest : FirestoreTests() {
             account = currentUser,
             viewModel = viewModel,
             onBack = {},
+            verified  = true,
+            navigationActions = mockNavigation,
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }
@@ -391,7 +398,9 @@ class NotificationsTabTest : FirestoreTests() {
         NotificationsTab(
             account = emptyAccount,
             viewModel = viewModel,
-            onBack = {},
+           verified = true,
+              navigationActions = mockNavigation,
+              onBack = {},
             unreadCount = currentUser.notifications.count { it -> !it.read },
         )
       }

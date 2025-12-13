@@ -87,6 +87,7 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
               account = currentAccountState.value,
               onFABCLick = {},
               onRedirect = {},
+              verified = true,
               cameraPositionState = cameraState,
               unreadCount = regularAccount.notifications.count { it -> !it.read },
               forceNoPermission = true)

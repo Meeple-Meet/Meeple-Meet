@@ -11,7 +11,8 @@ import kotlinx.serialization.Serializable
  * complete game information.
  *
  * @property name The name or title of the session
- * @property gameId The if of the complete game object associated with this session
+ * @property gameId The id of the complete game object associated with this session
+ * @property gameName The name of the game as a shortcut for easy load
  * @property date The scheduled date and time of the session
  * @property location The physical or virtual location where the session will take place
  * @property participants List of participant IDs (typically user IDs) who are part of this session
@@ -21,6 +22,7 @@ import kotlinx.serialization.Serializable
 data class Session(
     val name: String = "",
     val gameId: String = "",
+    val gameName: String = "",
     val date: Timestamp = Timestamp.now(),
     val location: Location = Location(),
     val participants: List<String> = emptyList(),

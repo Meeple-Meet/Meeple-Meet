@@ -96,6 +96,7 @@ class A_FeedsOverviewScreenTest : FirestoreTests() {
             viewModel = postVm,
             navigation = nav,
             account = me,
+            verified = true,
             onClickAddPost = { fabClicked = true },
             unreadCount = me.notifications.count { it -> !it.read },
             onSelectPost = { clickedPost = it })

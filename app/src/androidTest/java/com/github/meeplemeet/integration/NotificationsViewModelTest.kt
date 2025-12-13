@@ -25,8 +25,7 @@ class NotificationsViewModelTest : FirestoreTests() {
             accountRepository = accountRepository,
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
-            discussionRepository = discussionRepository,
-            gameRepository = gameRepository)
+            discussionRepository = discussionRepository)
 
     // Sign in anonymously for Firebase access
     auth.signInAnonymously().await()
