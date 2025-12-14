@@ -243,6 +243,8 @@ object MainTabUi {
   val AVATAR_SIZE = 130.dp
   val OFFSET_X = 4.dp
   val OFFSET_Y = (-4).dp
+  val OFFSET_EMAIL = 35.dp
+  val PADDING_BOTTOM_SCROLL = 100.dp
   const val MAX_NOTIF_COUNT = 9
 
   object Misc {
@@ -287,8 +289,6 @@ object MainTabUi {
 
     const val TOAST_MSG = "Sent"
     const val SEND_ICON_DESC = "Resend Verification Email"
-    const val VERIFIED_MSG = "Account Verified"
-    const val UNVERIFIED_MSG = "Account not Verified"
     const val EMAIL_INVALID_MSG = "Invalid Email Format"
     const val ROLES_TITLE = "Your Roles"
     const val SELL_ITEMS_LABEL = "Sell Items"
@@ -345,8 +345,6 @@ object MainTabUi {
   }
 }
 
-const val VERIFICATION_OFFSET = 35
-
 sealed class ProfilePage {
   data object Main : ProfilePage()
 
@@ -387,6 +385,7 @@ fun MainTab(
   val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   val businesses by viewModel.businesses.collectAsState()
+  val uiState by viewModel.uiState.collectAsState()
 
   val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -453,13 +452,10 @@ fun MainTab(
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
-          val uiState by viewModel.uiState.collectAsState()
-
           // Get email from Firebase Auth instead of Firestore account
           // Refresh whenever this page is composed or uiState changes
           val currentUser = FirebaseProvider.auth.currentUser
           val email = currentUser?.email ?: account.email
-          val isVerified = uiState.isEmailVerified
 
           // Refresh email and verification status when entering this section
           LaunchedEffect(currentPage) {
@@ -696,7 +692,9 @@ fun MainTabContent(
 
                 Box(
                     modifier =
-                        Modifier.align(Alignment.BottomCenter).offset(y = VERIFICATION_OFFSET.dp).zIndex(1f)) {
+                        Modifier.align(Alignment.BottomCenter)
+                            .offset(y = MainTabUi.OFFSET_EMAIL)
+                            .zIndex(1f)) {
                       ToastHost(toast = toast, onToastFinished = { toast = null })
                     }
               }
@@ -780,6 +778,10 @@ fun MainTabContent(
                     onDelete()
                   })
             }
+
+        if (!uiState.isEmailVerified) {
+          Spacer(modifier = Modifier.height(MainTabUi.PADDING_BOTTOM_SCROLL))
+        }
       }
 }
 
