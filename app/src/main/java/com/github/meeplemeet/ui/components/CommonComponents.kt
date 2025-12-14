@@ -68,12 +68,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -732,15 +729,7 @@ fun UserProfilePopup(
                         Button(
                             onClick = {
                               actions.onBlock(curr, target)
-                              snackbarMessage =
-                                  buildAnnotatedString {
-                                        append("Blocked ")
-                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                          append(target.name)
-                                        }
-                                        append(" successfully.")
-                                      }
-                                      .toString()
+                              snackbarMessage = "Blocked ${target.name} successfully."
                             },
                             modifier =
                                 Modifier.weight(0.7f)
@@ -774,26 +763,11 @@ fun UserProfilePopup(
                               onClick = {
                                 if (!isRequestSent) {
                                   actions.onSendFriendRequest(curr, target)
-                                  snackbarMessage =
-                                      buildAnnotatedString {
-                                            append("Friend request sent to")
-                                            withStyle(
-                                                style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                                  append(target.name)
-                                                }
-                                          }
-                                          .toString()
+                                  snackbarMessage = "Friend request sent to ${target.name}."
                                 } else {
                                   actions.onCancel(curr, target)
                                   snackbarMessage =
-                                      buildAnnotatedString {
-                                            append("Successfully canceled friend request to ")
-                                            withStyle(
-                                                style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                                  append(target.name)
-                                                }
-                                          }
-                                          .toString()
+                                      "Successfully canceled friend request to ${target.name}."
                                 }
                               },
                               modifier =
@@ -836,15 +810,7 @@ fun UserProfilePopup(
                           Button(
                               onClick = {
                                 actions.onRemoveFriend(curr, target)
-                                snackbarMessage =
-                                    buildAnnotatedString {
-                                          withStyle(
-                                              style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                                append(target.name)
-                                              }
-                                          append(" removed from friends")
-                                        }
-                                        .toString()
+                                snackbarMessage = "${target.name} removed from friends."
                               },
                               modifier =
                                   Modifier.weight(1f)
