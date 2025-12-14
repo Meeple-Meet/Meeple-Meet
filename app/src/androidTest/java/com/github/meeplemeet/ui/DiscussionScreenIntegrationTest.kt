@@ -821,6 +821,21 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           account.relationships[otherUser.uid] == RelationshipStatus.SENT
         }
 
+        // Manually update the LOCAL state to reflect the change, triggering recomposition
+        val sentRelationships = currentUser.relationships.toMutableMap()
+        sentRelationships[otherUser.uid] = RelationshipStatus.SENT
+        currentUserState.value = currentUser.copy(relationships = sentRelationships)
+        composeTestRule.waitForIdle()
+
+        // Assert button changes after sending request
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Request Sent").assertExists()
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertIsNotEnabled()
+
         // 2. Click Block
         composeTestRule
             .onNodeWithTag(
@@ -844,22 +859,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         val friendUser = currentUser.copy(relationships = friendRelationships)
 
         // Update repository
-        runBlocking {
-          // We need to unblock first if blocked? Using repository helper might be cleaner but
-          // manual set is requested.
-          // Just updating the repo directly
-          // Reset relationship first to clear block
-          accountRepository.resetRelationship(currentUser.uid, otherUser.uid)
-          // Then friend (cannot directly force friend via repo easily without acceptance flow,
-          // but we can mock/force update the document if the VM reads it,
-          // OR mostly importantly update the UI state)
-
-          // Actually, since we control the UI state via currentUserState, we can just update that
-          // for the UI check.
-          // But the ViewModel actions use 'curr' from the lambda parameters which comes from
-          // DiscussionScreen state.
-          // So updating currentUserState should propagate.
-        }
+        runBlocking { accountRepository.resetRelationship(currentUser.uid, otherUser.uid) }
 
         // Force update UI state to show FRIEND status
         currentUserState.value = friendUser

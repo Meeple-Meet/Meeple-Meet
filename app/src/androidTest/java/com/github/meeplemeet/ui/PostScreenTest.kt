@@ -4,6 +4,7 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -274,9 +275,17 @@ class PostScreenTest : FirestoreTests() {
 
     checkpoint("normal_user_shows_real_content") {
       // Should show actual username and comment for non-blocked user
+      compose.waitUntil(5_000) {
+        compose
+            .onAllNodesWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
       compose
           .onNodeWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
           .assertTextEquals(alex.name)
+
       compose.onNodeWithText("This should be visible").assertExists()
     }
   }
@@ -284,7 +293,7 @@ class PostScreenTest : FirestoreTests() {
   @Test
   fun verify_user_profile_popup_integration() = runBlocking {
     // Setup: Marco viewing Alex's post
-    val currentUser = marco
+    val currentUserState = mutableStateOf(marco)
     val author = alex
     // Create the post in Firestore so the ViewModel can find it
     val post =
@@ -294,7 +303,7 @@ class PostScreenTest : FirestoreTests() {
     compose.setContent {
       AppTheme {
         PostScreen(
-            account = currentUser,
+            account = currentUserState.value,
             postId = post.id,
             viewModel = postVM,
             online = true,
@@ -384,11 +393,25 @@ class PostScreenTest : FirestoreTests() {
       // Verify Snackbar
       compose.onNodeWithText("Friend request sent to ${author.name}.").assertExists()
 
-      // Verify Backend State
+      // Verify relationship status updates to SENT
       compose.waitUntil(5_000) {
-        val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+        val account = runBlocking { accountRepository.getAccount(currentUserState.value.uid) }
         account.relationships[author.uid] == RelationshipStatus.SENT
       }
+
+      // Assert button changes to "Request Sent" (blue and disabled)
+      // Manually update the LOCAL state to reflect the change, triggering recomposition
+      val sentRelationships = currentUserState.value.relationships.toMutableMap()
+      sentRelationships[author.uid] = RelationshipStatus.SENT
+      currentUserState.value = currentUserState.value.copy(relationships = sentRelationships)
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Request Sent").assertExists()
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .assertIsNotEnabled()
 
       // 2. Block User
       compose
@@ -401,7 +424,7 @@ class PostScreenTest : FirestoreTests() {
 
       // Verify Backend State
       compose.waitUntil(5_000) {
-        val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+        val account = runBlocking { accountRepository.getAccount(currentUserState.value.uid) }
         account.relationships[author.uid] == RelationshipStatus.BLOCKED
       }
     }
