@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -40,9 +41,9 @@ object DiscussionCommons {
 fun ProfilePicture(
     profilePictureUrl: String?,
     size: Dp,
-    backgroundColor: androidx.compose.ui.graphics.Color = AppColors.neutral,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    backgroundColor: Color = AppColors.neutral,
+    onClick: () -> Unit,
     testTag: String = ""
 ) {
   Box(

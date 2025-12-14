@@ -617,6 +617,7 @@ private fun PostContent(
     post: Post,
     currentUser: Account,
     verified: Boolean,
+    modifier: Modifier = Modifier,
     onDeletePost: () -> Unit,
     onEditPostBody: () -> Unit,
     onEditPostTitle: () -> Unit,
@@ -624,8 +625,7 @@ private fun PostContent(
     onDeleteComment: (Comment) -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     resolveUser: ResolveUser,
-    onProfileClick: (Account) -> Unit = {},
-    modifier: Modifier = Modifier
+    onProfileClick: (Account) -> Unit = {}
 ) {
   val listState = rememberLazyListState()
   val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
