@@ -115,8 +115,8 @@ class PostScreenTest : FirestoreTests() {
             account = marco,
             postId = postIdState.value,
             verified = true,
-            postViewModel = postVM,
-            accountViewModel = postVM,
+            viewModel = postVM,
+            online = true,
             onBack = { backCount++ })
       }
     }
@@ -232,8 +232,8 @@ class PostScreenTest : FirestoreTests() {
         PostScreen(
             account = marcoWithBlockedDany,
             postId = postId,
-            postViewModel = postVM,
-            accountViewModel = postVM,
+            viewModel = postVM,
+            online = true,
             verified = true,
             onBack = {})
       }

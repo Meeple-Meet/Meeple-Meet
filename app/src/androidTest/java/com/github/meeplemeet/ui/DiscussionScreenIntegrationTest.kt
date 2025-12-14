@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.discussions.DiscussionScreen
 import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -123,6 +124,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             discussion = currentDiscussionState.value,
             verified = true,
             account = currentUser,
+            online = true,
             onBack = { backPressed = true })
       }
     }
@@ -704,6 +706,83 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         // And verify it no longer exists in the repository
         val repoMessages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
         assertTrue(repoMessages.none { it.poll?.question == pollQuestion })
+      }
+    }
+
+    checkpoint("User info popup") {
+      // Make sure we're viewing the test discussion with Bob's messages
+      currentDiscussionState.value = testDiscussion
+      composeTestRule.waitForIdle()
+
+      checkpoint("Click on profile picture") {
+        // Wait for profile pictures to appear
+        // Note: Only profile pictures from OTHER users have the MESSAGE_PROFILE_PICTURE tag
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.MESSAGE_PROFILE_PICTURE, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Click the first found filtered profile picture (which should be Bob's)
+        composeTestRule
+            .onAllNodesWithTag(DiscussionTestTags.MESSAGE_PROFILE_PICTURE, useUnmergedTree = true)[
+                0]
+            .performClick()
+        composeTestRule.waitForIdle()
+      }
+
+      checkpoint("Assert UserProfilePopup fields exist") {
+        // Wait for popup to appear and verify username tag exists
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(
+                  CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Assert username is displayed (using test tag only, not text to avoid duplicates)
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert handle is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert avatar is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert description is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION, useUnmergedTree = true)
+            .assertExists()
+      }
+
+      checkpoint("Assert UserProfilePopup buttons are clickable") {
+        // Assert block button exists and can be clicked
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
+
+        // Assert send friend request button exists and can be clicked
+        // (since otherUser is not currently a friend)
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
       }
     }
 
