@@ -13,3 +13,4 @@ if (!admin.apps.length) {
 
 // Export notification functions
 export { onMessageCreated } from "./messageNotifications";
+export { onAccountNotificationCreated } from "./accountNotifications";

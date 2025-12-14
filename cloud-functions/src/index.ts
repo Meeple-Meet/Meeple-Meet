@@ -16,4 +16,7 @@ export {
 } from "./bgg/index";
 
 // Export notification functions
-export { onMessageCreated } from "./notifications/index";
+export {
+  onMessageCreated,
+  onAccountNotificationCreated,
+} from "./notifications/index";
