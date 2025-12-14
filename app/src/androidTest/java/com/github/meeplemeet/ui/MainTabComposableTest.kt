@@ -15,6 +15,7 @@ import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.ui.account.DeleteAccSectionTestTags
+import com.github.meeplemeet.ui.account.EmailVerificationTestTags
 import com.github.meeplemeet.ui.account.MainTab
 import com.github.meeplemeet.ui.account.MainTabTestTags
 import com.github.meeplemeet.ui.account.NotificationsSectionTestTags
@@ -185,8 +186,6 @@ class MainTabComposableTest : FirestoreTests() {
   // =======================
   // EMAIL SECTION
   // =======================
-  private fun ComposeTestRule.emailNotVerifiedLabel() =
-      onTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL)
 
   private fun ComposeTestRule.emailErrorLabel() = onTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL)
 
@@ -477,90 +476,81 @@ class MainTabComposableTest : FirestoreTests() {
       compose.waitForIdle()
     }
 
-    // TODO: Re-enable these tests after fixing rendering issue
     // ---------------------------------------------------------------------
-    if (false)
-        checkpoint("navigate_to_businesses_and_verify") {
-          scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
-          compose.settingsRowBusinesses().assertExists()
-          compose.settingsRowBusinesses().performClick()
-          compose.waitForIdle()
+    checkpoint("navigate_to_businesses_and_verify") {
+      scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_BUSINESSES)
+      compose.settingsRowBusinesses().assertExists()
+      compose.settingsRowBusinesses().performClick()
+      compose.waitForIdle()
 
-          compose.rolesTitle().assertExists()
+      compose.rolesTitle().assertExists()
 
-          // Toggle on for the first time == no dialog
-          compose.roleSpaceCheckbox().assertExists().performClick()
-          compose.roleDialog().assertDoesNotExist()
+      // Toggle on for the first time == no dialog
+      compose.roleSpaceCheckbox().assertExists().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-          // Toggle Off == dialog
-          compose.roleSpaceCheckbox().assertExists().performClick()
-          compose.roleDialog().assertExists()
-          compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
+      // Toggle Off == dialog
+      compose.roleSpaceCheckbox().assertExists().performClick()
+      compose.roleDialog().assertExists()
+      compose.rolesDialogText().assertExists().assertTextContains("spaces", substring = true)
 
-          // Cancel
-          compose.roleDialogCancel().performClick()
-          compose.roleDialog().assertDoesNotExist()
+      // Cancel
+      compose.roleDialogCancel().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-          // Toggle OFF again → confirm
-          compose.roleSpaceCheckbox().performClick()
-          compose.roleDialog().assertExists()
+      // Toggle OFF again → confirm
+      compose.roleSpaceCheckbox().performClick()
+      compose.roleDialog().assertExists()
 
-          compose.roleDialogConfirm().performClick()
-          compose.roleDialog().assertDoesNotExist()
-          compose.waitForIdle()
+      compose.roleDialogConfirm().performClick()
+      compose.roleDialog().assertDoesNotExist()
+      compose.waitForIdle()
 
-          // Now add the shop owner role and leave the subscaffold. Check that UI is updated right
-          // with
-          // regards to these changes
-          compose.roleShopCheckbox().performClick()
-          compose.roleDialog().assertDoesNotExist()
+      // Now add the shop owner role and leave the subscaffold. Check that UI is updated right
+      // with
+      // regards to these changes
+      compose.roleShopCheckbox().performClick()
+      compose.roleDialog().assertDoesNotExist()
 
-          compose.subPageBackButton().performClick()
-          compose.waitForIdle()
-          compose.publicInfoRoot().assertExists()
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
+      compose.publicInfoRoot().assertExists()
 
-          compose.settingsRowBusinesses().performClick()
-          compose.waitForIdle()
-          compose.rolesTitle().assertExists().performClick()
-          compose.roleShopCheckbox().assertExists() // UI updated correctly
+      compose.settingsRowBusinesses().performClick()
+      compose.waitForIdle()
+      compose.rolesTitle().assertExists().performClick()
+      compose.roleShopCheckbox().assertExists() // UI updated correctly
 
-          compose.subPageBackButton().performClick()
-          compose.waitForIdle()
-        }
+      compose.subPageBackButton().performClick()
+      compose.waitForIdle()
+    }
 
     // ---------------------------------------------------------------------
-    if (false)
-        checkpoint("navigate_to_email_and_verify") {
-          scrollToTag(ProfileNavigationTestTags.SETTINGS_ROW_EMAIL)
-          compose.settingsRowEmail().assertExists().performClick()
-          compose.waitForIdle()
+    checkpoint("email_verification") {
+      compose.onNodeWithTag(EmailVerificationTestTags.VERIFICATION_SECTION).assertIsDisplayed()
+      compose
+          .onNodeWithTag(EmailVerificationTestTags.RESEND_MAIL_VERIFICATION_BTN)
+          .assertIsDisplayed()
+          .performClick()
+      compose.waitForIdle()
+      compose.onNodeWithTag(PrivateInfoTestTags.EMAIL_TOAST).assertIsDisplayed()
+      compose
+          .onNodeWithTag(EmailVerificationTestTags.USER_EMAIL)
+          .assertIsDisplayed()
+          .assertTextContains(user.email, ignoreCase = true)
+    }
 
-          compose.emailNotVerifiedLabel().assertExists()
-          inputText(PrivateInfoTestTags.EMAIL_INPUT, "badlyformattedmail")
-          compose.emailErrorLabel().assertExists().assertTextEquals("Invalid Email Format")
+    checkpoint("Delete button user flow") {
+      scrollToTag(DeleteAccSectionTestTags.BUTTON)
 
-          inputText(PrivateInfoTestTags.EMAIL_INPUT, "newmail@example.com")
-          compose.emailSendButton().performClick()
-
-          compose.emailToast().assertExists()
-
-          compose.subPageBackButton().performClick()
-          compose.waitForIdle()
-          compose.publicInfoRoot().assertExists()
-        }
-
-    if (false)
-        checkpoint("Delete button user flow") {
-          scrollToTag(DeleteAccSectionTestTags.BUTTON)
-
-          compose.delAccountBtn().assertExists().performClick()
-          compose.delAccountPopup().assertExists()
-          compose.delAccountPopupCancel().assertExists().performClick()
-          compose.delAccountPopup().assertDoesNotExist()
-          compose.delAccountBtn().performClick()
-          compose.delAccountPopupConfirm().assertExists().performClick()
-          assert(delClicked)
-          compose.waitForIdle()
-        }
+      compose.delAccountBtn().assertExists().performClick()
+      compose.delAccountPopup().assertExists()
+      compose.delAccountPopupCancel().assertExists().performClick()
+      compose.delAccountPopup().assertDoesNotExist()
+      compose.delAccountBtn().performClick()
+      compose.delAccountPopupConfirm().assertExists().performClick()
+      assert(delClicked)
+      compose.waitForIdle()
+    }
   }
 }

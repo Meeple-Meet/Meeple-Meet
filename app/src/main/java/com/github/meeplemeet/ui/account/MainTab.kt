@@ -160,6 +160,12 @@ object PublicInfoTestTags {
   const val BUSINESS_CARD = "businesses_section"
 }
 
+object EmailVerificationTestTags {
+  const val VERIFICATION_SECTION = "verification_section"
+  const val USER_EMAIL = "user_email"
+  const val RESEND_MAIL_VERIFICATION_BTN = "resend_mail_verification_btn"
+}
+
 object PrivateInfoTestTags {
 
   // ------------------------------------------------------------
@@ -449,7 +455,7 @@ fun MainTab(
 
           // Get email from Firebase Auth instead of Firestore account
           // Refresh whenever this page is composed or uiState changes
-          val currentUser = com.github.meeplemeet.FirebaseProvider.auth.currentUser
+          val currentUser = FirebaseProvider.auth.currentUser
           val email = currentUser?.email ?: account.email
           val isVerified = uiState.isEmailVerified
 
@@ -645,49 +651,54 @@ fun MainTabContent(
               modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium))
 
           // The Blue Card
-          Box(contentAlignment = Alignment.BottomCenter) {
-            Card(
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            AppColors
-                                .neutral), // Using a blue-ish color similar to design, or could use
-                // AppColors.primary if it matches
-                shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-                modifier = Modifier.fillMaxWidth()) {
-                  Box(
-                      modifier =
-                          Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.large),
-                      contentAlignment = Alignment.Center) {
-                        // Email Address
-                        Text(
-                            text = userEmail,
-                            color = AppColors.textIcons,
-                            modifier = Modifier.align(Alignment.CenterStart))
+          Box(
+              contentAlignment = Alignment.BottomCenter,
+              modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = AppColors.neutral),
+                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                    modifier = Modifier.fillMaxWidth()) {
+                      Box(
+                          modifier =
+                              Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.large),
+                          contentAlignment = Alignment.Center) {
+                            // Email Address
+                            Text(
+                                text = userEmail,
+                                color = AppColors.textIcons,
+                                modifier =
+                                    Modifier.align(Alignment.CenterStart)
+                                        .testTag(EmailVerificationTestTags.USER_EMAIL))
 
-                        // Send Icon
-                        IconButton(
-                            onClick = {
-                              viewModel.sendVerificationEmail()
-                              viewModel.refreshEmailVerificationStatus()
-                              toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
-                            },
-                            enabled = online,
-                            modifier = Modifier.align(Alignment.CenterEnd)) {
-                              Icon(
-                                  imageVector = Icons.AutoMirrored.Filled.Send,
-                                  contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
-                                  tint = AppColors.textIcons,
-                                  modifier = Modifier.size(Dimensions.IconSize.large))
-                            }
-                      }
-                }
+                            // Send Icon
+                            IconButton(
+                                onClick = {
+                                  viewModel.sendVerificationEmail()
+                                  viewModel.refreshEmailVerificationStatus()
+                                  toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
+                                },
+                                enabled = online,
+                                modifier =
+                                    Modifier.align(Alignment.CenterEnd)
+                                        .testTag(
+                                            EmailVerificationTestTags
+                                                .RESEND_MAIL_VERIFICATION_BTN)) {
+                                  Icon(
+                                      imageVector = Icons.AutoMirrored.Filled.Send,
+                                      contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
+                                      tint = AppColors.textIcons,
+                                      modifier = Modifier.size(Dimensions.IconSize.large))
+                                }
+                          }
+                    }
 
-            // Toast Overlay - Positioned to float over content without layout shift
-            Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 35.dp).zIndex(1f)) {
-              ToastHost(toast = toast, onToastFinished = { toast = null })
-            }
-          }
+                // Toast Overlay - Positioned to float over content without layout shift
+                Box(
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter).offset(y = 35.dp).zIndex(1f)) {
+                      ToastHost(toast = toast, onToastFinished = { toast = null })
+                    }
+              }
 
           Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
         }
