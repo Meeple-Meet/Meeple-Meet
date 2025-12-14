@@ -683,6 +683,10 @@ fun MeepleMeetApp(
                       image = R.drawable.onboarding_session_discussion,
                       title = "Explore Nearby",
                       description = "Find activities near you."),
+                  OnBoardPage(
+                      image = R.drawable.logo_clear,
+                      title = "Stay Notified",
+                      description = "Enable notifications so you never miss replies."),
                   OnBoardPage(R.drawable.logo_clear, "Let's Go!", "Ready to start?"))
           OnBoardingScreen(
               pages = pages,
