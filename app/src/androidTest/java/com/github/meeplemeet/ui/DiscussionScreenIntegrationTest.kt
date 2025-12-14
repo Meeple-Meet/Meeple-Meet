@@ -54,14 +54,14 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             email = "alice@test.com",
             photoUrl = null)
 
-    otherUser =
-        accountRepository.createAccount(
+    // Create a test discussion    // Create initial account with a long description
+    val longDescription = "Start " + "A very long description that should definitely overflow because it repeats many times. ".repeat(10) + " End"
+    otherUser = accountRepository.createAccount(
             userHandle = "otheruser_${Random.nextInt(1000000)}",
             name = "Bob",
             email = "bob@test.com",
             photoUrl = null)
-
-    // Create a test discussion with messages
+      accountRepository.setAccountDescription(otherUser.uid, longDescription)
     testDiscussion =
         discussionRepository.createDiscussion(
             name = "Test Discussion",
@@ -763,10 +763,22 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             .assertExists()
 
         // Assert description is displayed
+        // Assert description is displayed
         composeTestRule
             .onNodeWithTag(
                 CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION, useUnmergedTree = true)
             .assertExists()
+
+        // Assert overflow "Show more" is displayed for our long description
+        composeTestRule.onNodeWithText("Show more").assertExists()
+        
+        // Assert expansion works
+        composeTestRule.onNodeWithText("Show more").performClick()
+        composeTestRule.onNodeWithText("Show less").assertExists()
+        
+        // Collapse again
+        composeTestRule.onNodeWithText("Show less").performClick()
+        composeTestRule.onNodeWithText("Show more").assertExists()
       }
 
       checkpoint("Assert UserProfilePopup buttons are clickable") {
@@ -895,7 +907,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
           // removes)
         }
       }
-    }
+
+          // removes)
+        }
 
     // Cleanup photo discussions
     runBlocking {
