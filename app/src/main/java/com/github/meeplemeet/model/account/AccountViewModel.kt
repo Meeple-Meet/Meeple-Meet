@@ -16,7 +16,7 @@ const val BLANK_ACCOUNT_ID_ERROR = "Account id cannot be blank"
  * repository. It uses coroutines to perform asynchronous operations and requires implementing
  * classes to provide a CoroutineScope.
  */
-interface AccountViewModel {
+interface AccountViewModel : UserProfilePopupActions {
   /** The CoroutineScope used for launching coroutines. */
   val scope: CoroutineScope
 
@@ -150,4 +150,23 @@ interface AccountViewModel {
       RepositoryProvider.accounts.deleteAccount(account.uid)
     }
   }
+
+    override fun onBlock(curr: Account, account: Account) {
+        scope.launch {
+            RepositoryProvider.accounts.blockUser(curr.uid, account.uid)
+        }
+    }
+
+    override fun onSendFriendRequest(curr: Account, account: Account) {
+        scope.launch {
+            RepositoryProvider.accounts.sendFriendRequest(curr, account.uid)
+            RepositoryProvider.accounts.sendFriendRequestNotification(curr.uid, account)
+        }
+    }
+
+    override fun onRemoveFriend(curr: Account, account: Account) {
+        scope.launch {
+            RepositoryProvider.accounts.resetRelationship(curr.uid, account.uid)
+        }
+    }
 }
