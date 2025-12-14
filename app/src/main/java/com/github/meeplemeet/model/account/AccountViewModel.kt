@@ -151,18 +151,18 @@ interface AccountViewModel : UserProfilePopupActions {
     }
   }
 
-  override fun onBlock(curr: Account, account: Account) {
-    scope.launch { RepositoryProvider.accounts.blockUser(curr.uid, account.uid) }
+  override fun onBlock(curr: Account, other: Account) {
+    scope.launch { RepositoryProvider.accounts.blockUser(curr.uid, other.uid) }
   }
 
-  override fun onSendFriendRequest(curr: Account, account: Account) {
+  override fun onSendFriendRequest(curr: Account, other: Account) {
     scope.launch {
-      RepositoryProvider.accounts.sendFriendRequest(curr, account.uid)
-      RepositoryProvider.accounts.sendFriendRequestNotification(curr.uid, account)
+      RepositoryProvider.accounts.sendFriendRequest(curr, other.uid)
+      RepositoryProvider.accounts.sendFriendRequestNotification(other.uid, curr)
     }
   }
 
-  override fun onRemoveFriend(curr: Account, account: Account) {
-    scope.launch { RepositoryProvider.accounts.resetRelationship(curr.uid, account.uid) }
+  override fun onRemoveFriend(curr: Account, other: Account) {
+    scope.launch { RepositoryProvider.accounts.resetRelationship(curr.uid, other.uid) }
   }
 }
