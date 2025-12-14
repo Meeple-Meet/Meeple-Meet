@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
 import com.github.meeplemeet.ui.theme.AppColors
@@ -31,7 +32,9 @@ object DiscussionCommons {
  * @param profilePictureUrl Optional URL to the profile picture
  * @param size Size of the circular profile picture
  * @param backgroundColor Background color when no image is provided
+ * @param onClick Callback when the profile picture is clicked
  * @param modifier Optional modifier
+ * @param testTag Optional test tag for UI testing
  */
 @Composable
 fun ProfilePicture(
@@ -39,13 +42,17 @@ fun ProfilePicture(
     size: Dp,
     backgroundColor: androidx.compose.ui.graphics.Color = AppColors.neutral,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    testTag: String = ""
 ) {
   Box(
       modifier =
-          modifier.size(size).clip(CircleShape).background(backgroundColor, CircleShape).clickable {
-            onClick()
-          }) {
+          modifier
+              .size(size)
+              .clip(CircleShape)
+              .background(backgroundColor, CircleShape)
+              .clickable { onClick() }
+              .let { if (testTag.isNotEmpty()) it.testTag(testTag) else it }) {
         if (profilePictureUrl != null) {
           AsyncImage(
               model = profilePictureUrl,

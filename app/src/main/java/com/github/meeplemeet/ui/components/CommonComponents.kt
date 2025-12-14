@@ -102,6 +102,13 @@ object CommonComponentsTestTags {
   const val CONFIRMATION_DIALOG_MESSAGE = "ConfirmationDialogMessage"
   const val CONFIRMATION_DIALOG_CONFIRM = "ConfirmationDialogConfirm"
   const val CONFIRMATION_DIALOG_CANCEL = "ConfirmationDialogCancel"
+  const val USER_PROFILE_POPUP_DESCRIPTION = "UserProfilePopupDescription"
+  const val USER_PROFILE_POPUP_HANDLE = "UserProfilePopupHandle"
+  const val USER_PROFILE_POPUP_USERNAME = "UserProfilePopupUsername"
+  const val USER_PROFILE_POPUP_AVATAR = "UserProfilePopupAvatar"
+  const val USER_PROFILE_POPUP_BLOCK_BUTTON = "UserProfilePopupBlockButton"
+  const val USER_PROFILE_POPUP_SEND_REQUEST_BUTTON = "UserProfilePopupSendRequestButton"
+  const val USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON = "UserProfilePopupRemoveFriendButton"
 }
 
 // The default size for the image carousel.
@@ -638,13 +645,17 @@ fun UserProfilePopup(
                               color = AppColors.textIcons,
                               fontSize = Dimensions.TextSize.large,
                               fontWeight = FontWeight.Bold,
-                          )
+                              modifier =
+                                  Modifier.testTag(
+                                      CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME))
 
                           Text(
                               text = "@" + target.handle,
                               color = AppColors.textIcons,
                               fontSize = Dimensions.TextSize.heading,
-                              modifier = Modifier.padding(top = Dimensions.Spacing.medium))
+                              modifier =
+                                  Modifier.padding(top = Dimensions.Spacing.medium)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE))
                         }
 
                         // Profile image
@@ -653,7 +664,8 @@ fun UserProfilePopup(
                               modifier =
                                   Modifier.size(Dimensions.IconSize.massive)
                                       .clip(CircleShape)
-                                      .background(AppColors.textIconsFade),
+                                      .background(AppColors.textIconsFade)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR),
                               contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.Person,
@@ -667,7 +679,9 @@ fun UserProfilePopup(
                               contentDescription = "User's avatar",
                               contentScale = ContentScale.Crop,
                               modifier =
-                                  Modifier.size(Dimensions.IconSize.massive).clip(CircleShape))
+                                  Modifier.size(Dimensions.IconSize.massive)
+                                      .clip(CircleShape)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR))
                         }
                       }
 
@@ -683,8 +697,9 @@ fun UserProfilePopup(
                       color = AppColors.textIcons,
                       modifier =
                           Modifier.padding(
-                              bottom = Dimensions.Spacing.medium,
-                              top = Dimensions.Spacing.extraLarge),
+                                  bottom = Dimensions.Spacing.medium,
+                                  top = Dimensions.Spacing.extraLarge)
+                              .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION),
                       fontSize = Dimensions.TextSize.subtitle,
                       maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
                       overflow = TextOverflow.Ellipsis,
@@ -715,7 +730,10 @@ fun UserProfilePopup(
                               (actions::onBlock)(curr, target)
                               snackbarMessage = "Blocked ${target.name} successfully."
                             },
-                            modifier = Modifier.weight(0.7f),
+                            modifier =
+                                Modifier.weight(0.7f)
+                                    .testTag(
+                                        CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON),
                             enabled = online,
                             colors =
                                 ButtonDefaults.buttonColors(
@@ -743,7 +761,11 @@ fun UserProfilePopup(
                                 (actions::onSendFriendRequest)(curr, target)
                                 snackbarMessage = "Friend request sent to ${target.name}."
                               },
-                              modifier = Modifier.weight(1f),
+                              modifier =
+                                  Modifier.weight(1f)
+                                      .testTag(
+                                          CommonComponentsTestTags
+                                              .USER_PROFILE_POPUP_SEND_REQUEST_BUTTON),
                               enabled = online,
                               colors =
                                   ButtonDefaults.buttonColors(
@@ -769,7 +791,11 @@ fun UserProfilePopup(
                                 (actions::onRemoveFriend)(curr, target)
                                 snackbarMessage = "${target.name} removed from Friends."
                               },
-                              modifier = Modifier.weight(1f),
+                              modifier =
+                                  Modifier.weight(1f)
+                                      .testTag(
+                                          CommonComponentsTestTags
+                                              .USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON),
                               enabled = online,
                               colors =
                                   ButtonDefaults.buttonColors(

@@ -126,6 +126,7 @@ object DiscussionTestTags {
   const val MESSAGE_OPTIONS_CARD = "message_options_card"
   const val MESSAGE_EDIT_BUTTON = "message_options_edit"
   const val MESSAGE_DELETE_BUTTON = "message_options_delete"
+  const val MESSAGE_PROFILE_PICTURE = "message_profile_picture"
 
   fun pollVoteButton(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_vote"
 
@@ -960,7 +961,8 @@ private fun MessageProfilePicture(
         profilePictureUrl = profilePictureUrl,
         size = Dimensions.AvatarSize.small,
         backgroundColor = if (isMine) AppColors.focus else AppColors.neutral,
-        onClick = onClick)
+        onClick = onClick,
+        testTag = if (!isMine) DiscussionTestTags.MESSAGE_PROFILE_PICTURE else "")
   } else {
     Spacer(Modifier.width(Dimensions.AvatarSize.small))
   }
