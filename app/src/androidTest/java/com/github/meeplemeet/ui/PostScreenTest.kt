@@ -4,7 +4,7 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -406,12 +406,12 @@ class PostScreenTest : FirestoreTests() {
       currentUserState.value = currentUserState.value.copy(relationships = sentRelationships)
       compose.waitForIdle()
 
-      compose.onNodeWithText("Request Sent").assertExists()
+      compose.onNodeWithText("Cancel request").assertExists()
       compose
           .onNodeWithTag(
               CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
               useUnmergedTree = true)
-          .assertIsNotEnabled()
+          .assertIsEnabled()
 
       // 2. Block User
       compose

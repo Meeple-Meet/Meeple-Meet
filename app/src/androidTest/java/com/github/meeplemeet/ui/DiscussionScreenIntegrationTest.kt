@@ -829,12 +829,12 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
         // Assert button changes after sending request
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Request Sent").assertExists()
+        composeTestRule.onNodeWithText("Cancel request").assertExists()
         composeTestRule
             .onNodeWithTag(
                 CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
                 useUnmergedTree = true)
-            .assertIsNotEnabled()
+            .assertIsEnabled()
 
         // 2. Click Block
         composeTestRule
@@ -898,7 +898,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             .performClick()
 
         // 4. Verify Snackbar
-        composeTestRule.onNodeWithText("${otherUser.name} removed from Friends.").assertExists()
+        composeTestRule.onNodeWithText("${otherUser.name} removed from friends.").assertExists()
 
         // 5. Verify Backend State (Relationship removed)
         composeTestRule.waitUntil(5_000) {
