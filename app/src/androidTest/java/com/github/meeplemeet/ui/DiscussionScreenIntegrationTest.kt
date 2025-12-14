@@ -892,7 +892,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
               rel ==
                   RelationshipStatus
                       .PENDING // Depending on how remove friend is implemented (usually completely
-                               // removes)
+          // removes)
         }
       }
     }
