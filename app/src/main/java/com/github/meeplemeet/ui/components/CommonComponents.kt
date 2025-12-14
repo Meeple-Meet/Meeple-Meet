@@ -72,7 +72,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
@@ -107,6 +106,7 @@ object CommonComponentsTestTags {
 
 // The default size for the image carousel.
 val CAROUSEL_SIZE = 260.dp
+val SNACKBAR_OFFSET = 50.dp
 
 // The label for the "Add Picture" action.
 const val ADD_PICTURE = "Add Picture"
@@ -608,10 +608,10 @@ fun UserProfilePopup(
       properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box {
           Card(
-              modifier = Modifier.fillMaxWidth().padding(10.dp),
-              shape = RoundedCornerShape(16.dp),
+              modifier = Modifier.fillMaxWidth().padding(Dimensions.Spacing.extraMedium),
+              shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
               colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
-                Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Spacing.xxLarge)) {
                   Row(
                       modifier = Modifier.fillMaxWidth(),
                       horizontalArrangement = Arrangement.SpaceBetween,
@@ -620,22 +620,22 @@ fun UserProfilePopup(
                           Text(
                               text = target.name,
                               color = AppColors.textIcons,
-                              fontSize = 24.sp,
+                              fontSize = Dimensions.TextSize.large,
                               fontWeight = FontWeight.Bold,
                           )
 
                           Text(
                               text = "@" + target.handle,
                               color = AppColors.textIcons,
-                              fontSize = 18.sp,
-                              modifier = Modifier.padding(top = 8.dp))
+                              fontSize = Dimensions.TextSize.heading,
+                              modifier = Modifier.padding(top = Dimensions.Spacing.medium))
                         }
 
                         // Profile image
                         if (target.photoUrl.isNullOrBlank()) {
                           Box(
                               modifier =
-                                  Modifier.size(90.dp)
+                                  Modifier.size(Dimensions.IconSize.massive)
                                       .clip(CircleShape)
                                       .background(AppColors.textIconsFade),
                               contentAlignment = Alignment.Center) {
@@ -650,7 +650,7 @@ fun UserProfilePopup(
                               painter = rememberAsyncImagePainter(target.photoUrl),
                               contentDescription = "User's avatar",
                               contentScale = ContentScale.Crop,
-                              modifier = Modifier.size(90.dp).clip(CircleShape))
+                              modifier = Modifier.size(Dimensions.IconSize.massive).clip(CircleShape))
                         }
                       }
 
@@ -664,8 +664,8 @@ fun UserProfilePopup(
                   Text(
                       text = description,
                       color = AppColors.textIcons,
-                      modifier = Modifier.padding(bottom = 4.dp),
-                      fontSize = 16.sp,
+                      modifier = Modifier.padding(bottom = Dimensions.Spacing.medium, top = Dimensions.Spacing.extraLarge),
+                      fontSize = Dimensions.TextSize.subtitle,
                       maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
                       overflow = TextOverflow.Ellipsis,
                       onTextLayout = { textLayoutResult ->
@@ -675,16 +675,16 @@ fun UserProfilePopup(
                   if (showShowMore || isExpanded) {
                     Text(
                         text = if (isExpanded) "Show less" else "Show more",
-                        color = AppColors.textIcons.copy(alpha = 0.7f),
-                        fontSize = 14.sp,
+                        color = AppColors.textIcons.copy(alpha = Dimensions.Alpha.dialogIconTranslucent),
+                        fontSize = Dimensions.TextSize.standard,
                         modifier =
-                            Modifier.padding(top = 4.dp).clickable { isExpanded = !isExpanded })
+                            Modifier.padding(top = Dimensions.Spacing.small).clickable { isExpanded = !isExpanded })
                   }
 
                   // Action buttons
                   Row(
                       modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
                         // Block button
                         Button(
                             onClick = {
@@ -694,15 +694,15 @@ fun UserProfilePopup(
                             modifier = Modifier.weight(0.7f),
                             colors =
                                 ButtonDefaults.buttonColors(containerColor = AppColors.primary),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(vertical = 16.dp)) {
+                            shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                            contentPadding = PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
                               Icon(
                                   imageVector = Icons.Default.Block,
                                   contentDescription = "Block",
                                   tint = AppColors.textIcons,
-                                  modifier = Modifier.size(20.dp))
-                              Spacer(modifier = Modifier.width(8.dp))
-                              Text(text = "Block", color = AppColors.textIcons, fontSize = 16.sp)
+                                  modifier = Modifier.size(Dimensions.IconSize.standard))
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                              Text(text = "Block", color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle)
                             }
 
                         // Send friend request button
@@ -717,18 +717,18 @@ fun UserProfilePopup(
                                   ButtonDefaults.buttonColors(
                                       containerColor = AppColors.primary,
                                       contentColor = AppColors.textIcons),
-                              shape = RoundedCornerShape(8.dp),
-                              contentPadding = PaddingValues(vertical = 16.dp)) {
+                              shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                              contentPadding = PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
                                 Icon(
                                     imageVector = Icons.Default.PersonAdd,
                                     contentDescription = "Send friend request",
                                     tint = AppColors.textIcons,
-                                    modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                    modifier = Modifier.size(Dimensions.IconSize.standard))
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                                 Text(
                                     text = "Send friend request",
                                     color = AppColors.textIcons,
-                                    fontSize = 16.sp)
+                                    fontSize = Dimensions.TextSize.subtitle)
                               }
                         } else {
                           Button(
@@ -741,18 +741,18 @@ fun UserProfilePopup(
                                   ButtonDefaults.buttonColors(
                                       containerColor = AppColors.primary,
                                       contentColor = AppColors.textIcons),
-                              shape = RoundedCornerShape(8.dp),
-                              contentPadding = PaddingValues(vertical = 16.dp)) {
+                              shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                              contentPadding = PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
                                 Icon(
                                     imageVector = Icons.Default.PersonRemove,
                                     contentDescription = "Remove friend",
                                     tint = AppColors.textIcons,
-                                    modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                    modifier = Modifier.size(Dimensions.IconSize.standard))
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                                 Text(
                                     text = "Remove friend",
                                     color = AppColors.textIcons,
-                                    fontSize = 16.sp)
+                                    fontSize = Dimensions.TextSize.subtitle)
                               }
                         }
                       }
@@ -762,7 +762,7 @@ fun UserProfilePopup(
           // Snackbar
           SnackbarHost(
               hostState = snackbarHostState,
-              modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).offset(y = 50.dp),
+              modifier = Modifier.align(Alignment.BottomCenter).padding(Dimensions.Spacing.extraLarge).offset(y = SNACKBAR_OFFSET),
               snackbar = { data ->
                 Snackbar(
                     snackbarData = data,
