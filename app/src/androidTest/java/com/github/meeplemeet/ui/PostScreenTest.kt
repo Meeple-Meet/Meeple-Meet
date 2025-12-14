@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -17,6 +18,7 @@ import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
@@ -269,6 +271,85 @@ class PostScreenTest : FirestoreTests() {
           .onNodeWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
           .assertTextEquals(alex.name)
       compose.onNodeWithText("This should be visible").assertExists()
+    }
+  }
+
+  @Test
+  fun verify_user_profile_popup_integration() = runBlocking {
+    // Setup: Marco viewing Alex's post
+    val currentUser = marco
+    val author = alex
+    // Create the post in Firestore so the ViewModel can find it
+    val post =
+        postRepository.createPost(
+            postByAlex.title, postByAlex.body, postByAlex.authorId, postByAlex.tags)
+
+    compose.setContent {
+      AppTheme {
+        PostScreen(
+            account = currentUser,
+            postId = post.id,
+            viewModel = postVM,
+            online = true,
+            verified = true,
+            onBack = {})
+      }
+    }
+
+    // Wait for content to load
+    compose.waitUntil(timeoutMillis = 5000) {
+      compose
+          .onAllNodesWithTag(PostTags.POST_HEADER, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    checkpoint("Trigger UserProfilePopup") {
+      // Click on the author's profile picture
+      compose
+          .onNodeWithTag(PostTags.POST_AVATAR, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+
+      // Assert popup is visible
+      compose.waitForIdle()
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+          .assertExists()
+    }
+
+    checkpoint("Verify UserProfilePopup Actions") {
+      // 1. Send Friend Request
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .performClick()
+
+      // Verify Snackbar
+      compose.onNodeWithText("Friend request sent to ${author.name}.").assertExists()
+
+      // Verify Backend State
+      compose.waitUntil(5_000) {
+        val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+        account.relationships[author.uid] == RelationshipStatus.SENT
+      }
+
+      // 2. Block User
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+          .performClick()
+
+      // Verify Snackbar
+      compose.onNodeWithText("Blocked ${author.name} successfully.").assertExists()
+
+      // Verify Backend State
+      compose.waitUntil(5_000) {
+        val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+        account.relationships[author.uid] == RelationshipStatus.BLOCKED
+      }
     }
   }
 }
