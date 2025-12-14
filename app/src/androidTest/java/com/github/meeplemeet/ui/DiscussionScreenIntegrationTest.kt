@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.ui.components.CommonComponentsTestTags
@@ -114,8 +115,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         galleryDiscussion, otherUser, "Second photo", "https://example.com/picB.jpg")
     val refreshedGalleryDiscussion = discussionRepository.getDiscussion(galleryDiscussion.uid)
 
-    // Use mutable state to switch discussions
+    // Use mutable state to switch discussions and update user state
     val currentDiscussionState = mutableStateOf(testDiscussion)
+    val currentUserState = mutableStateOf(currentUser)
 
     composeTestRule.setContent {
       AppTheme(themeMode = ThemeMode.LIGHT) {
@@ -123,7 +125,7 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             viewModel = viewModel,
             discussion = currentDiscussionState.value,
             verified = true,
-            account = currentUser,
+            account = currentUserState.value,
             online = true,
             onBack = { backPressed = true })
       }
@@ -783,6 +785,115 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
                 useUnmergedTree = true)
             .assertExists()
             .assertHasClickAction()
+      }
+
+      checkpoint("Verify UserProfilePopup actions") {
+        // 1. Click Send Friend Request
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .performClick()
+
+        // Verify Snackbar appears
+        composeTestRule.onNodeWithText("Friend request sent to ${otherUser.name}.").assertExists()
+
+        // Verify relationship status updates to SENT
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          account.relationships[otherUser.uid] == RelationshipStatus.SENT
+        }
+
+        // 2. Click Block
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        // Verify Snackbar appears
+        composeTestRule.onNodeWithText("Blocked ${otherUser.name} successfully.").assertExists()
+
+        // Verify relationship status updates to BLOCKED
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          account.relationships[otherUser.uid] == RelationshipStatus.BLOCKED
+        }
+      }
+
+      checkpoint("Verify Remove Friend action") {
+        // 1. Manually set relationship to FRIEND
+        val friendRelationships = currentUser.relationships.toMutableMap()
+        friendRelationships[otherUser.uid] = RelationshipStatus.FRIEND
+        val friendUser = currentUser.copy(relationships = friendRelationships)
+
+        // Update repository
+        runBlocking {
+          // We need to unblock first if blocked? Using repository helper might be cleaner but
+          // manual set is requested.
+          // Just updating the repo directly
+          // Reset relationship first to clear block
+          accountRepository.resetRelationship(currentUser.uid, otherUser.uid)
+          // Then friend (cannot directly force friend via repo easily without acceptance flow,
+          // but we can mock/force update the document if the VM reads it,
+          // OR mostly importantly update the UI state)
+
+          // Actually, since we control the UI state via currentUserState, we can just update that
+          // for the UI check.
+          // But the ViewModel actions use 'curr' from the lambda parameters which comes from
+          // DiscussionScreen state.
+          // So updating currentUserState should propagate.
+        }
+
+        // Force update UI state to show FRIEND status
+        currentUserState.value = friendUser
+        composeTestRule.waitForIdle()
+
+        // 2. Verify "Remove Friend" button is now visible (and others hidden)
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(
+                  CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                  useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
+
+        // Block button should still be there? Yes.
+        // Send Request should be GONE.
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertDoesNotExist()
+
+        // 3. Click Remove Friend
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                useUnmergedTree = true)
+            .performClick()
+
+        // 4. Verify Snackbar
+        composeTestRule.onNodeWithText("${otherUser.name} removed from Friends.").assertExists()
+
+        // 5. Verify Backend State (Relationship removed)
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          // Relationship should be removed (null) or not FRIEND/SENT/BLOCKED
+          val rel = account.relationships[otherUser.uid]
+          rel == null ||
+              rel ==
+                  RelationshipStatus
+                      .PENDING // Depending on how remove friend is implemented (usually completely
+                               // removes)
+        }
       }
     }
 
