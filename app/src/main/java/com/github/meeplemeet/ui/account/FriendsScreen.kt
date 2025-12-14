@@ -323,6 +323,8 @@ fun FriendsScreen(
     verified: Boolean,
     navigationActions: NavigationActions,
     onBack: () -> Unit,
+    onNavigate: (MeepleMeetScreen) -> Unit = {},
+    unreadCount: Int,
     viewModel: FriendsScreenViewModel = viewModel(),
 ) {
   val context = LocalContext.current
@@ -378,6 +380,7 @@ fun FriendsScreen(
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
           BottomBarWithVerification(
+              unreadCount = unreadCount,
               currentScreen = MeepleMeetScreen.Profile,
               onTabSelected = { navigationActions.navigateTo(it) },
               verified = verified,

@@ -277,6 +277,7 @@ fun MapScreen(
     onFABCLick: (PinType) -> Unit,
     onRedirect: (StorableGeoPin) -> Unit,
     cameraPositionState: CameraPositionState = rememberCameraPositionState(),
+    unreadCount: Int,
     forceNoPermission: Boolean = false
 ) {
   // --- State & helpers ---
@@ -427,9 +428,10 @@ fun MapScreen(
       bottomBar = {
         BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.Map,
-            onTabSelected = { screen -> navigation.navigateTo(screen) },
+            unreadCount = unreadCount,
             verified = verified,
-            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) },
+            onTabSelected = { screen -> navigation.navigateTo(screen) })
       },
       snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
 

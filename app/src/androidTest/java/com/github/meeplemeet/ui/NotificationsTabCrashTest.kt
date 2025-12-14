@@ -1,13 +1,11 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationsViewModel
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.ui.account.NotificationsTab
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -25,14 +23,14 @@ class NotificationsTabCrashTest : FirestoreTests() {
   @get:Rule val compose = createComposeRule()
 
   private lateinit var viewModel: NotificationsViewModel
-  private lateinit var navViewModel: NavigationViewModel
+  private lateinit var navViewModel: MainActivityViewModel
   private lateinit var currentUser: Account
   private lateinit var mockNavigation: NavigationActions
 
   @Before
   fun setup() {
     viewModel = NotificationsViewModel(accountRepository, handlesRepository)
-    navViewModel = NavigationViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       val suffix = System.currentTimeMillis()
@@ -73,16 +71,15 @@ class NotificationsTabCrashTest : FirestoreTests() {
     val notificationId = initialUser.notifications.first().uid
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme(themeMode = ThemeMode.DARK) {
-          NotificationsTab(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {},
-          )
-        }
+      AppTheme(themeMode = ThemeMode.DARK) {
+        NotificationsTab(
+            account = currentUser,
+            viewModel = viewModel,
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+        )
       }
     }
 

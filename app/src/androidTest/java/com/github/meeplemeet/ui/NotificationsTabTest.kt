@@ -1,6 +1,5 @@
 package com.github.meeplemeet.ui
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -12,14 +11,13 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.Notification
 import com.github.meeplemeet.model.account.NotificationNoUid
 import com.github.meeplemeet.model.account.NotificationType
 import com.github.meeplemeet.model.account.NotificationsViewModel
 import com.github.meeplemeet.model.discussions.Discussion
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -47,7 +45,7 @@ class NotificationsTabTest : FirestoreTests() {
 
   private lateinit var mockNavigation: NavigationActions
   private lateinit var viewModel: NotificationsViewModel
-  private lateinit var navViewModel: NavigationViewModel
+  private lateinit var navViewModel: MainActivityViewModel
   private lateinit var currentUser: Account
   private lateinit var otherUser: Account
   private lateinit var discussion: Discussion
@@ -92,7 +90,7 @@ class NotificationsTabTest : FirestoreTests() {
             handlesRepository = handlesRepository,
             imageRepository = imageRepository,
             discussionRepository = discussionRepository)
-    navViewModel = NavigationViewModel(accountRepository)
+    navViewModel = MainActivityViewModel(inTests = true, accountRepository = accountRepository)
 
     runBlocking {
       // Create current user
@@ -219,15 +217,15 @@ class NotificationsTabTest : FirestoreTests() {
   @Test
   fun smoke_all_notifications_tests() {
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme {
-          NotificationsTab(
-              account = currentUser,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {})
-        }
+      AppTheme {
+        NotificationsTab(
+            account = currentUser,
+            viewModel = viewModel,
+            onBack = {},
+            verified = true,
+            navigationActions = mockNavigation,
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
@@ -396,15 +394,15 @@ class NotificationsTabTest : FirestoreTests() {
     val emptyAccount = currentUser.copy(notifications = emptyList())
 
     compose.setContent {
-      CompositionLocalProvider(LocalNavigationVM provides navViewModel) {
-        AppTheme {
-          NotificationsTab(
-              account = emptyAccount,
-              viewModel = viewModel,
-              verified = true,
-              navigationActions = mockNavigation,
-              onBack = {})
-        }
+      AppTheme {
+        NotificationsTab(
+            account = emptyAccount,
+            viewModel = viewModel,
+            verified = true,
+            navigationActions = mockNavigation,
+            onBack = {},
+            unreadCount = currentUser.notifications.count { it -> !it.read },
+        )
       }
     }
 
