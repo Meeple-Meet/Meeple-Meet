@@ -185,23 +185,35 @@ object MapScreenTestTags {
 }
 
 /**
- * Configuration object for cluster marker visuals on the map.
+ * Configuration object for all map markers (pins and clusters).
  *
- * Provides thresholds and colors for cluster sizes, allowing consistent coloring of cluster icons
- * depending on how many pins are grouped together.
+ * Centralizes visual styling for consistency across the map interface.
  */
-object ClusterConfig {
-  private val startColor = Color(0xFF4CAF50) // Green
-  private val midColor = Color(0xFFFFC107) // Amber
-  private val endColor = Color(0xFFE53935) // Red
+object MarkerConfig {
+  // Pin type colors
+  @Composable fun shopColor() = AppColors.neutral
+
+  @Composable fun spaceColor() = AppColors.focus
+
+  @Composable fun sessionColor() = AppColors.negative
+
+  // Cluster gradient colors
+  private val clusterStartColor = Color(0xFF4CAF50) // Green
+  private val clusterMidColor = Color(0xFFFFC107) // Amber
+  private val clusterEndColor = Color(0xFFE53935) // Red
 
   private const val SMALL_CLUSTER_THRESHOLD = 5
   private const val MEDIUM_CLUSTER_THRESHOLD = 15
 
-  private const val BACKGROUND_ALPHA = 0.85f
+  // Visual properties
+  private const val CLUSTER_BACKGROUND_ALPHA = 0.85f
+  const val PULSE_ALPHA = 0.3f
+  val MARKER_COLOR = Color.White
+  const val MARKER_SCALE = 1.5f
+  const val MARKER_BACKGROUND_ALPHA = 1.0f
 
   /** Returns a gradient-based color depending on cluster size. */
-  fun getColorForSize(size: Int): Color {
+  fun getColorForClusterSize(size: Int): Color {
     val normalized =
         when {
           size <= SMALL_CLUSTER_THRESHOLD -> 0f
@@ -211,17 +223,16 @@ object ClusterConfig {
           else -> 1f
         }
 
-    // Interpolate:
     val color =
         if (normalized < 0.5f) {
           val t = normalized / 0.5f
-          lerp(startColor, midColor, t)
+          lerp(clusterStartColor, clusterMidColor, t)
         } else {
           val t = (normalized - 0.5f) / 0.5f
-          lerp(midColor, endColor, t)
+          lerp(clusterMidColor, clusterEndColor, t)
         }
 
-    return color.copy(alpha = BACKGROUND_ALPHA)
+    return color.copy(alpha = CLUSTER_BACKGROUND_ALPHA)
   }
 }
 
@@ -239,8 +250,6 @@ private const val DEFAULT_LOCATION_UPDATE_INTERVAL_MS = 5_000L
 private const val CAMERA_CENTER_DEBOUNCE_MS = 1000L
 private const val CAMERA_ZOOM_DEBOUNCE_MS = 500L
 private const val SCALE_BAR_HIDE_MS = 3000L
-private const val DEFAULT_MARKER_SCALE = 1.5f
-private const val DEFAULT_MARKER_BACKGROUND_ALPHA = 1.0f
 private const val RGB_MAX_ALPHA = 255
 
 /**
@@ -537,9 +546,15 @@ fun MapScreen(
               }
 
           // Prepare marker icons for different pin types
-          val shopIcon = rememberMarkerIcon(resId = R.drawable.ic_storefront)
-          val spaceIcon = rememberMarkerIcon(resId = R.drawable.ic_table)
-          val sessionIcon = rememberMarkerIcon(resId = R.drawable.ic_dice)
+          val shopIcon =
+              rememberMarkerIcon(
+                  resId = R.drawable.ic_storefront, backgroundTint = MarkerConfig.shopColor())
+          val spaceIcon =
+              rememberMarkerIcon(
+                  resId = R.drawable.ic_table, backgroundTint = MarkerConfig.spaceColor())
+          val sessionIcon =
+              rememberMarkerIcon(
+                  resId = R.drawable.ic_dice, backgroundTint = MarkerConfig.sessionColor())
 
           // State for scale bar visibility and recenter button
           var showScaleBar by remember { mutableStateOf(false) }
@@ -1260,49 +1275,64 @@ private fun ClusterPreviewItem(
  *
  * The icon is drawn on a colored circle background with configurable scale, tint, and alpha. This
  * allows easy distinction between different pin types while maintaining legibility on the map.
+ * Includes a subtle pulse effect.
  *
  * @param resId drawable resource ID of the marker icon
- * @param scale scaling factor applied to the drawable (default 1.5x)
- * @param tint color applied to the drawable icon (default [AppColors.neutral])
- * @param backgroundTint color of the circle background behind the icon (default
- *   [AppColors.primary])
- * @param backgroundAlpha alpha transparency of the background circle (0f = fully transparent, 1f =
- *   opaque)
+ * @param scale scaling factor applied to the drawable (default [MarkerConfig.MARKER_SCALE])
+ * @param iconTint color applied to the drawable icon (default [MarkerConfig.MARKER_COLOR])
+ * @param backgroundTint color of the circle background behind the icon (must be provided, e.g.
+ *   [MarkerConfig.shopColor()], [MarkerConfig.spaceColor()], etc.)
+ * @param backgroundAlpha alpha transparency of the background circle (default
+ *   [MarkerConfig.MARKER_BACKGROUND_ALPHA], 0f = fully transparent, 1f = opaque)
+ * @param includePulse whether to draw a subtle pulse effect around the marker (default true)
  * @return a [BitmapDescriptor] usable as a Google Maps marker icon
  */
 @Composable
 private fun rememberMarkerIcon(
     @DrawableRes resId: Int,
-    scale: Float = DEFAULT_MARKER_SCALE,
-    tint: Color = AppColors.neutral,
-    backgroundTint: Color = AppColors.primary,
-    backgroundAlpha: Float = DEFAULT_MARKER_BACKGROUND_ALPHA
+    scale: Float = MarkerConfig.MARKER_SCALE,
+    iconTint: Color = MarkerConfig.MARKER_COLOR,
+    backgroundTint: Color,
+    backgroundAlpha: Float = MarkerConfig.MARKER_BACKGROUND_ALPHA,
+    includePulse: Boolean = true
 ): BitmapDescriptor {
   val context = LocalContext.current
 
-  return remember(resId, scale) {
+  return remember(resId, scale, backgroundTint, includePulse) {
     val drawable = AppCompatResources.getDrawable(context, resId) ?: error("Drawable not found")
 
-    val width = (drawable.intrinsicWidth * scale).toInt()
-    val height = (drawable.intrinsicHeight * scale).toInt()
+    val baseWidth = (drawable.intrinsicWidth * scale).toInt()
+    val baseHeight = (drawable.intrinsicHeight * scale).toInt()
 
-    // Main bitmap
-    val bitmap = createBitmap(width, height)
+    // Add extra space for pulse effect if enabled
+    val pulseSize = if (includePulse) (baseWidth * 0.5f).toInt() else 0
+    val totalWidth = baseWidth + pulseSize * 2
+    val totalHeight = baseHeight + pulseSize * 2
+
+    val bitmap = createBitmap(totalWidth, totalHeight)
     val canvas = Canvas(bitmap)
 
-    // Circle background
-    val paint =
-        Paint().apply {
-          color = backgroundTint.toArgb()
-          alpha = (RGB_MAX_ALPHA * backgroundAlpha).toInt()
-          isAntiAlias = true
-        }
-    val radius = min(width, height) / 2f
-    canvas.drawCircle(width / 2f, height / 2f, radius, paint)
+    val paint = Paint().apply { isAntiAlias = true }
+    val centerX = totalWidth / 2f
+    val centerY = totalHeight / 2f
+    val radius = min(baseWidth, baseHeight) / 2f
 
-    // Draw icon on background
-    drawable.setTint(tint.toArgb())
-    drawable.setBounds(0, 0, width, height)
+    // Draw pulse effect
+    if (includePulse) {
+      paint.color = backgroundTint.copy(alpha = MarkerConfig.PULSE_ALPHA).toArgb()
+      canvas.drawCircle(centerX, centerY, radius + pulseSize / 2f, paint)
+    }
+
+    // Draw main circle background
+    paint.color = backgroundTint.toArgb()
+    paint.alpha = (RGB_MAX_ALPHA * backgroundAlpha).toInt()
+    canvas.drawCircle(centerX, centerY, radius, paint)
+
+    // Draw icon centered
+    drawable.setTint(iconTint.toArgb())
+    val left = (totalWidth - baseWidth) / 2
+    val top = (totalHeight - baseHeight) / 2
+    drawable.setBounds(left, top, left + baseWidth, top + baseHeight)
     drawable.draw(canvas)
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
@@ -1313,32 +1343,46 @@ private fun rememberMarkerIcon(
  * Creates a custom Google Maps cluster icon with the cluster size displayed.
  *
  * The icon is a circle whose color depends on the cluster size (small/medium/large), and the size
- * number is drawn centered in white text.
+ * number is drawn centered in white text. Includes a pulse effect for visual consistency.
  *
  * @param size number of items in the cluster
- * @param diameterDp diameter of the cluster icon in dp (default is 32dp)
+ * @param diameterDp diameter of the cluster icon in dp (default 32dp)
+ * @param includePulse whether to draw a subtle pulse effect around the cluster (default true)
  * @return a [BitmapDescriptor] usable as a Google Maps marker icon
  */
 @Composable
-private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescriptor {
+private fun rememberClusterIcon(
+    size: Int,
+    diameterDp: Int = 32,
+    includePulse: Boolean = true
+): BitmapDescriptor {
   val density = LocalDensity.current
 
-  return remember(size, diameterDp) {
+  return remember(size, diameterDp, includePulse) {
     val diameterPx = with(density) { diameterDp.dp.toPx() }.toInt()
+    val pulseSize = if (includePulse) (diameterPx * 0.5f).toInt() else 0
+    val totalSize = diameterPx + pulseSize * 2
     val radius = diameterPx / 2f
+    val centerX = totalSize / 2f
+    val centerY = totalSize / 2f
 
-    // Create a bitmap
-    val bitmap = createBitmap(diameterPx, diameterPx)
+    val bitmap = createBitmap(totalSize, totalSize)
     val canvas = Canvas(bitmap)
 
-    // Background circle
-    val paint =
-        Paint().apply {
-          isAntiAlias = true
-          color = ClusterConfig.getColorForSize(size).toArgb()
-          style = Paint.Style.FILL
-        }
-    canvas.drawCircle(radius, radius, radius, paint)
+    val backgroundColor = MarkerConfig.getColorForClusterSize(size)
+    val paint = Paint().apply { isAntiAlias = true }
+
+    // Draw pulse effect
+    if (includePulse) {
+      paint.color = backgroundColor.copy(alpha = MarkerConfig.PULSE_ALPHA).toArgb()
+      paint.style = Paint.Style.FILL
+      canvas.drawCircle(centerX, centerY, radius + pulseSize / 2f, paint)
+    }
+
+    // Draw main background circle
+    paint.color = backgroundColor.toArgb()
+    paint.style = Paint.Style.FILL
+    canvas.drawCircle(centerX, centerY, radius, paint)
 
     // Draw auto-sized text (size number)
     val digits = size.toString().length
@@ -1359,8 +1403,8 @@ private fun rememberClusterIcon(size: Int, diameterDp: Int = 32): BitmapDescript
           isAntiAlias = true
         }
 
-    val textY = radius - (textPaint.descent() + textPaint.ascent()) / 2
-    canvas.drawText(size.toString(), radius, textY, textPaint)
+    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2
+    canvas.drawText(size.toString(), centerX, textY, textPaint)
 
     BitmapDescriptorFactory.fromBitmap(bitmap)
   }
