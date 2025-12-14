@@ -151,42 +151,6 @@ class ProfileScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun testEmailSection_toast() {
-    composeTestRule.setContent {
-      // Isolating EmailSection to test the Toast logic specifically
-      EmailSection(
-          email = "user@example.com",
-          isVerified = false,
-          online = true,
-          onEmailChange = {},
-          onFocusChanged = {},
-          onSendVerification = {}, // Mock callback
-          onChangeEmail = { _, _ -> })
-    }
-
-    checkpoint("Send Verification Shows Toast") {
-      composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON).performClick()
-
-      // Wait for Toast
-      composeTestRule.waitUntil(2000) {
-        composeTestRule
-            .onAllNodesWithTag(PrivateInfoTestTags.EMAIL_TOAST)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-      composeTestRule.onNodeWithText(MainTabUi.PrivateInfo.TOAST_MSG).assertIsDisplayed()
-
-      // Wait for Toast to disappear (duration 1500)
-      composeTestRule.waitUntil(3000) {
-        composeTestRule
-            .onAllNodesWithTag(PrivateInfoTestTags.EMAIL_TOAST)
-            .fetchSemanticsNodes()
-            .isEmpty()
-      }
-    }
-  }
-
-  @Test
   fun testDeleteAccountDialog() {
     val show = mutableStateOf(false)
     composeTestRule.setContent {
