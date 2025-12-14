@@ -188,9 +188,7 @@ fun ImageCarousel(
       modifier = modifier.testTag(CommonComponentsTestTags.IMAGE_CAROUSEL),
       horizontalAlignment = Alignment.CenterHorizontally) {
         ElevatedCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(CAROUSEL_SIZE),
+            modifier = Modifier.fillMaxWidth().height(CAROUSEL_SIZE),
             colors =
                 CardColors(
                     containerColor = AppColors.secondary,
@@ -204,8 +202,7 @@ fun ImageCarousel(
                     canAddMoreImages) {
                   Box(
                       modifier =
-                          Modifier
-                              .fillMaxSize()
+                          Modifier.fillMaxSize()
                               .padding(Dimensions.Padding.giant)
                               .testTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON)
                               .clickable { if (canAddMoreImages) showImageSourceMenu = true },
@@ -228,8 +225,7 @@ fun ImageCarousel(
                         contentDescription = "Discussion Profile Picture",
                         contentScale = ContentScale.Fit,
                         modifier =
-                            Modifier
-                                .fillMaxSize()
+                            Modifier.fillMaxSize()
                                 .clickable { showImageSourceMenu = true }
                                 .testTag(CommonComponentsTestTags.CAROUSEL_IMAGE),
                         placeholder =
@@ -238,8 +234,7 @@ fun ImageCarousel(
                     if (page < photoCollectionUrl.size && editable) {
                       Box(
                           modifier =
-                              Modifier
-                                  .align(Alignment.TopEnd)
+                              Modifier.align(Alignment.TopEnd)
                                   .padding(Dimensions.Padding.medium)
                                   .size(Dimensions.IconSize.extraLarge)
                                   .clip(CircleShape)
@@ -272,17 +267,14 @@ fun ImageCarousel(
 
                   Box(
                       modifier =
-                          Modifier
-                              .padding(Dimensions.Padding.small)
+                          Modifier.padding(Dimensions.Padding.small)
                               .size(
                                   if (selected) Dimensions.Padding.extraMedium
-                                  else Dimensions.Padding.medium
-                              )
+                                  else Dimensions.Padding.medium)
                               .clip(CircleShape)
                               .background(
                                   if (selected) MaterialTheme.colorScheme.primary
-                                  else MaterialTheme.colorScheme.surfaceVariant
-                              )
+                                  else MaterialTheme.colorScheme.surfaceVariant)
                               .testTag(CommonComponentsTestTags.DOT))
                 }
               }
@@ -338,19 +330,13 @@ fun PhotoDialogTopBar(
                       listOf(
                           AppColors.primary.copy(alpha = Dimensions.Alpha.dialogOverlayDark),
                           AppColors.primary.copy(
-                              alpha = Dimensions.Alpha.dialogOverlayTransparent
-                          )
-                      )
-                  )
-              )) {
+                              alpha = Dimensions.Alpha.dialogOverlayTransparent))))) {
         Row(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .padding(
                         horizontal = Dimensions.Padding.extraLarge,
-                        vertical = Dimensions.Spacing.medium
-                    ),
+                        vertical = Dimensions.Spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
               IconButton(
@@ -367,8 +353,7 @@ fun PhotoDialogTopBar(
                   color = AppColors.textIcons,
                   style = MaterialTheme.typography.titleMedium,
                   modifier =
-                      Modifier
-                          .weight(Dimensions.Weight.full)
+                      Modifier.weight(Dimensions.Weight.full)
                           .padding(horizontal = Dimensions.Spacing.large)
                           .testTag(UITestTags.PROFILE_PICTURE_DIALOG_TITLE),
                   textAlign = TextAlign.Center)
@@ -391,18 +376,13 @@ fun PhotoDialogBottomBar(
     onTakePhoto: () -> Unit,
     onChooseFromGallery: () -> Unit
 ) {
-  Box(modifier = modifier
-      .fillMaxWidth()
-      .navigationBarsPadding()
-      .background(AppColors.primary)) {
+  Box(modifier = modifier.fillMaxWidth().navigationBarsPadding().background(AppColors.primary)) {
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .padding(
                     horizontal = Dimensions.Padding.extraLarge,
-                    vertical = Dimensions.Spacing.extraLarge
-                ),
+                    vertical = Dimensions.Spacing.extraLarge),
         horizontalArrangement =
             Arrangement.spacedBy(Dimensions.Spacing.large, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically) {
@@ -412,9 +392,7 @@ fun PhotoDialogBottomBar(
                   ButtonDefaults.buttonColors(
                       containerColor = AppColors.textIcons.copy(alpha = 0.2f),
                       contentColor = AppColors.textIconsFade),
-              modifier = Modifier
-                  .weight(1f)
-                  .testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
+              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_CAMERA_OPTION)) {
                 Icon(
                     imageVector = Icons.Default.PhotoCamera,
                     contentDescription = "Take Photo",
@@ -432,9 +410,7 @@ fun PhotoDialogBottomBar(
                   ButtonDefaults.buttonColors(
                       containerColor = AppColors.textIcons.copy(alpha = 0.2f),
                       contentColor = AppColors.textIconsFade),
-              modifier = Modifier
-                  .weight(1f)
-                  .testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
+              modifier = Modifier.weight(1f).testTag(UITestTags.PROFILE_PICTURE_GALLERY_OPTION)) {
                 Icon(
                     imageVector = Icons.Default.Image,
                     contentDescription = "Choose from Gallery",
@@ -476,8 +452,7 @@ fun GalleryDialog(
           DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .background(AppColors.primary)
                     .testTag(CommonComponentsTestTags.GALLERY_DIALOG_ROOT)) {
               // Image or default icon
@@ -486,14 +461,10 @@ fun GalleryDialog(
                     model = galleryPictureUrl!![pageNumber],
                     contentDescription = "Discussion Profile Picture",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .combinedClickable(onClick = { onDismiss() }))
+                    modifier = Modifier.fillMaxSize().combinedClickable(onClick = { onDismiss() }))
               } else {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { onDismiss() },
+                    modifier = Modifier.fillMaxSize().clickable { onDismiss() },
                     contentAlignment = Alignment.Center) {
                       Icon(
                           imageVector = Icons.Default.AddAPhoto,
@@ -620,145 +591,134 @@ fun UserProfilePopup(
     onDismiss: () -> Unit,
     actions: UserProfilePopupActions
 ) {
-    if (!visible) return
+  if (!visible) return
 
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
+  var snackbarMessage by remember { mutableStateOf<String?>(null) }
+  val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(snackbarMessage) {
-        snackbarMessage?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
-            snackbarMessage = null
-        }
+  LaunchedEffect(snackbarMessage) {
+    snackbarMessage?.let { message ->
+      snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+      snackbarMessage = null
     }
+  }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)) {
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
-                Column(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top) {
+          Card(
+              modifier = Modifier.fillMaxWidth().padding(10.dp),
+              shape = RoundedCornerShape(16.dp),
+              colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.Top) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = target.name,
-                                color = AppColors.textIcons,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
+                          Text(
+                              text = target.name,
+                              color = AppColors.textIcons,
+                              fontSize = 24.sp,
+                              fontWeight = FontWeight.Bold,
+                          )
 
-                            Text(
-                                text = "@" + target.handle,
-                                color = AppColors.textIcons,
-                                fontSize = 18.sp,
-                                modifier = Modifier.padding(top = 8.dp))
+                          Text(
+                              text = "@" + target.handle,
+                              color = AppColors.textIcons,
+                              fontSize = 18.sp,
+                              modifier = Modifier.padding(top = 8.dp))
                         }
 
                         // Profile image
                         if (target.photoUrl.isNullOrBlank()) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(90.dp)
-                                        .clip(CircleShape)
-                                        .background(AppColors.textIconsFade),
-                                contentAlignment = Alignment.Center) {
+                          Box(
+                              modifier =
+                                  Modifier.size(90.dp)
+                                      .clip(CircleShape)
+                                      .background(AppColors.textIconsFade),
+                              contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = "No avatar for display",
                                     tint = AppColors.divider,
                                     modifier = Modifier.size(Dimensions.IconSize.giant))
-                            }
+                              }
                         } else {
-                            Image(
-                                painter = rememberAsyncImagePainter(target.photoUrl),
-                                contentDescription = "User's avatar",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(90.dp)
-                                    .clip(CircleShape))
+                          Image(
+                              painter = rememberAsyncImagePainter(target.photoUrl),
+                              contentDescription = "User's avatar",
+                              contentScale = ContentScale.Crop,
+                              modifier = Modifier.size(90.dp).clip(CircleShape))
                         }
-                    }
+                      }
 
-                    var isExpanded by remember { mutableStateOf(false) }
-                    var showShowMore by remember { mutableStateOf(false) }
-                    val maxLinesNotExpanded = 3
-                    val maxLinesExpanded = 5
-                    val description = target.description ?: "This user does not have a description."
+                  var isExpanded by remember { mutableStateOf(false) }
+                  var showShowMore by remember { mutableStateOf(false) }
+                  val maxLinesNotExpanded = 3
+                  val maxLinesExpanded = 5
+                  val description = target.description ?: "This user does not have a description."
 
-                    // Bio
+                  // Bio
+                  Text(
+                      text = description,
+                      color = AppColors.textIcons,
+                      modifier = Modifier.padding(bottom = 4.dp),
+                      fontSize = 16.sp,
+                      maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
+                      overflow = TextOverflow.Ellipsis,
+                      onTextLayout = { textLayoutResult ->
+                        showShowMore = textLayoutResult.hasVisualOverflow
+                      })
+
+                  if (showShowMore || isExpanded) {
                     Text(
-                        text = description,
-                        color = AppColors.textIcons,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        fontSize = 16.sp,
-                        maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { textLayoutResult ->
-                            showShowMore = textLayoutResult.hasVisualOverflow
-                        })
+                        text = if (isExpanded) "Show less" else "Show more",
+                        color = AppColors.textIcons.copy(alpha = 0.7f),
+                        fontSize = 14.sp,
+                        modifier =
+                            Modifier.padding(top = 4.dp).clickable { isExpanded = !isExpanded })
+                  }
 
-                    if (showShowMore || isExpanded) {
-                        Text(
-                            text = if (isExpanded) "Show less" else "Show more",
-                            color = AppColors.textIcons.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
-                            modifier =
-                                Modifier
-                                    .padding(top = 4.dp)
-                                    .clickable { isExpanded = !isExpanded })
-                    }
-
-                    // Action buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                  // Action buttons
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         // Block button
                         Button(
                             onClick = {
-                                (actions::onBlock)(curr, target)
-                                snackbarMessage = "Blocked ${target.name} successfully."
+                              (actions::onBlock)(curr, target)
+                              snackbarMessage = "Blocked ${target.name} successfully."
                             },
                             modifier = Modifier.weight(0.7f),
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.primary),
+                            colors =
+                                ButtonDefaults.buttonColors(containerColor = AppColors.primary),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(vertical = 16.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.Block,
-                                contentDescription = "Block",
-                                tint = AppColors.textIcons,
-                                modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Block", color = AppColors.textIcons, fontSize = 16.sp)
-                        }
+                              Icon(
+                                  imageVector = Icons.Default.Block,
+                                  contentDescription = "Block",
+                                  tint = AppColors.textIcons,
+                                  modifier = Modifier.size(20.dp))
+                              Spacer(modifier = Modifier.width(8.dp))
+                              Text(text = "Block", color = AppColors.textIcons, fontSize = 16.sp)
+                            }
 
                         // Send friend request button
                         if (!isFriend) {
-                            Button(
-                                onClick = {
-                                    (actions::onSendFriendRequest)(curr, target)
-                                    snackbarMessage = "Friend request sent to ${target.name}."
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = AppColors.primary,
-                                        contentColor = AppColors.textIcons),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(vertical = 16.dp)) {
+                          Button(
+                              onClick = {
+                                (actions::onSendFriendRequest)(curr, target)
+                                snackbarMessage = "Friend request sent to ${target.name}."
+                              },
+                              modifier = Modifier.weight(1f),
+                              colors =
+                                  ButtonDefaults.buttonColors(
+                                      containerColor = AppColors.primary,
+                                      contentColor = AppColors.textIcons),
+                              shape = RoundedCornerShape(8.dp),
+                              contentPadding = PaddingValues(vertical = 16.dp)) {
                                 Icon(
                                     imageVector = Icons.Default.PersonAdd,
                                     contentDescription = "Send friend request",
@@ -769,20 +729,20 @@ fun UserProfilePopup(
                                     text = "Send friend request",
                                     color = AppColors.textIcons,
                                     fontSize = 16.sp)
-                            }
+                              }
                         } else {
-                            Button(
-                                onClick = {
-                                    (actions::onRemoveFriend)(curr, target)
-                                    snackbarMessage = "${target.name} removed from Friends."
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = AppColors.primary,
-                                        contentColor = AppColors.textIcons),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(vertical = 16.dp)) {
+                          Button(
+                              onClick = {
+                                (actions::onRemoveFriend)(curr, target)
+                                snackbarMessage = "${target.name} removed from Friends."
+                              },
+                              modifier = Modifier.weight(1f),
+                              colors =
+                                  ButtonDefaults.buttonColors(
+                                      containerColor = AppColors.primary,
+                                      contentColor = AppColors.textIcons),
+                              shape = RoundedCornerShape(8.dp),
+                              contentPadding = PaddingValues(vertical = 16.dp)) {
                                 Icon(
                                     imageVector = Icons.Default.PersonRemove,
                                     contentDescription = "Remove friend",
@@ -793,27 +753,22 @@ fun UserProfilePopup(
                                     text = "Remove friend",
                                     color = AppColors.textIcons,
                                     fontSize = 16.sp)
-                            }
+                              }
                         }
-                    }
+                      }
                 }
-            }
+              }
 
-            // Snackbar
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .offset(y = 50.dp),
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = AppColors.primary,
-                        contentColor = AppColors.textIcons
-                    )
-                }
-            )
+          // Snackbar
+          SnackbarHost(
+              hostState = snackbarHostState,
+              modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).offset(y = 50.dp),
+              snackbar = { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = AppColors.primary,
+                    contentColor = AppColors.textIcons)
+              })
         }
-    }
+      }
 }
