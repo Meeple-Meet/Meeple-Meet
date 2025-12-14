@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopViewModel
 import com.github.meeplemeet.ui.components.AvailabilitySectionWithChevron
@@ -65,6 +66,7 @@ object ShopScreenDefaults {
     const val IMAGE_HEIGHT_CORRECTION = 3.1f
     val PAGER_UNSELECTED_BUBBLE_SIZE = 8.dp
     val PAGER_SELECTED_BUBBLE_SIZE = 10.dp
+    const val PERIODIC_FETCH_INTERVAL_MS = 30_000L
   }
 
   object Stock {
@@ -95,6 +97,8 @@ fun ShopScreen(
 ) {
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
+  val fetchedGames by viewModel.fetchedGames.collectAsStateWithLifecycle()
+
   // Trigger loading of shop data when shopId changes
   LaunchedEffect(shopId) { viewModel.getShop(shopId) }
 
@@ -127,8 +131,18 @@ fun ShopScreen(
                     Modifier.padding(innerPadding)
                         .padding(Dimensions.Padding.extraLarge)
                         .fillMaxSize(),
-                onGameClick = { game -> popupGame = game },
-            )
+                onGameClick = { gameItem -> popupGame = fetchedGames[gameItem.gameId] },
+                fetchedGames = fetchedGames,
+                onPageChanged = { pageIndex ->
+                  val start = pageIndex * ShopScreenDefaults.Pager.GAMES_PER_PAGE
+                  val end =
+                      minOf(
+                          start + ShopScreenDefaults.Pager.GAMES_PER_PAGE, shop.gameCollection.size)
+                  if (start < shop.gameCollection.size) {
+                    val gameIds = shop.gameCollection.subList(start, end).map { it.gameId }
+                    viewModel.fetchGames(gameIds)
+                  }
+                })
           }
               ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -176,8 +190,10 @@ fun ShopScreen(
 fun ShopDetails(
     shop: Shop,
     modifier: Modifier = Modifier,
-    onGameClick: (Game) -> Unit,
-    photoCollectionUrl: List<String> = shop.photoCollectionUrl
+    onGameClick: (GameItem) -> Unit,
+    photoCollectionUrl: List<String> = shop.photoCollectionUrl,
+    fetchedGames: Map<String, Game> = emptyMap(),
+    onPageChanged: (Int) -> Unit = {}
 ) {
   LazyColumn(
       modifier = modifier.fillMaxSize(),
@@ -219,7 +235,10 @@ fun ShopDetails(
                   false, // Does not matter what the value is set as since the user cannot interact
               // with the games either way
               title = ShopScreenDefaults.Game.GAME_SECTION_TITLE,
-              onClick = onGameClick)
+              onClick = onGameClick,
+              fetchedGames = fetchedGames,
+              periodicFetch = false,
+              onPageChanged = onPageChanged)
         }
       }
 }

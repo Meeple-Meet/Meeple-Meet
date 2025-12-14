@@ -1,5 +1,8 @@
 package com.github.meeplemeet.model.shared.game
 
+import com.github.meeplemeet.model.GameFetchException
+import com.github.meeplemeet.model.GameSearchException
+
 /**
  * Repository interface for accessing and querying [Game] data.
  *
@@ -14,7 +17,7 @@ interface GameRepository {
    *
    * @param gameID the unique ID of the game (e.g., Firestore document ID).
    * @return the corresponding [Game] object.
-   * @throws com.github.meeplemeet.model.GameNotFoundException if no game with the given ID exists.
+   * @throws GameFetchException if fetching the game with the given ID fails.
    */
   suspend fun getGameById(gameID: String): Game
 
@@ -30,29 +33,19 @@ interface GameRepository {
    * @return a [List] of [Game] objects corresponding to the provided IDs. The list may contain
    *   fewer items than requested if some IDs are invalid or not found.
    * @throws IllegalArgumentException if more than 20 IDs are provided.
+   * @throws GameFetchException if fetching games with the given IDs fails.
    */
   suspend fun getGamesById(vararg gameIDs: String): List<Game>
 
   /**
-   * Searches for games whose names contain the specified [query].
+   * Searches for games by name and returns lightweight search results.
    *
-   * This method performs a substring search on the game names, allowing the caller to choose
-   * whether the comparison should ignore case sensitivity.
-   *
-   * For example, searching for `"cat"` with [ignoreCase] set to `true` will match `"Catan"`, `"Cat
-   * Lady"`, and `"Concatenate"`. When [ignoreCase] is `false`,only exact casing matches are
-   * returned.
-   *
-   * Returns up to [maxResults] results, making it suitable for live search or autocomplete.
+   * Search is case-insensitive by default.
    *
    * @param query the substring of the game name to search for.
-   * @param maxResults the maximum number of results to return (default: 5).
-   * @param ignoreCase whether to ignore case when matching names (default: true).
-   * @return a [List] of [Game] objects whose names contain the specified substring.
+   * @param maxResults the maximum number of results to return (default: 10).
+   * @return a [List] of [GameSearchResult] objects matching the query.
+   * @throws GameSearchException If the search operation fails.
    */
-  suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int = 10,
-      ignoreCase: Boolean = true
-  ): List<Game>
+  suspend fun searchGamesByName(query: String, maxResults: Int = 10): List<GameSearchResult>
 }

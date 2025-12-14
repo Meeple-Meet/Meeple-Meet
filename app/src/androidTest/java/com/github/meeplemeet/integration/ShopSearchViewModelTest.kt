@@ -4,6 +4,7 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shops.OpeningHours
@@ -28,11 +29,7 @@ import org.junit.Test
 class CountingGameRepository : GameRepository {
   var callCount = 0
 
-  override suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int,
-      ignoreCase: Boolean
-  ): List<Game> {
+  override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> {
     callCount++
     return emptyList()
   }
@@ -108,7 +105,7 @@ class ShopSearchViewModelTest : FirestoreTests() {
 
   @Test(expected = PermissionDeniedException::class)
   fun setGameThrowsIfNotOwner() {
-    shopViewModel.setGame(shop, intruder, game)
+    shopViewModel.setGame(shop, intruder, GameSearchResult("", ""))
   }
 
   @Test(expected = PermissionDeniedException::class)
@@ -130,7 +127,7 @@ class ShopSearchViewModelTest : FirestoreTests() {
 
   @Test
   fun setGameSucceedsIfOwner() {
-    shopViewModel.setGame(shop, owner, game)
+    shopViewModel.setGame(shop, owner, GameSearchResult("", ""))
   }
 
   @Test
@@ -166,5 +163,62 @@ class ShopSearchViewModelTest : FirestoreTests() {
 
     testScheduler.advanceUntilIdle()
     assertEquals(1, (locationRepo as CountingLocationRepository).callCount)
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun fetchGames_allBehaviors() = runTest {
+    val testGame1 = Game("g1", "Catan", "", "", 3, 4, null, 90, null, emptyList())
+    val testGame2 = Game("g2", "Pandemic", "", "", 2, 4, null, 45, null, emptyList())
+
+    var getByIdCallCount = 0
+    val fakeRepo =
+        object : GameRepository {
+          override suspend fun searchGamesByName(query: String, maxResults: Int) =
+              emptyList<GameSearchResult>()
+
+          override suspend fun getGameById(gameID: String) = error("Not used")
+
+          override suspend fun getGamesById(vararg gameIDs: String): List<Game> {
+            getByIdCallCount++
+            return gameIDs.mapNotNull { id ->
+              when (id) {
+                "g1" -> testGame1
+                "g2" -> testGame2
+                else -> null
+              }
+            }
+          }
+        }
+
+    val vm = TestableShopSearchViewModel(fakeRepo, locationRepo)
+
+    // Test 1: fetchGames populates map
+    vm.fetchGames(listOf("g1", "g2"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(2, vm.fetchedGames.value.size)
+    assertEquals("Catan", vm.fetchedGames.value["g1"]?.name)
+
+    // Test 2: Already-fetched games are skipped
+    vm.fetchGames(listOf("g1"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(1, getByIdCallCount) // Still only 1 call
+
+    // Test 3: clearFetchedGames works
+    vm.clearFetchedGames()
+    assert(vm.fetchedGames.value.isEmpty())
+
+    // Test 4: Empty list doesn't crash
+    vm.fetchGames(emptyList())
+    testScheduler.advanceUntilIdle()
+
+    // Test 5: Too many IDs throws
+    var threwException = false
+    try {
+      vm.fetchGames((1..21).map { "game$it" })
+    } catch (e: IllegalArgumentException) {
+      threwException = true
+    }
+    assert(threwException)
   }
 }

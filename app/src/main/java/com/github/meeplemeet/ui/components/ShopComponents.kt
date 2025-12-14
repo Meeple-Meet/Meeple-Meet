@@ -50,7 +50,9 @@ import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
@@ -63,6 +65,7 @@ import java.text.DateFormatSymbols
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 interface ShopFormActions {
@@ -78,13 +81,13 @@ interface ShopFormActions {
 }
 
 interface GamePickerActions {
-  fun onStockChange(stock: List<Pair<Game, Int>>)
+  fun onStockChange(stock: List<GameItem>)
 
   fun onQtyChange(qty: Int)
 
   fun onSetGameQuery(query: String)
 
-  fun onSetGame(game: Game)
+  fun onSetGame(game: GameSearchResult)
 
   fun onDismiss()
 }
@@ -245,11 +248,11 @@ fun isValidEmail(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email)
 
 @Stable
 class CreateShopFormState(
-    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialStock: List<GameItem> = emptyList(),
     initialWeek: List<OpeningHours> = emptyWeek(),
     initialShop: Shop? = null,
     private val onSetGameQueryCallback: (String) -> Unit,
-    private val onSetGameCallback: (Game) -> Unit
+    private val onSetGameCallback: (GameSearchResult) -> Unit
 ) : ShopFormActions, GamePickerActions {
 
   var shopName by mutableStateOf(initialShop?.name ?: "")
@@ -258,8 +261,8 @@ class CreateShopFormState(
   var website by mutableStateOf(initialShop?.website ?: "")
   var addressText by mutableStateOf(initialShop?.address?.name ?: "")
 
-  var week by mutableStateOf(if (initialShop != null) initialShop.openingHours else initialWeek)
-  var stock by mutableStateOf(if (initialShop != null) initialShop.gameCollection else initialStock)
+  var week by mutableStateOf(initialShop?.openingHours ?: initialWeek)
+  var stock by mutableStateOf(initialShop?.gameCollection ?: initialStock)
   var photoCollectionUrl by mutableStateOf(initialShop?.photoCollectionUrl ?: listOf())
 
   // Dialog & UI states
@@ -267,7 +270,8 @@ class CreateShopFormState(
   var editingDay by mutableStateOf<Int?>(null)
 
   var showGameDialog by mutableStateOf(false)
-  var editingGame by mutableStateOf<Game?>(null)
+  var overwriteStock by mutableStateOf(true)
+  var editingGame by mutableStateOf<GameSearchResult?>(null)
   var qty by mutableIntStateOf(1)
 
   // Derived state for validation
@@ -295,7 +299,7 @@ class CreateShopFormState(
   }
 
   // ---- GamePickerActions implementation ----
-  override fun onStockChange(stock: List<Pair<Game, Int>>) {
+  override fun onStockChange(stock: List<GameItem>) {
     this.stock = stock
   }
 
@@ -307,7 +311,7 @@ class CreateShopFormState(
     onSetGameQueryCallback(query)
   }
 
-  override fun onSetGame(game: Game) {
+  override fun onSetGame(game: GameSearchResult) {
     onSetGameCallback(game)
   }
 
@@ -331,21 +335,21 @@ class CreateShopFormState(
   }
 
   // ---- Helpers for stock ----
-  fun updateStockQuantity(game: Game, qty: Int) {
-    stock = stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+  fun updateStockQuantity(game: GameItem, qty: Int) {
+    stock = stock.map { if (it.gameId == game.gameId) it.copy(quantity = qty) else it }
   }
 
-  fun removeFromStock(game: Game) {
-    stock = stock.filterNot { it.first.uid == game.uid }
+  fun removeFromStock(game: GameItem) {
+    stock = stock.filterNot { it.gameId == game.gameId }
   }
 
-  fun addOrUpdateStock(game: Game, qty: Int) {
-    val existing = stock.find { it.first.uid == game.uid }
+  fun addOrUpdateStock(game: GameItem, qty: Int) {
+    val existing = stock.find { it.gameId == game.gameId }
     stock =
         if (existing != null) {
-          stock.map { if (it.first.uid == game.uid) it.first to qty else it }
+          stock.map { if (it.gameId == game.gameId) it.copy(quantity = qty) else it }
         } else {
-          stock + (game to qty)
+          stock + GameItem(game.gameId, game.gameName, qty)
         }
   }
 
@@ -488,11 +492,13 @@ fun GameStockPicker(
     shop: Shop?,
     viewModel: ShopSearchViewModel,
     gameUIState: GameUIState,
-    state: CreateShopFormState,
+    state: CreateShopFormState
 ) {
   if (!state.showGameDialog) return
 
-  val existing = remember(state.stock) { state.stock.map { it.first.uid }.toSet() }
+  val existing = remember(state.stock) { state.stock.map { it.gameId }.toSet() }
+  val isEditMode = state.overwriteStock && state.editingGame != null
+
   Box(Modifier.testTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER)) {
     GameStockDialog(
         owner,
@@ -503,14 +509,26 @@ fun GameStockPicker(
         quantity = state.qty,
         onQuantityChange = state::onQtyChange,
         existingIds = existing,
-        ignoreId = state.editingGame?.uid,
+        ignoreId = state.editingGame?.id,
+        isEditMode = isEditMode,
         onDismiss = {
           state.onDismiss()
           state.onQtyChange(1)
           state.onSetGameQuery("")
         },
         onSave = {
-          gameUIState.fetchedGame?.let { g -> state.addOrUpdateStock(g, state.qty) }
+          if (isEditMode) {
+            state.editingGame?.let { editGame ->
+              val gameItem = state.stock.find { it.gameId == editGame.id }
+              if (gameItem != null) {
+                state.updateStockQuantity(gameItem, state.qty)
+              }
+            }
+          } else {
+            gameUIState.selectedGameSearchResult?.let { g ->
+              state.addOrUpdateStock(GameItem(g.id, g.name), state.qty)
+            }
+          }
           state.onQtyChange(1)
           state.onSetGameQuery("")
           state.onDismiss()
@@ -682,12 +700,13 @@ fun GameStockDialog(
     onQuantityChange: (Int) -> Unit,
     existingIds: Set<String> = emptySet(),
     ignoreId: String? = null,
+    isEditMode: Boolean = false,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
 ) {
-  val selectedGame = gameUIState.fetchedGame
+  val selectedGame = gameUIState.selectedGameSearchResult
   val isDuplicate =
-      selectedGame?.uid?.let { it in existingIds && (ignoreId == null || it != ignoreId) } ?: false
+      selectedGame?.id?.let { it in existingIds && (ignoreId == null || it != ignoreId) } ?: false
 
   AlertDialog(
       onDismissRequest = onDismiss,
@@ -700,7 +719,8 @@ fun GameStockDialog(
                 .background(AppColors.primary),
             contentAlignment = Alignment.Center) {
               Text(
-                  ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
+                  if (isEditMode) ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_EDIT_TITLE
+                  else ShopUiDefaults.StringsMagicNumbers.GAME_DIALOG_TITLE,
                   style = MaterialTheme.typography.headlineSmall)
             }
       },
@@ -712,12 +732,22 @@ fun GameStockDialog(
                   owner,
                   shop,
                   viewModel,
-                  gameUIState.fetchedGame,
+                  gameUIState.selectedGameSearchResult,
                   existingIds,
+                  enabled = !isEditMode,
                   inputFieldTestTag = ShopComponentsTestTags.GAME_SEARCH_FIELD,
                   dropdownItemTestTag = ShopComponentsTestTags.GAME_SEARCH_ITEM)
 
-              if (isDuplicate) {
+              if (isEditMode) {
+                Spacer(Modifier.height(Dimensions.Padding.small))
+                Text(
+                    ShopUiDefaults.StringsMagicNumbers.quantityUpdateDialog(selectedGame?.name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textIconsFade,
+                    textAlign = TextAlign.Center)
+              }
+
+              if (isDuplicate && !isEditMode) {
                 Spacer(Modifier.height(Dimensions.Padding.mediumSmall))
                 Text(
                     ShopUiDefaults.StringsMagicNumbers.DUPLICATE_GAME,
@@ -747,7 +777,9 @@ fun GameStockDialog(
       confirmButton = {
         TextButton(
             onClick = onSave,
-            enabled = gameUIState.fetchedGame != null && !isDuplicate && quantity > 0,
+            enabled =
+                (isEditMode || (gameUIState.selectedGameSearchResult != null && !isDuplicate)) &&
+                    quantity > 0,
             modifier = Modifier.testTag(ShopComponentsTestTags.GAME_DIALOG_SAVE)) {
               Text(ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             }
@@ -774,19 +806,24 @@ fun GameStockDialog(
  */
 @Composable
 fun GameItemImage(
-    game: Game,
+    game: GameItem,
     count: Int,
     modifier: Modifier = Modifier,
     online: Boolean,
     editable: Boolean = false,
     clickable: Boolean = true,
-    onClick: (Game) -> Unit = {},
-    onEdit: (Game) -> Unit = {},
-    onDelete: (Game) -> Unit = {},
+    onClick: (GameItem) -> Unit = {},
+    onEdit: (GameItem) -> Unit = {},
+    onDelete: (GameItem) -> Unit = {},
     imageHeight: Dp? = null,
+    fetchedGames: Map<String, Game> = emptyMap()
 ) {
-  Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
-  Box(modifier = modifier.testTag(ShopFormTestTags.gameTestTag(game.uid))) {
+  Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.gameId))
+
+  val fetchedGame = fetchedGames[game.gameId]
+  val imageUrl = fetchedGame?.imageURL ?: ""
+
+  Box(modifier = modifier.testTag(ShopFormTestTags.gameTestTag(game.gameId))) {
     Column(
         modifier =
             Modifier.padding(top = ShopScreenDefaults.Stock.STOCK_BUBBLE_TOP_PADDING)
@@ -795,8 +832,8 @@ fun GameItemImage(
                 .clickable(enabled = clickable) { onClick(game) },
         horizontalAlignment = Alignment.CenterHorizontally) {
           AsyncImage(
-              model = game.imageURL,
-              contentDescription = game.name,
+              model = imageUrl,
+              contentDescription = game.gameName,
               contentScale = ContentScale.Crop,
               modifier =
                   Modifier.fillMaxWidth(ShopScreenDefaults.Game.GAME_IMG_RELATIVE_WIDTH)
@@ -813,14 +850,14 @@ fun GameItemImage(
           Spacer(Modifier.height(Dimensions.Spacing.small))
 
           Text(
-              text = game.name,
+              text = game.gameName,
               style = MaterialTheme.typography.bodySmall,
               textAlign = TextAlign.Center,
               maxLines = ShopScreenDefaults.Game.GAME_NAME_MAX_LINES,
               overflow = TextOverflow.Ellipsis,
               modifier =
                   Modifier.fillMaxWidth()
-                      .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.uid}"))
+                      .testTag("${ShopTestTags.SHOP_GAME_NAME_PREFIX}${game.gameId}"))
         }
 
     if (count > ShopScreenDefaults.Stock.NOT_SHOWING_STOCK_MIN_VALUE) {
@@ -838,7 +875,7 @@ fun GameItemImage(
                     Modifier.size(Dimensions.Padding.xLarge)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
-                        .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.uid}"),
+                        .testTag("${ShopTestTags.SHOP_GAME_STOCK_PREFIX}${game.gameId}"),
                 contentAlignment = Alignment.Center) {
                   Text(
                       text = label,
@@ -852,7 +889,7 @@ fun GameItemImage(
                   onClick = { onDelete(game) },
                   modifier =
                       Modifier.offset(x = Dimensions.Padding.large)
-                          .testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.uid}")) {
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_DELETE}:${game.gameId}")) {
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = null,
@@ -862,12 +899,12 @@ fun GameItemImage(
               IconButton(
                   onClick = {
                     onEdit(game)
-                    Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.uid))
+                    Log.d("checkpoint testTag", ShopFormTestTags.gameTestTag(game.gameId))
                   },
                   modifier =
                       Modifier.offset(
                               x = Dimensions.Padding.large, y = -Dimensions.Padding.extraMedium)
-                          .testTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.uid}")) {
+                          .testTag("${ShopComponentsTestTags.SHOP_GAME_EDIT}:${game.gameId}")) {
                     Icon(Icons.Default.Edit, contentDescription = null, tint = AppColors.textIcons)
                   }
             }
@@ -893,15 +930,18 @@ fun GameItemImage(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GameImageListSection(
-    games: List<Pair<Game, Int>>,
+    games: List<GameItem>,
     modifier: Modifier = Modifier,
     clickableGames: Boolean = false,
     title: String,
     editable: Boolean = false,
     online: Boolean,
-    onClick: (Game) -> Unit = {},
-    onEdit: (Game) -> Unit = {},
-    onDelete: (Game) -> Unit = {}
+    onClick: (GameItem) -> Unit = {},
+    onEdit: (GameItem) -> Unit = {},
+    onDelete: (GameItem) -> Unit = {},
+    fetchedGames: Map<String, Game> = emptyMap(),
+    onPageChanged: (Int) -> Unit = {},
+    periodicFetch: Boolean = false
 ) {
   val clampedGames = remember(games) { games.shuffled().take(ShopScreenDefaults.Pager.MAX_GAMES) }
   if (clampedGames.isEmpty()) return
@@ -916,6 +956,23 @@ fun GameImageListSection(
 
   val pagerState = rememberPagerState(pageCount = { pageCount })
   val scope = rememberCoroutineScope()
+
+  if (periodicFetch) {
+    LaunchedEffect(pagerState.currentPage) {
+      // Initial fetch
+      onPageChanged(pagerState.currentPage)
+
+      // Periodic fetch
+      while (true) {
+        delay(ShopScreenDefaults.Pager.PERIODIC_FETCH_INTERVAL_MS)
+        // Re-fetch la page courante
+        onPageChanged(pagerState.currentPage)
+      }
+    }
+  } else {
+    // Boot-up fetch (only one)
+    LaunchedEffect(pagerState.currentPage) { onPageChanged(pagerState.currentPage) }
+  }
 
   Column(
       verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall),
@@ -944,10 +1001,10 @@ fun GameImageListSection(
                     horizontalArrangement = Arrangement.spacedBy(0.dp),
                     userScrollEnabled = false,
                     modifier = Modifier.fillMaxSize()) {
-                      items(pages[pageIndex], key = { it.first.uid }) { (game, count) ->
+                      items(pages[pageIndex], key = { it.gameId }) { gameItem ->
                         GameItemImage(
-                            game = game,
-                            count = count,
+                            game = gameItem,
+                            count = gameItem.quantity,
                             clickable = clickableGames,
                             editable = editable,
                             onClick = onClick,
@@ -955,6 +1012,7 @@ fun GameImageListSection(
                             onEdit = onEdit,
                             imageHeight = imageHeight,
                             online = online,
+                            fetchedGames = fetchedGames,
                             modifier = Modifier.height(rowHeight))
                       }
                     }

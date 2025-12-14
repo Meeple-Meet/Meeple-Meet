@@ -1,7 +1,7 @@
 package com.github.meeplemeet.model.shared.game
 
 import com.github.meeplemeet.FirebaseProvider
-import com.github.meeplemeet.model.GameNotFoundException
+import com.github.meeplemeet.model.GameFetchException
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
@@ -24,7 +24,7 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
   override suspend fun getGameById(gameID: String): Game {
     val snapshot = games.document(gameID).get().await()
     val game = snapshot.toObject(GameNoUid::class.java)
-    return game?.let { fromNoUid(gameID, it) } ?: throw GameNotFoundException()
+    return game?.let { fromNoUid(gameID, it) } ?: throw GameFetchException("")
   }
 
   /**
@@ -58,31 +58,19 @@ class FirestoreGameRepository(db: FirebaseFirestore = FirebaseProvider.db) : Gam
   /**
    * Searches for games whose names contain the specified [query].
    *
-   * This search is performed locally after fetching all games, and supports optional
-   * case-insensitive matching. Results are limited to [maxResults].
+   * This search is performed locally after fetching all games. Results are limited to [maxResults].
    */
-  override suspend fun searchGamesByNameContains(
-      query: String,
-      maxResults: Int,
-      ignoreCase: Boolean
-  ): List<Game> {
+  override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> {
     if (query.isBlank()) return emptyList()
 
     val snapshot = games.get().await()
     val allGames = mapSnapshotToGames(snapshot.documents)
-
-    // Filter games based on whether their names contain the query
-    val filteredGames =
-        if (ignoreCase) {
-          allGames.filter { it.name.contains(query, ignoreCase = true) }
-        } else {
-          allGames.filter { it.name.contains(query) }
-        }
+    val filteredGames = allGames.filter { it.name.contains(query, ignoreCase = true) }
 
     // Sort results to prioritize names starting with the query
-    val sortedGames = filteredGames.sortedBy { !it.name.startsWith(query, ignoreCase) }
+    val sortedGames = filteredGames.sortedBy { !it.name.startsWith(query, true) }
 
-    return sortedGames.take(maxResults)
+    return sortedGames.take(maxResults).map { GameSearchResult(it.uid, it.name) }
   }
 
   /** Converts a Firestore query result into a list of [Game] objects. */

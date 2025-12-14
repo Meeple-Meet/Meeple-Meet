@@ -310,15 +310,17 @@ fun SessionEditScreen(
                     onSave = { updated ->
                       val result =
                           runCatching {
-                                val selectedGameId = gameUi.selectedGameUid
+                                val selectedResult = gameUi.selectedGameSearchResult
+
                                 val finalGameId =
-                                    when {
-                                      selectedGameId.isNotBlank() -> selectedGameId
-                                      updated.proposedGameString.isNotBlank() ->
-                                          updated.proposedGameString
-                                      session.gameId.isNotBlank() -> session.gameId
-                                      else -> LABEL_UNKNOWN_GAME
-                                    }
+                                    selectedResult?.id
+                                        ?: updated.proposedGameString.ifBlank {
+                                          session.gameId.ifBlank { LABEL_UNKNOWN_GAME }
+                                        }
+
+                                val finalGameName =
+                                    selectedResult?.name
+                                        ?: session.gameName.ifBlank { LABEL_UNKNOWN_GAME }
 
                                 val finalParticipantIds = updated.participants.map { it.uid }
 
@@ -327,7 +329,7 @@ fun SessionEditScreen(
                                     discussion = discussion,
                                     name = updated.title,
                                     gameId = finalGameId,
-                                    gameName = "Temp game name (edit)",
+                                    gameName = finalGameName,
                                     date = toTimestamp(updated.date, updated.time),
                                     location = locationUi.selectedLocation ?: session.location,
                                     participants = finalParticipantIds,
@@ -600,7 +602,7 @@ private fun EditTitleAndGameSection(
         account = account,
         discussion = discussion,
         viewModel = viewModel,
-        initial = gameUi.fetchedGame,
+        initial = gameUi.selectedGameSearchResult,
     )
   }
 }
