@@ -2,6 +2,7 @@
 package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -37,17 +38,22 @@ fun ProfilePicture(
     profilePictureUrl: String?,
     size: Dp,
     backgroundColor: androidx.compose.ui.graphics.Color = AppColors.neutral,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-  Box(modifier = modifier.size(size).clip(CircleShape).background(backgroundColor, CircleShape)) {
-    if (profilePictureUrl != null) {
-      AsyncImage(
-          model = profilePictureUrl,
-          contentDescription = "Profile Picture",
-          modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Crop)
-    }
-  }
+  Box(
+      modifier =
+          modifier.size(size).clip(CircleShape).background(backgroundColor, CircleShape).clickable {
+            onClick()
+          }) {
+        if (profilePictureUrl != null) {
+          AsyncImage(
+              model = profilePictureUrl,
+              contentDescription = "Profile Picture",
+              modifier = Modifier.fillMaxSize(),
+              contentScale = ContentScale.Crop)
+        }
+      }
 }
 
 /** Formats a date as "Today", "Yesterday" or "MMM dd, yyyy". */
