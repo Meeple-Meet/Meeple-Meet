@@ -325,7 +325,7 @@ private fun NotificationPermissionPage(
               .background(AppColors.primary)) {
         Box(
             modifier =
-                Modifier.size(180.dp)
+                Modifier.size(Dimensions.MapDimensions.offsetX180)
                     .clip(CircleShape)
                     .background(AppColors.focus.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center) {
@@ -333,17 +333,12 @@ private fun NotificationPermissionPage(
                   imageVector = Icons.Filled.Notifications,
                   contentDescription = null,
                   tint = AppColors.focus,
-                  modifier = Modifier.size(96.dp))
+                  modifier = Modifier.size(Dimensions.Padding.veryVeryLarge))
             }
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        Text(
-            text = "Enable notifications",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = AppColors.textIcons,
-            textAlign = TextAlign.Center)
+        PageTitle(title = "Enable notifications", pageIndex = 5)
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
@@ -1133,7 +1128,7 @@ fun LetsGoPage() {
 
         PageImage(imageRes = logoRes)
 
-        PageTitle(title = "Let's Go!", pageIndex = 5)
+        PageTitle(title = "Let's Go!", pageIndex = 6)
 
         Text(
             text =
