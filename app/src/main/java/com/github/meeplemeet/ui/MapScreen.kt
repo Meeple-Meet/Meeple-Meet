@@ -90,6 +90,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
@@ -604,6 +605,7 @@ fun MapScreen(
                               true
                             },
                             icon = icon,
+                            anchor = Offset(0.5f, 0.5f),
                             tag = MapScreenTestTags.getTestTagForPin(gp.geoPin.uid))
                       } else {
                         // Cluster with multiple pins, create a cluster icon
@@ -617,6 +619,7 @@ fun MapScreen(
                               true
                             },
                             icon = clusterIcon,
+                            anchor = Offset(0.5f, 0.5f),
                             tag = MapScreenTestTags.getTestTagForCluster(pos))
                       }
                     }
