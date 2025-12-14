@@ -79,6 +79,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.account.UserProfilePopupActions
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.discussions.UITestTags
@@ -727,7 +728,7 @@ fun UserProfilePopup(
                         // Block button
                         Button(
                             onClick = {
-                              (actions::onBlock)(curr, target)
+                              actions.onBlock(curr, target)
                               snackbarMessage = "Blocked ${target.name} successfully."
                             },
                             modifier =
@@ -756,39 +757,55 @@ fun UserProfilePopup(
 
                         // Send friend request button
                         if (!isFriend) {
+                          val isRequestSent =
+                              curr.relationships[target.uid] == RelationshipStatus.SENT
                           Button(
                               onClick = {
-                                (actions::onSendFriendRequest)(curr, target)
-                                snackbarMessage = "Friend request sent to ${target.name}."
+                                if (!isRequestSent) {
+                                  actions.onSendFriendRequest(curr, target)
+                                  snackbarMessage = "Friend request sent to ${target.name}."
+                                }
                               },
                               modifier =
                                   Modifier.weight(1f)
                                       .testTag(
                                           CommonComponentsTestTags
                                               .USER_PROFILE_POPUP_SEND_REQUEST_BUTTON),
-                              enabled = online,
+                              enabled = online && !isRequestSent,
                               colors =
                                   ButtonDefaults.buttonColors(
-                                      containerColor = AppColors.affirmative,
-                                      contentColor = AppColors.textIcons),
+                                      containerColor =
+                                          if (isRequestSent) AppColors.neutral
+                                          else AppColors.affirmative,
+                                      contentColor = AppColors.textIcons,
+                                      disabledContainerColor =
+                                          if (isRequestSent) AppColors.neutral
+                                          else ButtonDefaults.buttonColors().disabledContainerColor,
+                                      disabledContentColor = AppColors.textIcons),
                               shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
                               contentPadding =
                                   PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
                                 Icon(
-                                    imageVector = Icons.Default.PersonAdd,
-                                    contentDescription = "Send friend request",
+                                    imageVector =
+                                        if (isRequestSent) Icons.Default.Person
+                                        else Icons.Default.PersonAdd,
+                                    contentDescription =
+                                        if (isRequestSent) "Request Sent"
+                                        else "Send friend request",
                                     tint = AppColors.textIcons,
                                     modifier = Modifier.size(Dimensions.IconSize.standard))
                                 Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                                 Text(
-                                    text = "Send friend request",
+                                    text =
+                                        if (isRequestSent) "Request Sent"
+                                        else "Send friend request",
                                     color = AppColors.textIcons,
                                     fontSize = Dimensions.TextSize.subtitle)
                               }
                         } else {
                           Button(
                               onClick = {
-                                (actions::onRemoveFriend)(curr, target)
+                                actions.onRemoveFriend(curr, target)
                                 snackbarMessage = "${target.name} removed from Friends."
                               },
                               modifier =
