@@ -1303,7 +1303,6 @@ fun EmailSection(
     errorMsg: String? = null,
     successMsg: String? = null
 ) {
-  var toast by remember { mutableStateOf<ToastData?>(null) }
   var localEmail by remember { mutableStateOf(email) }
   var showErrors by remember { mutableStateOf(false) }
   var newEmail by remember { mutableStateOf("") }
@@ -1371,6 +1370,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.NEW_EMAIL_INPUT_FIELD) },
+          enabled = online,
           value = newEmail,
           onValueChange = { new ->
             newEmail = new
@@ -1405,6 +1405,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.CONFIRM_EMAIL_INPUT_FIELD) },
+          enabled = online,
           value = confirmEmail,
           onValueChange = { new ->
             confirmEmail = new
@@ -1431,6 +1432,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.PASSWORD_INPUT_FIELD) },
+          enabled = online,
           value = password,
           onValueChange = { password = it },
           visualTransformation =
@@ -1564,7 +1566,7 @@ fun RolesSection(
     online: Boolean
 ) {
 
-  var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
+  var expanded by remember { mutableStateOf(hasNoRoles(account)) }
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }
