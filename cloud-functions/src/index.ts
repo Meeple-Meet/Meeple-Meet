@@ -19,4 +19,5 @@ export {
 export {
   onMessageCreated,
   onAccountNotificationCreated,
+  onPostCommentCreated,
 } from "./notifications/index";
