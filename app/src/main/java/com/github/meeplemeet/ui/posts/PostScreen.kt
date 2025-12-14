@@ -260,6 +260,7 @@ fun PostScreen(
     account: Account,
     postId: String,
     verified: Boolean,
+    online: Boolean,
     viewModel: PostViewModel = viewModel(),
     onBack: () -> Unit = {},
     onVerifyClick: () -> Unit = {}
@@ -458,6 +459,7 @@ fun PostScreen(
         target = selectedAccount,
         isFriend = isFriend,
         onDismiss = { showUserProfilePopup = false },
+        online = online,
         actions = viewModel)
   }
 }

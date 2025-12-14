@@ -214,6 +214,7 @@ fun DiscussionScreen(
     discussion: Discussion,
     verified: Boolean,
     viewModel: DiscussionViewModel = viewModel(),
+    online: Boolean,
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
@@ -932,6 +933,7 @@ fun DiscussionScreen(
         target = selectedAccount,
         isFriend = isFriend,
         onDismiss = { showUserProfilePopup = false },
+        online = online,
         actions = viewModel)
   }
 }

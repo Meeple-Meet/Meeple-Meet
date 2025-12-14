@@ -603,6 +603,7 @@ fun UserProfilePopup(
     curr: Account,
     target: Account,
     isFriend: Boolean,
+    online: Boolean,
     onDismiss: () -> Unit,
     actions: UserProfilePopupActions
 ) {
@@ -715,8 +716,11 @@ fun UserProfilePopup(
                               snackbarMessage = "Blocked ${target.name} successfully."
                             },
                             modifier = Modifier.weight(0.7f),
+                            enabled = online,
                             colors =
-                                ButtonDefaults.buttonColors(containerColor = AppColors.primary),
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.negative,
+                                    contentColor = AppColors.textIcons),
                             shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
                             contentPadding =
                                 PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
@@ -740,9 +744,10 @@ fun UserProfilePopup(
                                 snackbarMessage = "Friend request sent to ${target.name}."
                               },
                               modifier = Modifier.weight(1f),
+                              enabled = online,
                               colors =
                                   ButtonDefaults.buttonColors(
-                                      containerColor = AppColors.primary,
+                                      containerColor = AppColors.affirmative,
                                       contentColor = AppColors.textIcons),
                               shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
                               contentPadding =
@@ -765,6 +770,7 @@ fun UserProfilePopup(
                                 snackbarMessage = "${target.name} removed from Friends."
                               },
                               modifier = Modifier.weight(1f),
+                              enabled = online,
                               colors =
                                   ButtonDefaults.buttonColors(
                                       containerColor = AppColors.primary,
