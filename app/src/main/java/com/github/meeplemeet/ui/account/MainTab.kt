@@ -244,7 +244,7 @@ object MainTabUi {
   val OFFSET_X = 4.dp
   val OFFSET_Y = (-4).dp
   val OFFSET_EMAIL = 35.dp
-  val PADDING_BOTTOM_SCROLL = 100.dp
+  val PADDING_BOTTOM_SCROLL = 110.dp
   const val MAX_NOTIF_COUNT = 9
 
   object Misc {
