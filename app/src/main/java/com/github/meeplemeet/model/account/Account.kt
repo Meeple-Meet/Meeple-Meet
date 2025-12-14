@@ -111,7 +111,8 @@ data class Account(
     val notifications: List<Notification> = emptyList(),
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
     val themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT,
-    val pastSessionIds: List<String> = emptyList()
+    val pastSessionIds: List<String> = emptyList(),
+    val fcmToken: String? = null
 )
 
 /**
@@ -142,7 +143,8 @@ data class AccountNoUid(
     val spaceRenter: Boolean = false,
     val notificationSettings: NotificationSettings = NotificationSettings.EVERYONE,
     val themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT,
-    val pastSessionIds: List<String> = emptyList()
+    val pastSessionIds: List<String> = emptyList(),
+    val fcmToken: String? = null
 )
 
 /**
@@ -183,4 +185,5 @@ fun fromNoUid(
         notifications = notifications,
         themeMode = accountNoUid.themeMode,
         notificationSettings = accountNoUid.notificationSettings,
-        pastSessionIds = accountNoUid.pastSessionIds)
+        pastSessionIds = accountNoUid.pastSessionIds,
+        fcmToken = accountNoUid.fcmToken)

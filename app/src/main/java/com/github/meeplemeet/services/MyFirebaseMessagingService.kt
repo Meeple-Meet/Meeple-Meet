@@ -11,8 +11,13 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.R
+import com.github.meeplemeet.utils.FCMTokenManager
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -38,9 +43,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     super.onNewToken(token)
     Log.d(TAG, "Refreshed token: $token")
 
-    // If you want to send messages to this application instance or
-    // manage this apps subscriptions on the server side, send the
-    // FCM registration token to your app server.
+    // Save token locally
+    FCMTokenManager.saveTokenLocally(applicationContext, token)
+
+    // Register token with server if user is logged in
     sendRegistrationToServer(token)
   }
 
@@ -56,8 +62,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
   }
 
   private fun sendRegistrationToServer(token: String) {
-    // Implement this method to send token to your app server
-    Log.d(TAG, "sendRegistrationTokenToServer($token)")
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
+    if (userId != null) {
+      CoroutineScope(Dispatchers.IO).launch {
+        try {
+          FCMTokenManager.registerTokenWithServer(userId, token)
+          Log.d(TAG, "Token registered with server for user: $userId")
+        } catch (e: Exception) {
+          Log.e(TAG, "Failed to register token with server", e)
+        }
+      }
+    } else {
+      Log.d(TAG, "User not logged in, token registration skipped")
+    }
   }
 
   private fun sendNotification(title: String?, messageBody: String?) {

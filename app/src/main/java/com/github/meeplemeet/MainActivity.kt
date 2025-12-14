@@ -1,10 +1,15 @@
 package com.github.meeplemeet
 // AI was used for this file
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.core.content.ContextCompat
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -81,6 +87,7 @@ import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
 import com.github.meeplemeet.ui.space_renter.SpaceRenterScreen
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
+import com.github.meeplemeet.utils.FCMTokenManager
 import com.github.meeplemeet.utils.KeyboardUtils
 import com.google.android.gms.maps.MapsInitializer
 import com.google.firebase.Firebase
@@ -279,6 +286,28 @@ fun MeepleMeetApp(
   var wasOnline by remember { mutableStateOf(online) }
   val activity = context as? MainActivity
 
+  // Notification permission launcher for Android 13+
+  val notificationPermissionLauncher =
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+          isGranted ->
+        if (isGranted) {
+          // Permission granted, FCM can now show notifications
+        }
+      }
+
+  // Request notification permission for Android 13+
+  LaunchedEffect(account) {
+    if (account != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      val hasPermission =
+          ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+              PackageManager.PERMISSION_GRANTED
+
+      if (!hasPermission) {
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
+  }
+
   LaunchedEffect(online) {
     // Only sync when transitioning from offline to online
     if (online && !wasOnline) {
@@ -298,8 +327,13 @@ fun MeepleMeetApp(
   // 2. Happens once per login session
   // 3. Ensures Firestore is up-to-date with Firebase Auth before any screen is shown
   LaunchedEffect(account) {
-    if (account != null) {
+    account?.let { currentAccount ->
       RepositoryProvider.authentication.syncEmailToFirestore()
+
+      // Initialize FCM token for push notifications
+      activity?.syncScope?.launch {
+        FCMTokenManager.initializeTokenForUser(context, currentAccount.uid)
+      }
     }
   }
 
