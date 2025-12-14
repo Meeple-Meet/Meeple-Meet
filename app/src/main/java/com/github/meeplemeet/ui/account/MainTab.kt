@@ -345,6 +345,8 @@ object MainTabUi {
   }
 }
 
+const val VERIFICATION_OFFSET = 35
+
 sealed class ProfilePage {
   data object Main : ProfilePage()
 
@@ -692,10 +694,9 @@ fun MainTabContent(
                           }
                     }
 
-                // Toast Overlay - Positioned to float over content without layout shift
                 Box(
                     modifier =
-                        Modifier.align(Alignment.BottomCenter).offset(y = 35.dp).zIndex(1f)) {
+                        Modifier.align(Alignment.BottomCenter).offset(y = VERIFICATION_OFFSET.dp).zIndex(1f)) {
                       ToastHost(toast = toast, onToastFinished = { toast = null })
                     }
               }
