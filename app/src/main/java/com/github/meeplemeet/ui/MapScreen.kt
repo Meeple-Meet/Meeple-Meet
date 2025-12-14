@@ -210,7 +210,7 @@ object MarkerConfig {
   private const val CLUSTER_BACKGROUND_ALPHA = 0.85f
   const val PULSE_ALPHA = 0.3f
   val MARKER_COLOR = Color.White
-  const val MARKER_SCALE = 1.5f
+  const val MARKER_SCALE = 1.20f
   const val MARKER_BACKGROUND_ALPHA = 1.0f
 
   /** Returns a gradient-based color depending on cluster size. */
