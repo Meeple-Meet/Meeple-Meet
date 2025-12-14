@@ -162,6 +162,10 @@ interface AccountViewModel : UserProfilePopupActions {
     }
   }
 
+  override fun onCancel(curr: Account, other: Account) {
+    scope.launch { RepositoryProvider.accounts.resetRelationship(curr.uid, other.uid) }
+  }
+
   override fun onRemoveFriend(curr: Account, other: Account) {
     scope.launch { RepositoryProvider.accounts.resetRelationship(curr.uid, other.uid) }
   }

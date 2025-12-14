@@ -6,4 +6,6 @@ interface UserProfilePopupActions {
   fun onSendFriendRequest(curr: Account, other: Account)
 
   fun onRemoveFriend(curr: Account, other: Account)
+
+  fun onCancel(curr: Account, other: Account)
 }

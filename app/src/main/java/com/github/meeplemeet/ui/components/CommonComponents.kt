@@ -68,9 +68,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -729,7 +732,15 @@ fun UserProfilePopup(
                         Button(
                             onClick = {
                               actions.onBlock(curr, target)
-                              snackbarMessage = "Blocked ${target.name} successfully."
+                              snackbarMessage =
+                                  buildAnnotatedString {
+                                        append("Blocked ")
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                          append(target.name)
+                                        }
+                                        append(" successfully.")
+                                      }
+                                      .toString()
                             },
                             modifier =
                                 Modifier.weight(0.7f)
@@ -763,7 +774,26 @@ fun UserProfilePopup(
                               onClick = {
                                 if (!isRequestSent) {
                                   actions.onSendFriendRequest(curr, target)
-                                  snackbarMessage = "Friend request sent to ${target.name}."
+                                  snackbarMessage =
+                                      buildAnnotatedString {
+                                            append("Friend request sent to")
+                                            withStyle(
+                                                style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                  append(target.name)
+                                                }
+                                          }
+                                          .toString()
+                                } else {
+                                  actions.onCancel(curr, target)
+                                  snackbarMessage =
+                                      buildAnnotatedString {
+                                            append("Successfully canceled friend request to ")
+                                            withStyle(
+                                                style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                  append(target.name)
+                                                }
+                                          }
+                                          .toString()
                                 }
                               },
                               modifier =
@@ -771,7 +801,7 @@ fun UserProfilePopup(
                                       .testTag(
                                           CommonComponentsTestTags
                                               .USER_PROFILE_POPUP_SEND_REQUEST_BUTTON),
-                              enabled = online && !isRequestSent,
+                              enabled = online,
                               colors =
                                   ButtonDefaults.buttonColors(
                                       containerColor =
@@ -790,14 +820,14 @@ fun UserProfilePopup(
                                         if (isRequestSent) Icons.Default.Person
                                         else Icons.Default.PersonAdd,
                                     contentDescription =
-                                        if (isRequestSent) "Request Sent"
+                                        if (isRequestSent) "Cancel request"
                                         else "Send friend request",
                                     tint = AppColors.textIcons,
                                     modifier = Modifier.size(Dimensions.IconSize.standard))
                                 Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
                                 Text(
                                     text =
-                                        if (isRequestSent) "Request Sent"
+                                        if (isRequestSent) "Cancel request"
                                         else "Send friend request",
                                     color = AppColors.textIcons,
                                     fontSize = Dimensions.TextSize.subtitle)
@@ -806,7 +836,15 @@ fun UserProfilePopup(
                           Button(
                               onClick = {
                                 actions.onRemoveFriend(curr, target)
-                                snackbarMessage = "${target.name} removed from Friends."
+                                snackbarMessage =
+                                    buildAnnotatedString {
+                                          withStyle(
+                                              style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                append(target.name)
+                                              }
+                                          append(" removed from friends")
+                                        }
+                                        .toString()
                               },
                               modifier =
                                   Modifier.weight(1f)
