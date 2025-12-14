@@ -55,13 +55,18 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             photoUrl = null)
 
     // Create a test discussion    // Create initial account with a long description
-    val longDescription = "Start " + "A very long description that should definitely overflow because it repeats many times. ".repeat(10) + " End"
-    otherUser = accountRepository.createAccount(
+    val longDescription =
+        "Start " +
+            "A very long description that should definitely overflow because it repeats many times. "
+                .repeat(10) +
+            " End"
+    otherUser =
+        accountRepository.createAccount(
             userHandle = "otheruser_${Random.nextInt(1000000)}",
             name = "Bob",
             email = "bob@test.com",
             photoUrl = null)
-      accountRepository.setAccountDescription(otherUser.uid, longDescription)
+    accountRepository.setAccountDescription(otherUser.uid, longDescription)
     testDiscussion =
         discussionRepository.createDiscussion(
             name = "Test Discussion",
@@ -771,11 +776,11 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
 
         // Assert overflow "Show more" is displayed for our long description
         composeTestRule.onNodeWithText("Show more").assertExists()
-        
+
         // Assert expansion works
         composeTestRule.onNodeWithText("Show more").performClick()
         composeTestRule.onNodeWithText("Show less").assertExists()
-        
+
         // Collapse again
         composeTestRule.onNodeWithText("Show less").performClick()
         composeTestRule.onNodeWithText("Show more").assertExists()
@@ -908,8 +913,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         }
       }
 
-          // removes)
-        }
+      // removes)
+    }
 
     // Cleanup photo discussions
     runBlocking {

@@ -68,11 +68,18 @@ class PostScreenTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     // Use postRepository from FirestoreTests parent class
+    com.github.meeplemeet.model.offline.OfflineModeManager.clearOfflineMode()
     postVM = PostViewModel(postRepository)
 
     // Create accounts in Firestore
+    val longDescription =
+        "Start " +
+            "A very long description that should definitely overflow because it repeats many times. "
+                .repeat(10) +
+            " End"
     marco = accountRepository.createAccount("u_marco", "Marco", "marco@meeple.ch", null)
     alex = accountRepository.createAccount("u_alex", "Alex", "alex@meeple.ch", null)
+    accountRepository.setAccountDescription(alex.uid, longDescription)
     dany = accountRepository.createAccount("u_dany", "Dany", "dany@meeple.ch", null)
 
     val c1_1_1 = testComment("c1_1_1", "Deep reply about Spirit Island combos", dany)
@@ -313,10 +320,57 @@ class PostScreenTest : FirestoreTests() {
 
       // Assert popup is visible
       compose.waitForIdle()
+
+      // Assert username is displayed
       compose
           .onNodeWithTag(
               CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
           .assertExists()
+
+      // Assert handle is displayed
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert avatar is displayed
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert description is displayed
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert overflow "Show more" is displayed
+      compose.onNodeWithText("Show more").assertExists()
+
+      // Assert expansion works
+      compose.onNodeWithText("Show more").performClick()
+      compose.onNodeWithText("Show less").assertExists()
+
+      // Collapse again
+      compose.onNodeWithText("Show less").performClick()
+      compose.onNodeWithText("Show more").assertExists()
+    }
+
+    checkpoint("Assert UserProfilePopup buttons are clickable") {
+      // Assert block button exists and can be clicked
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
+
+      // Assert send friend request button exists and can be clicked
+      // (since author is not currently a friend)
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
     }
 
     checkpoint("Verify UserProfilePopup Actions") {
