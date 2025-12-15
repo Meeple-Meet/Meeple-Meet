@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
@@ -40,7 +39,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
-import com.github.meeplemeet.ui.components.ToastData
+import com.github.meeplemeet.ui.components.ClosableToast
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -240,52 +239,62 @@ fun CreateAccountScreen(
                     modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
                 /** Input field for entering the user's unique handle. */
-                FocusableInputField(
-                    value = handle,
-                    onValueChange = {
-                      handle = it
-                      if (it.isNotBlank()) {
-                        showErrors = true
-                        viewModel.checkHandleAvailable(it)
-                      } else {
-                        showErrors = false
-                      }
-                    },
-                    label = { Text("Handle") },
-                    singleLine = true,
-                    trailingIcon = {
-                      Icon(
-                          imageVector = Icons.Default.QuestionMark,
-                          contentDescription = "Handle information",
-                          modifier =
-                              Modifier.clickable {
-                                    toast =
-                                        if (toast == null)
-                                            ToastData(
-                                                "A unique name others use to find and recognize you.")
-                                        else null
-                                  }
-                                  .testTag("Hello-World"))
-                    },
-                    textStyle = TextStyle(color = AppColors.textIcons),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedIndicatorColor = AppColors.textIcons,
-                            unfocusedIndicatorColor = AppColors.textIconsFade,
-                            cursorColor = AppColors.textIcons,
-                            focusedLabelColor = AppColors.textIcons,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                            errorContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            unfocusedLabelColor = AppColors.textIconsFade,
-                            focusedTextColor = AppColors.textIcons,
-                            unfocusedTextColor = AppColors.textIconsFade),
-                    isError = showErrors && errorMessage.isNotBlank(),
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .onFocusChanged { isInputFocused = it.isFocused }
-                            .testTag(CreateAccountTestTags.HANDLE_FIELD))
+                Box(modifier = Modifier.fillMaxWidth()) {
+                  FocusableInputField(
+                      value = handle,
+                      onValueChange = {
+                        handle = it
+                        if (it.isNotBlank()) {
+                          showErrors = true
+                          viewModel.checkHandleAvailable(it)
+                        } else {
+                          showErrors = false
+                        }
+                      },
+                      label = { Text("Handle") },
+                      singleLine = true,
+                      trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.QuestionMark,
+                            contentDescription = "Handle information",
+                            modifier =
+                                Modifier.clickable {
+                                      toast =
+                                          if (toast == null)
+                                              ToastData(
+                                                  "A unique name others use to find and recognize you.")
+                                          else null
+                                    }
+                                    .testTag("Hello-World"))
+                      },
+                      textStyle = TextStyle(color = AppColors.textIcons),
+                      colors =
+                          TextFieldDefaults.colors(
+                              focusedIndicatorColor = AppColors.textIcons,
+                              unfocusedIndicatorColor = AppColors.textIconsFade,
+                              cursorColor = AppColors.textIcons,
+                              focusedLabelColor = AppColors.textIcons,
+                              unfocusedContainerColor = Color.Transparent,
+                              focusedContainerColor = Color.Transparent,
+                              errorContainerColor = Color.Transparent,
+                              disabledContainerColor = Color.Transparent,
+                              unfocusedLabelColor = AppColors.textIconsFade,
+                              focusedTextColor = AppColors.textIcons,
+                              unfocusedTextColor = AppColors.textIconsFade),
+                      isError = showErrors && errorMessage.isNotBlank(),
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .onFocusChanged { isInputFocused = it.isFocused }
+                              .testTag(CreateAccountTestTags.HANDLE_FIELD))
+
+                  if (toast != null) {
+                    ClosableToast(
+                        message = toast?.message ?: "",
+                        onDismiss = { toast = null },
+                        modifier =
+                            Modifier.align(Alignment.TopEnd).zIndex(10f).offset(y = (-60).dp))
+                  }
+                }
 
                 /** Error message displayed if handle validation fails. */
                 if (showErrors && errorMessage.isNotBlank()) {
@@ -373,16 +382,6 @@ fun CreateAccountScreen(
                     description = "Offer your play spaces for other players to book.",
                     testTag = CreateAccountTestTags.CHECKBOX_RENTER)
               }
-
-          if (toast != null) {
-            ClosableToast(
-                message = toast?.message ?: "",
-                onDismiss = { toast = null },
-                modifier =
-                    Modifier.align(Alignment.CenterEnd)
-                        .zIndex(10f)
-                        .offset(y = if (isInputFocused) 40.dp else (-110).dp, x = (-20).dp))
-          }
         }
       }
 }
@@ -429,36 +428,6 @@ fun RoleCheckBox(
                   text = description,
                   color = AppColors.textIconsFade,
                   style = MaterialTheme.typography.bodySmall)
-            }
-      }
-}
-
-@Composable
-fun ClosableToast(message: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
-  Surface(
-      modifier = modifier.widthIn(max = 280.dp),
-      color = AppColors.secondary,
-      shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-      shadowElevation = Dimensions.Elevation.high) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    start = Dimensions.Padding.extraLarge,
-                    end = Dimensions.Padding.small,
-                    top = Dimensions.Padding.small,
-                    bottom = Dimensions.Padding.small),
-            verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  text = message,
-                  color = AppColors.textIcons,
-                  style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.weight(1f))
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-              Icon(
-                  imageVector = Icons.Filled.Close,
-                  contentDescription = "Close",
-                  tint = AppColors.textIcons,
-                  modifier = Modifier.size(20.dp).clickable { onDismiss() })
             }
       }
 }
