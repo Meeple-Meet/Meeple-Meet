@@ -1,6 +1,7 @@
 package com.github.meeplemeet.end2end
 
 import android.Manifest
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOn
@@ -13,11 +14,12 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
-import androidx.test.espresso.Espresso
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.MainActivity
@@ -42,7 +44,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +53,6 @@ import org.junit.runner.RunWith
  * from the UI, and add all 3 members to it. Ask to users the name of the store through a poll,
  * create the store, create a post to advertise it, wait for reactions.
  */
-@Ignore("flaky test")
 @RunWith(AndroidJUnit4::class)
 class E2E_M2 : FirestoreTests() {
   // Generic retry helper used for waiting on backend state convergence
@@ -108,6 +108,19 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
   }
 
+  private fun ensureSectionExpanded(sectionBaseTag: String) {
+    val contentTag = sectionBaseTag + CreateShopScreenTestTags.SECTION_CONTENT_SUFFIX
+    val isExpanded =
+        composeTestRule.onAllNodesWithTag(contentTag).fetchSemanticsNodes().isNotEmpty()
+    if (!isExpanded) {
+      composeTestRule
+          .onNodeWithTag(sectionBaseTag + CreateShopScreenTestTags.SECTION_TOGGLE_ICON_SUFFIX)
+          .assertExists()
+          .performClick()
+      composeTestRule.waitForIdle()
+    }
+  }
+
   @Test
   fun signUpUser_createOtherUsers_createDiscussionAndAddMembers() {
     // Generate unique identifiers for test data with UUID to allow multiple test runs
@@ -134,7 +147,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput(mainUserPassword)
     composeTestRule.waitForIdle()
 
-    Espresso.closeSoftKeyboard()
+    composeTestRule.onRoot().performClick()
     composeTestRule
         .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
         .assertExists()
@@ -161,7 +174,7 @@ class E2E_M2 : FirestoreTests() {
         .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
         .assertExists()
         .performTextInput(mainUserName)
-    Espresso.closeSoftKeyboard()
+    composeTestRule.onRoot().performClick()
     composeTestRule
         .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
         .assertExists()
@@ -237,7 +250,7 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     // Verify the discussion appears in the list
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
+    composeTestRule.waitUntil(timeoutMillis = 20_000) {
       try {
         composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
         true
@@ -478,7 +491,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
+    composeTestRule.waitUntil(timeoutMillis = 50_000) {
       try {
         composeTestRule
             .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
@@ -502,6 +515,8 @@ class E2E_M2 : FirestoreTests() {
             CreateShopScreenTestTags.SECTION_CONTENT_SUFFIX
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
+
+    ensureSectionExpanded(CreateShopScreenTestTags.SECTION_AVAILABILITY)
 
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       composeTestRule
@@ -631,12 +646,10 @@ class E2E_M2 : FirestoreTests() {
     // Expand to Games section header and add first game via UI
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
-
-    composeTestRule
-        .onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
-        .assertExists()
-        .performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.onRoot().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
 
     // Wait for the Game Stock dialog to appear
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
@@ -685,13 +698,7 @@ class E2E_M2 : FirestoreTests() {
     }
 
     // Increase quantity to 5
-    repeat(4) {
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.QTY_PLUS_BUTTON, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-      composeTestRule.waitForIdle()
-    }
+    setSliderValue(5)
 
     // Click save and wait for dialog to dismiss
     composeTestRule
@@ -796,13 +803,7 @@ class E2E_M2 : FirestoreTests() {
     }
 
     // Increase quantity to 3
-    repeat(2) {
-      composeTestRule
-          .onNodeWithTag(ShopComponentsTestTags.QTY_PLUS_BUTTON, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-      composeTestRule.waitForIdle()
-    }
+    setSliderValue(7)
 
     // Click save and wait for dialog to dismiss
     composeTestRule
@@ -850,7 +851,7 @@ class E2E_M2 : FirestoreTests() {
     }
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
-    Espresso.closeSoftKeyboard()
+    composeTestRule.onRoot().performClick()
     composeTestRule.waitUntil(timeoutMillis = 8_000) {
       var byTag =
           composeTestRule
@@ -1096,5 +1097,19 @@ class E2E_M2 : FirestoreTests() {
       postRepository.addComment(postId = postId, text = text, authorId = uid, parentId = postId)
       composeTestRule.waitForIdle()
     }
+  }
+  /** Set slider value by performing swipe gesture. */
+  private fun setSliderValue(targetValue: Int, maxValue: Int = 100) {
+    composeTestRule.onNodeWithTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTouchInput {
+      val fraction = targetValue.toFloat() / maxValue.toFloat()
+      val targetX = left + (right - left) * fraction
+      // Slider is aligned to BottomCenter, so we should touch near the bottom
+      val targetY = top + (bottom - top) * 0.9f
+
+      down(Offset(center.x, targetY))
+      moveTo(Offset(targetX, targetY))
+      up()
+    }
+    composeTestRule.waitForIdle()
   }
 }

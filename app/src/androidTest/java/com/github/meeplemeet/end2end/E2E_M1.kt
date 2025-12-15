@@ -2,6 +2,7 @@ package com.github.meeplemeet.end2end
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -17,7 +18,6 @@ import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +26,6 @@ import org.junit.runner.RunWith
  * End-to-end test for Meeple Meet application. Tests the complete user journey from sign-up to
  * navigating the app.
  */
-@Ignore("flaky test")
 @RunWith(AndroidJUnit4::class)
 class E2E_M1 : FirestoreTests() {
   @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
@@ -116,7 +115,9 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     // Verify discussion appears in Alice's list
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+    composeTestRule.waitUntil(5000) {
+      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).isDisplayed()
+    }
 
     // Open the discussion and send an initial message from Alice to Bob
     composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
