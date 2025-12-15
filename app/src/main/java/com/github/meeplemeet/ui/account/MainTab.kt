@@ -645,7 +645,7 @@ fun MainTabContent(
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
         // Email verification part
-        val notVerified = uiState.isEmailVerified
+        val notVerified = !uiState.isEmailVerified
         Text(
             text = "Email",
             fontSize = Dimensions.TextSize.heading,
@@ -655,7 +655,7 @@ fun MainTabContent(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
               Card(
-                  border = BorderStroke(0.5.dp, AppColors.textIcons),
+                  border = BorderStroke(Dimensions.DividerThickness.thin, AppColors.textIcons),
                   colors =
                       CardDefaults.cardColors(
                           containerColor =
