@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -644,6 +645,7 @@ fun MainTabContent(
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
         // Email verification part
+        val notVerified = uiState.isEmailVerified
         Text(
             text = "Email",
             fontSize = Dimensions.TextSize.heading,
@@ -653,7 +655,11 @@ fun MainTabContent(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
               Card(
-                  colors = CardDefaults.cardColors(containerColor = AppColors.neutral),
+                  border = BorderStroke(0.5.dp, AppColors.textIcons),
+                  colors =
+                      CardDefaults.cardColors(
+                          containerColor =
+                              if (notVerified) AppColors.neutral else AppColors.primary),
                   shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
                   modifier = Modifier.fillMaxWidth()) {
                     Box(
@@ -670,7 +676,7 @@ fun MainTabContent(
 
                           IconButton(
                               onClick = {
-                                if (!uiState.isEmailVerified) {
+                                if (notVerified) {
                                   viewModel.sendVerificationEmail()
                                   viewModel.refreshEmailVerificationStatus()
                                   toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
@@ -683,10 +689,12 @@ fun MainTabContent(
                                           EmailVerificationTestTags.RESEND_MAIL_VERIFICATION_BTN)) {
                                 Icon(
                                     imageVector =
-                                        if (!uiState.isEmailVerified) Icons.AutoMirrored.Filled.Send
+                                        if (notVerified) Icons.AutoMirrored.Filled.Send
                                         else Icons.Default.Check,
                                     contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
-                                    tint = AppColors.textIcons,
+                                    tint =
+                                        if (notVerified) AppColors.textIcons
+                                        else AppColors.affirmative,
                                     modifier = Modifier.size(Dimensions.IconSize.large))
                               }
                         }
@@ -780,9 +788,7 @@ fun MainTabContent(
                   })
             }
 
-        if (!uiState.isEmailVerified) {
-          Spacer(modifier = Modifier.height(MainTabUi.PADDING_BOTTOM_SCROLL))
-        }
+        Spacer(modifier = Modifier.height(MainTabUi.PADDING_BOTTOM_SCROLL))
       }
 }
 
