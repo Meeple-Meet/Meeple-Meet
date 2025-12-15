@@ -17,7 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.QuestionMark
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -66,6 +67,7 @@ object CreateAccountTestTags {
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
   const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
   const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
+  const val HANDLE_INFO_ICON = "CreateAccountHandleInfoIcon"
 }
 
 object CreateAccountScreenUi {
@@ -255,7 +257,7 @@ fun CreateAccountScreen(
                       singleLine = true,
                       trailingIcon = {
                         Icon(
-                            imageVector = Icons.Default.QuestionMark,
+                            imageVector = Icons.Outlined.Info,
                             contentDescription = "Handle information",
                             modifier =
                                 Modifier.clickable {
@@ -265,7 +267,7 @@ fun CreateAccountScreen(
                                                   "A unique name others use to find and recognize you.")
                                           else null
                                     }
-                                    .testTag("Hello-World"))
+                                    .testTag(CreateAccountTestTags.HANDLE_INFO_ICON))
                       },
                       textStyle = TextStyle(color = AppColors.textIcons),
                       colors =

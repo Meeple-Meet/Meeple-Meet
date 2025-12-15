@@ -41,10 +41,10 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -115,6 +115,7 @@ object PublicInfoTestTags {
 
   // ROOT
   const val PUBLIC_INFO = "public_info_root"
+  const val HANDLE_INFO_ICON = "handle_info_icon"
 
   // ------------------------------------------------------------
   // SECTION 1 — Avatar
@@ -1032,15 +1033,17 @@ fun PublicInfoInputs(
               },
               trailingIcon = {
                 Icon(
-                    imageVector = Icons.Default.QuestionMark,
+                    imageVector = Icons.Outlined.Info,
                     contentDescription = "Handle information",
                     modifier =
                         Modifier.clickable {
-                          toast =
-                              if (toast == null)
-                                  ToastData("A unique name others use to find and recognize you.")
-                              else null
-                        })
+                              toast =
+                                  if (toast == null)
+                                      ToastData(
+                                          "A unique name others use to find and recognize you.")
+                                  else null
+                            }
+                            .testTag(PublicInfoTestTags.HANDLE_INFO_ICON))
               })
 
           if (errorHandle) {

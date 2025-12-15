@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,8 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -54,6 +53,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -105,6 +105,8 @@ object CommonComponentsTestTags {
   const val CONFIRMATION_DIALOG_MESSAGE = "ConfirmationDialogMessage"
   const val CONFIRMATION_DIALOG_CONFIRM = "ConfirmationDialogConfirm"
   const val CONFIRMATION_DIALOG_CANCEL = "ConfirmationDialogCancel"
+  const val CLOSABLE_TOAST = "ClosableToast"
+  const val CLOSABLE_TOAST_CLOSE_BUTTON = "ClosableToastCloseButton"
   const val USER_PROFILE_POPUP_DESCRIPTION = "UserProfilePopupDescription"
   const val USER_PROFILE_POPUP_HANDLE = "UserProfilePopupHandle"
   const val USER_PROFILE_POPUP_USERNAME = "UserProfilePopupUsername"
@@ -600,9 +602,15 @@ fun ConfirmationDialog(
  * @param modifier Modifier to be applied to the toast.
  */
 @Composable
-fun ClosableToast(message: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
-  androidx.compose.material3.Surface(
-      modifier = modifier.widthIn(max = 280.dp),
+fun ClosableToast(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String = CommonComponentsTestTags.CLOSABLE_TOAST,
+    closeButtonTestTag: String = CommonComponentsTestTags.CLOSABLE_TOAST_CLOSE_BUTTON
+) {
+  Surface(
+      modifier = modifier.fillMaxWidth(),
       color = AppColors.secondary,
       shape = androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.CornerRadius.medium),
       shadowElevation = Dimensions.Elevation.high) {
@@ -618,13 +626,17 @@ fun ClosableToast(message: String, onDismiss: () -> Unit, modifier: Modifier = M
                   text = message,
                   color = AppColors.textIcons,
                   style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.weight(1f))
+                  modifier = Modifier.weight(1f).testTag(testTag))
               Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
               Icon(
                   imageVector = Icons.Filled.Close,
                   contentDescription = "Close",
                   tint = AppColors.textIcons,
-                  modifier = Modifier.size(20.dp).clickable { onDismiss() })
+                  modifier =
+                      Modifier.size(Dimensions.IconSize.extraLarge)
+                          .clickable { onDismiss() }
+                          .testTag(closeButtonTestTag)
+                          .padding(end = Dimensions.Padding.extraMedium))
             }
       }
 }
