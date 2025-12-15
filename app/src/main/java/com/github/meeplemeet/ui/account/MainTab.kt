@@ -645,7 +645,7 @@ fun MainTabContent(
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
         // Email verification part
-        val notVerified = uiState.isEmailVerified
+        val notVerified = !uiState.isEmailVerified
         Text(
             text = "Email",
             fontSize = Dimensions.TextSize.heading,
