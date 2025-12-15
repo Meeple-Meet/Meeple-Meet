@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -640,67 +641,67 @@ fun MainTabContent(
                     onInputFocusChanged = onInputFocusChanged)
               }
         }
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
-        if (!uiState.isEmailVerified) {
-          Text(
-              text = "Verify Your Email",
-              fontSize = Dimensions.TextSize.heading,
-              modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium))
+        // Email verification part
+        Text(
+            text = "Email",
+            fontSize = Dimensions.TextSize.heading,
+            modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium))
 
-          // The Blue Card
-          Box(
-              contentAlignment = Alignment.BottomCenter,
-              modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AppColors.neutral),
-                    shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-                    modifier = Modifier.fillMaxWidth()) {
-                      Box(
-                          modifier =
-                              Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.large),
-                          contentAlignment = Alignment.Center) {
-                            // Email Address
-                            Text(
-                                text = userEmail,
-                                color = AppColors.textIcons,
-                                modifier =
-                                    Modifier.align(Alignment.CenterStart)
-                                        .testTag(EmailVerificationTestTags.USER_EMAIL))
+        Box(
+            contentAlignment = Alignment.BottomCenter,
+            modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
+              Card(
+                  colors = CardDefaults.cardColors(containerColor = AppColors.neutral),
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                  modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.large),
+                        contentAlignment = Alignment.Center) {
+                          // Email Address
+                          Text(
+                              text = userEmail,
+                              color = AppColors.textIcons,
+                              modifier =
+                                  Modifier.align(Alignment.CenterStart)
+                                      .testTag(EmailVerificationTestTags.USER_EMAIL))
 
-                            // Send Icon
-                            IconButton(
-                                onClick = {
+                          IconButton(
+                              onClick = {
+                                if (!uiState.isEmailVerified) {
                                   viewModel.sendVerificationEmail()
                                   viewModel.refreshEmailVerificationStatus()
                                   toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
-                                },
-                                enabled = online,
-                                modifier =
-                                    Modifier.align(Alignment.CenterEnd)
-                                        .testTag(
-                                            EmailVerificationTestTags
-                                                .RESEND_MAIL_VERIFICATION_BTN)) {
-                                  Icon(
-                                      imageVector = Icons.AutoMirrored.Filled.Send,
-                                      contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
-                                      tint = AppColors.textIcons,
-                                      modifier = Modifier.size(Dimensions.IconSize.large))
                                 }
-                          }
-                    }
+                              },
+                              enabled = online,
+                              modifier =
+                                  Modifier.align(Alignment.CenterEnd)
+                                      .testTag(
+                                          EmailVerificationTestTags.RESEND_MAIL_VERIFICATION_BTN)) {
+                                Icon(
+                                    imageVector =
+                                        if (!uiState.isEmailVerified) Icons.AutoMirrored.Filled.Send
+                                        else Icons.Default.Check,
+                                    contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
+                                    tint = AppColors.textIcons,
+                                    modifier = Modifier.size(Dimensions.IconSize.large))
+                              }
+                        }
+                  }
 
-                Box(
-                    modifier =
-                        Modifier.align(Alignment.BottomCenter)
-                            .offset(y = MainTabUi.OFFSET_EMAIL)
-                            .zIndex(1f)) {
-                      ToastHost(toast = toast, onToastFinished = { toast = null })
-                    }
-              }
+              Box(
+                  modifier =
+                      Modifier.align(Alignment.BottomCenter)
+                          .offset(y = MainTabUi.OFFSET_EMAIL)
+                          .zIndex(1f)) {
+                    ToastHost(toast = toast, onToastFinished = { toast = null })
+                  }
+            }
 
-          Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
-        }
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
 
         Text(
             text = MainTabUi.SettingRows.HEADER,
@@ -1336,26 +1337,6 @@ fun EmailSection(
 
   Box(modifier = Modifier.fillMaxWidth().testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically) {
-            FocusableInputField(
-                readOnly = true,
-                label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
-                value = email,
-                onValueChange = { new ->
-                  localEmail = new
-                  onEmailChange(new)
-
-                  showErrors = new.isNotBlank()
-                },
-                isError = emailError,
-                modifier =
-                    Modifier.weight(Dimensions.Weight.full)
-                        .testTag(PrivateInfoTestTags.EMAIL_INPUT))
-          }
-
       Row(modifier = Modifier.fillMaxWidth()) {
         if (emailError) {
           Text(
@@ -1368,13 +1349,6 @@ fun EmailSection(
                       .testTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL))
         }
       }
-
-      HorizontalDivider(
-          modifier = Modifier.fillMaxWidth(),
-          thickness = Dimensions.DividerThickness.standard,
-          color = AppColors.textIcons.copy(alpha = 0.5f))
-
-      Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
       Text(
           text = MainTabUi.EmailSection.CHANGE_EMAIL_TITLE,
