@@ -87,6 +87,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -110,6 +111,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -135,6 +137,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -163,6 +166,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -191,6 +195,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -217,6 +222,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account2)
     advanceUntilIdle()
 
@@ -242,6 +248,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -273,6 +280,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -293,6 +301,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500) // Wait for Firestore
 
@@ -317,6 +326,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -337,6 +347,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -372,6 +383,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -392,7 +404,14 @@ class FirestoreSessionTests : FirestoreTests() {
   @Test
   fun creatingSessionUpdatesDiscussionState() = runTest {
     viewModel.createSession(
-        account1, baseDiscussion, "Catan Night", "game123", "Game 123", testTimestamp, testLocation)
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
@@ -417,6 +436,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -437,6 +457,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -463,6 +484,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500) // Wait for Firestore
 
@@ -486,6 +508,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account3)
     advanceUntilIdle()
   }
@@ -500,6 +523,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account3) // account3 not in discussion
     advanceUntilIdle()
 
@@ -526,6 +550,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 789",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid,
             account2.uid)
 
@@ -549,6 +574,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     // Then update just the name
@@ -571,6 +597,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newLocation = Location(latitude = 51.5074, longitude = -0.1278, name = "London")
@@ -592,6 +619,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newDate = Timestamp(testTimestamp.seconds + 3600, 0) // +1 hour
@@ -612,6 +640,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val updated =
@@ -634,6 +663,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newParticipants = listOf(account1.uid, account2.uid, account3.uid)
@@ -656,6 +686,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newName = "Updated Name"
@@ -694,6 +725,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     // This should throw IllegalArgumentException
@@ -712,6 +744,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     realSessionRepo.updateSession(withSession.uid, gameId = "NoGameNameProvided")
@@ -729,6 +762,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     realSessionRepo.updateSession(withSession.uid, gameName = "NoGameIdProvided")
@@ -746,6 +780,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     assertNotNull(withSession.session)
@@ -768,7 +803,8 @@ class FirestoreSessionTests : FirestoreTests() {
             "game123",
             "Game 123",
             testTimestamp,
-            testLocation)
+            testLocation,
+            rentalId = null)
 
     assertNotNull(updatedDiscussion.session)
     assertEquals(0, updatedDiscussion.session?.participants?.size)
@@ -791,6 +827,7 @@ class FirestoreSessionTests : FirestoreTests() {
             originalGameName,
             testTimestamp,
             originalLocation,
+            rentalId = null,
             account1.uid)
 
     // Update only the date
@@ -817,6 +854,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 111",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     assertNotNull(firstSession.session)
@@ -831,6 +869,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 222",
             Timestamp(testTimestamp.seconds + 3600, 0),
             Location(40.7128, -74.0060, "New York"),
+            rentalId = null,
             account2.uid)
 
     assertNotNull(secondSession.session)
@@ -850,6 +889,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 456",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val geoPinSnapshot = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
@@ -869,6 +909,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val beforeDelete = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
@@ -891,6 +932,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val geoPinRef = geoPinRepository.collection.document(baseDiscussion.uid)
@@ -989,6 +1031,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account2)
     advanceUntilIdle()
 
@@ -1019,6 +1062,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2,
         account3)
@@ -1047,6 +1091,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -1070,12 +1115,26 @@ class FirestoreSessionTests : FirestoreTests() {
       // create session for even indices including account1
       if (i % 2 == 0) {
         realSessionRepo.createSession(
-            d.uid, "S$i", "game$i", "Game$i", testTimestamp, testLocation, account1.uid)
+            d.uid,
+            "S$i",
+            "game$i",
+            "Game$i",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account1.uid)
         discussionsWithSession += d.uid
       } else {
         // create session without account1
         realSessionRepo.createSession(
-            d.uid, "S$i", "game$i", "Game$i", testTimestamp, testLocation, account2.uid)
+            d.uid,
+            "S$i",
+            "game$i",
+            "Game$i",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account2.uid)
         otherDiscussions += d.uid
       }
     }
@@ -1096,7 +1155,14 @@ class FirestoreSessionTests : FirestoreTests() {
     repeat(7) { i ->
       val d = discussionRepository.createDiscussion("P$i", "desc", account1.uid)
       realSessionRepo.createSession(
-          d.uid, "PS$i", "gameP$i", "GameP$i", testTimestamp, testLocation, account1.uid)
+          d.uid,
+          "PS$i",
+          "gameP$i",
+          "GameP$i",
+          testTimestamp,
+          testLocation,
+          rentalId = null,
+          account1.uid)
       createdIds += d.uid
     }
 
@@ -1118,6 +1184,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500)
 
@@ -1147,6 +1214,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()

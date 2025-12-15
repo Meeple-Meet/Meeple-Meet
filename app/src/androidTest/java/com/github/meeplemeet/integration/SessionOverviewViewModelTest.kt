@@ -69,6 +69,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
 
     delay(100) // wait for Firestore snapshot
@@ -95,6 +96,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
     delay(100)
     assertEquals(
@@ -127,6 +129,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
     val photoUrl = "https://example.com/archived_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
@@ -151,6 +154,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
     val photoUrl = "https://example.com/find_by_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
@@ -184,6 +188,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
     val photoUrl = "https://example.com/single_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
@@ -216,6 +221,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         Timestamp.now(),
         testLocation,
+        rentalId = null,
         account.uid)
     val photoUrl = "https://example.com/viewmodel_find_by_photo.webp"
     val archivedId = java.util.UUID.randomUUID().toString()
@@ -264,6 +270,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         twentyFiveHoursAgo,
         testLocation,
+        rentalId = null,
         account.uid)
 
     delay(1000)
@@ -290,6 +297,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         oneHourFromNow,
         testLocation,
+        rentalId = null,
         account.uid)
 
     delay(100)
@@ -330,6 +338,7 @@ class SessionOverviewViewModelTest : FirestoreTests() {
         game.name,
         sessionDate,
         testLocation,
+        rentalId = null,
         account.uid)
 
     delay(100)

@@ -106,6 +106,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
               testGame1.name,
               testTimestamp,
               testLocation,
+              rentalId = null,
               testAccount.uid)
 
       // Create discussion without session
@@ -559,6 +560,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
             testGame1.name,
             specificDate,
             testLocation,
+            rentalId = null,
             testAccount.uid)
 
     val sessionPin = StorableGeoPin(uid = sessionWithSpecificDate.uid, type = PinType.SESSION)
@@ -608,6 +610,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
             testGame2.name,
             testTimestamp,
             testLocation,
+            rentalId = null,
             testAccount.uid)
 
     val pins =
@@ -712,6 +715,7 @@ class FirestoreMarkerPreviewTest : FirestoreTests() {
               testGame1.name,
               testTimestamp,
               testLocation,
+              rentalId = null,
               testAccount.uid))
     }
 
