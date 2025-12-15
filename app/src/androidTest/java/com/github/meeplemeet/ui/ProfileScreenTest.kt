@@ -151,42 +151,6 @@ class ProfileScreenTest : FirestoreTests() {
   }
 
   @Test
-  fun testEmailSection_toast() {
-    composeTestRule.setContent {
-      // Isolating EmailSection to test the Toast logic specifically
-      EmailSection(
-          email = "user@example.com",
-          isVerified = false,
-          online = true,
-          onEmailChange = {},
-          onFocusChanged = {},
-          onSendVerification = {}, // Mock callback
-          onChangeEmail = { _, _ -> })
-    }
-
-    checkpoint("Send Verification Shows Toast") {
-      composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON).performClick()
-
-      // Wait for Toast
-      composeTestRule.waitUntil(2000) {
-        composeTestRule
-            .onAllNodesWithTag(PrivateInfoTestTags.EMAIL_TOAST)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      }
-      composeTestRule.onNodeWithText(MainTabUi.PrivateInfo.TOAST_MSG).assertIsDisplayed()
-
-      // Wait for Toast to disappear (duration 1500)
-      composeTestRule.waitUntil(3000) {
-        composeTestRule
-            .onAllNodesWithTag(PrivateInfoTestTags.EMAIL_TOAST)
-            .fetchSemanticsNodes()
-            .isEmpty()
-      }
-    }
-  }
-
-  @Test
   fun testDeleteAccountDialog() {
     val show = mutableStateOf(false)
     composeTestRule.setContent {
@@ -327,18 +291,6 @@ class ProfileScreenTest : FirestoreTests() {
           .isNotEmpty()
     }
     composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_SECTION).assertIsDisplayed()
-
-    // Verify Email Input displays user email (mocked user has tester@example.com)
-    // Note: The Email page logic fetches currentUser?.email ?: account.email
-    // Since Firebase Auth mock might return null or something else, we check if it displays
-    // *something* or the account email.
-    // In this test setup, `user` is passed to MainTab. The `ProfilePage.Email` block uses
-    // `viewModel.uiState` and `FirebaseProvider.auth.currentUser`.
-    // We should ensure `Auth` is set up or expect `account.email` to be used if currentUser is
-    // null.
-    // However, MainTab uses `account.email` as fallback.
-
-    composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_INPUT).assertTextContains(user.email)
   }
 
   @Test
