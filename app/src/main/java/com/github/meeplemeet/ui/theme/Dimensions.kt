@@ -244,4 +244,10 @@ object Dimensions {
     const val expanded: Float = 180f
     const val collapsed: Float = 0f
   }
+
+  object ZIndex {
+    const val background: Float = 0f
+    const val foreground: Float = 1f
+    const val foregroundMax: Float = 10f
+  }
 }

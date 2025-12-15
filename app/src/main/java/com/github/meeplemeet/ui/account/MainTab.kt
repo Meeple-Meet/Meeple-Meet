@@ -1127,7 +1127,10 @@ fun PublicInfoInputs(
       ClosableToast(
           message = toast?.message ?: "",
           onDismiss = { toast = null },
-          modifier = Modifier.align(Alignment.TopEnd).zIndex(10f).offset(y = (-60).dp))
+          modifier =
+              Modifier.align(Alignment.TopEnd)
+                  .zIndex(Dimensions.ZIndex.foregroundMax)
+                  .offset(y = -Dimensions.Spacing.xxxxLarge))
     }
   }
 }

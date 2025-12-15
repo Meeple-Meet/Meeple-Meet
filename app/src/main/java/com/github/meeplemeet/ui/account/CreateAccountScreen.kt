@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
@@ -294,7 +293,9 @@ fun CreateAccountScreen(
                         message = toast?.message ?: "",
                         onDismiss = { toast = null },
                         modifier =
-                            Modifier.align(Alignment.TopEnd).zIndex(10f).offset(y = (-60).dp))
+                            Modifier.align(Alignment.TopEnd)
+                                .zIndex(Dimensions.ZIndex.foregroundMax)
+                                .offset(y = -Dimensions.Spacing.xxxxLarge))
                   }
                 }
 
