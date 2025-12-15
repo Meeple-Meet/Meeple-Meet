@@ -665,6 +665,9 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
+    composeTestRule.waitUntil {
+      composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).isDisplayed()
+    }
     composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
 
     // Wait for the Game Stock dialog to appear
@@ -765,6 +768,10 @@ class E2E_M2 : FirestoreTests() {
               .fetchSemanticsNodes()
               .isNotEmpty()
       byTag || byTextUnmerged || byTextMerged
+    }
+    composeTestRule.closeKeyboardSafely()
+    composeTestRule.waitUntil {
+      composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).isDisplayed()
     }
 
     // Add Ticket to Ride stock
