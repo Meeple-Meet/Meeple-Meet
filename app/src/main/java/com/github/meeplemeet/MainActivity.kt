@@ -288,12 +288,7 @@ fun MeepleMeetApp(
 
   // Notification permission launcher for Android 13+
   val notificationPermissionLauncher =
-      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
-          isGranted ->
-        if (isGranted) {
-          // Permission granted, FCM can now show notifications
-        }
-      }
+      rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {}
 
   // Request notification permission for Android 13+
   LaunchedEffect(account) {
