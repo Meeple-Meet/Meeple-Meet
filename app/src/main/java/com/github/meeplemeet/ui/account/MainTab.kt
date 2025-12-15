@@ -645,7 +645,7 @@ fun MainTabContent(
         Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
 
         // Email verification part
-        val notVerified = !uiState.isEmailVerified
+        val notVerified = uiState.isEmailVerified
         Text(
             text = "Email",
             fontSize = Dimensions.TextSize.heading,
@@ -667,7 +667,8 @@ fun MainTabContent(
                   modifier = Modifier.fillMaxWidth()) {
                     Box(
                         modifier =
-                            Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.large),
+                            Modifier.fillMaxSize()
+                                .padding(start = Dimensions.Padding.extraLarge, end = 0.dp),
                         contentAlignment = Alignment.Center) {
                           // Email Address
                           Text(
@@ -690,6 +691,7 @@ fun MainTabContent(
                                   Modifier.align(Alignment.CenterEnd)
                                       .testTag(
                                           EmailVerificationTestTags.RESEND_MAIL_VERIFICATION_BTN)) {
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
                                 Icon(
                                     imageVector =
                                         if (notVerified) Icons.AutoMirrored.Filled.Send
