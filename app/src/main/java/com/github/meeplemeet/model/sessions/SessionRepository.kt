@@ -42,9 +42,11 @@ class SessionRepository(
       gameName: String,
       date: Timestamp,
       location: Location,
+      rentalId: String? = null,
       vararg participants: String
   ): Discussion {
-    val session = Session(name, gameId, gameName, date, location, participants.toList())
+    val session =
+        Session(name, gameId, gameName, date, location, participants.toList(), rentalId = rentalId)
     discussions.document(discussionId).update(DiscussionNoUid::session.name, session).await()
 
     geoPinsRepo.upsertSessionGeoPin(ref = discussionId, location = location)
@@ -67,7 +69,8 @@ class SessionRepository(
       date: Timestamp? = null,
       location: Location? = null,
       newParticipantList: List<String>? = null,
-      photoUrl: String? = null
+      photoUrl: String? = null,
+      rentalId: String? = null
   ): Discussion {
     require((gameId == null) == (gameName == null)) {
       "gameId and gameName must be provided together"
@@ -87,6 +90,11 @@ class SessionRepository(
       // Use FieldValue.delete() to clear the field when empty string is passed
       val value = it.ifEmpty { FieldValue.delete() }
       updates["${DiscussionNoUid::session.name}.${Session::photoUrl.name}"] = value
+    }
+    rentalId?.let {
+      // Use FieldValue.delete() to clear the field when empty string is passed
+      val value = it.ifEmpty { FieldValue.delete() }
+      updates["${DiscussionNoUid::session.name}.${Session::rentalId.name}"] = value
     }
 
     if (updates.isEmpty())
