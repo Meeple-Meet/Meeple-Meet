@@ -655,7 +655,10 @@ fun MainTabContent(
             contentAlignment = Alignment.BottomCenter,
             modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
               Card(
-                  border = BorderStroke(Dimensions.DividerThickness.thin, AppColors.textIcons),
+                  border =
+                      if (!notVerified)
+                          BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider)
+                      else null,
                   colors =
                       CardDefaults.cardColors(
                           containerColor =
