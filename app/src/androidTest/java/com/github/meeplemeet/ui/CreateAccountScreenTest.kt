@@ -9,6 +9,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.account.CreateAccountScreen
 import com.github.meeplemeet.ui.account.CreateAccountTestTags
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.ui.theme.ThemeMode
 import com.github.meeplemeet.utils.Checkpoint
@@ -81,6 +82,32 @@ class CreateAccountScreenTest : FirestoreTests() {
       handleField().performTextInput(h1)
       submitBtn().assertIsNotEnabled()
       clearFields()
+    }
+
+    checkpoint("Handle icon displays toast") {
+      // Basic behavior
+      compose.onNodeWithTag(CreateAccountTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertExists()
+          .assertTextContains("A unique name others use to find and recognize you.")
+      compose.waitForIdle()
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.CLOSABLE_TOAST_CLOSE_BUTTON, useUnmergedTree = true)
+          .performClick()
+      compose.waitForIdle()
+
+      // Assert that the icon acts as a toggle
+      compose.onNodeWithTag(CreateAccountTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertExists()
+          .assertTextContains("A unique name others use to find and recognize you.")
+      compose.onNodeWithTag(CreateAccountTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertDoesNotExist()
     }
 
     /* 3. handle already taken */
