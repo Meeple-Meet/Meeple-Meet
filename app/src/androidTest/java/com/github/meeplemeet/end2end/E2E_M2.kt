@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
@@ -38,6 +37,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.posts.CreatePostTestTags
 import com.github.meeplemeet.ui.posts.FeedsOverviewTestTags
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
+import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
@@ -147,7 +147,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput(mainUserPassword)
     composeTestRule.waitForIdle()
 
-    composeTestRule.onRoot().performClick()
+    composeTestRule.closeKeyboardSafely()
     composeTestRule
         .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
         .assertExists()
@@ -174,7 +174,7 @@ class E2E_M2 : FirestoreTests() {
         .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
         .assertExists()
         .performTextInput(mainUserName)
-    composeTestRule.onRoot().performClick()
+    composeTestRule.closeKeyboardSafely()
     composeTestRule
         .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
         .assertExists()
@@ -659,7 +659,11 @@ class E2E_M2 : FirestoreTests() {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     composeTestRule.waitForIdle()
-    composeTestRule.onRoot().performClick()
+
+    ensureSectionExpanded(CreateShopScreenTestTags.SECTION_GAMES)
+
+    composeTestRule.waitForIdle()
+    composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
 
@@ -863,7 +867,7 @@ class E2E_M2 : FirestoreTests() {
     }
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
-    composeTestRule.onRoot().performClick()
+    composeTestRule.closeKeyboardSafely()
     composeTestRule.waitUntil(timeoutMillis = 8_000) {
       var byTag =
           composeTestRule
