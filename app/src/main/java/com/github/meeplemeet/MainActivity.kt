@@ -390,6 +390,7 @@ fun MeepleMeetApp(
                           if (it.session != null) MeepleMeetScreen.SessionViewer
                           else MeepleMeetScreen.CreateSession)
                     },
+                    online = online,
                     onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
             else navigationActions.navigateTo(MeepleMeetScreen.DiscussionsOverview)
           } else LoadingScreen()
@@ -464,6 +465,7 @@ fun MeepleMeetApp(
               postId = postId,
               verified = uiState.isEmailVerified,
               onBack = { navigationActions.goBack() },
+              online = online,
               onVerifyClick = { navigationActions.navigateTo(MeepleMeetScreen.Profile) })
         }
 

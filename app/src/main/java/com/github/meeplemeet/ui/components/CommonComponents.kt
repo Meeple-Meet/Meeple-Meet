@@ -6,18 +6,21 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,22 +28,34 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,13 +68,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.R
+import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
+import com.github.meeplemeet.model.account.UserProfilePopupActions
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.ui.discussions.UITestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -82,10 +103,18 @@ object CommonComponentsTestTags {
   const val CONFIRMATION_DIALOG_MESSAGE = "ConfirmationDialogMessage"
   const val CONFIRMATION_DIALOG_CONFIRM = "ConfirmationDialogConfirm"
   const val CONFIRMATION_DIALOG_CANCEL = "ConfirmationDialogCancel"
+  const val USER_PROFILE_POPUP_DESCRIPTION = "UserProfilePopupDescription"
+  const val USER_PROFILE_POPUP_HANDLE = "UserProfilePopupHandle"
+  const val USER_PROFILE_POPUP_USERNAME = "UserProfilePopupUsername"
+  const val USER_PROFILE_POPUP_AVATAR = "UserProfilePopupAvatar"
+  const val USER_PROFILE_POPUP_BLOCK_BUTTON = "UserProfilePopupBlockButton"
+  const val USER_PROFILE_POPUP_SEND_REQUEST_BUTTON = "UserProfilePopupSendRequestButton"
+  const val USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON = "UserProfilePopupRemoveFriendButton"
 }
 
 // The default size for the image carousel.
 val CAROUSEL_SIZE = 260.dp
+val SNACKBAR_OFFSET = 50.dp
 
 // The label for the "Add Picture" action.
 const val ADD_PICTURE = "Add Picture"
@@ -559,4 +588,272 @@ fun ConfirmationDialog(
         },
         modifier = Modifier.testTag(dialogTestTag))
   }
+}
+
+/**
+ * Displays a popup dialog showing another user's profile information with action buttons.
+ *
+ * This composable presents a dialog containing the target user's profile details including their
+ * name, handle, avatar, and description. It provides interactive buttons to block the user or
+ * manage friendship status (send friend request or remove friend).
+ *
+ * @param visible Whether the popup dialog should be displayed. If false, nothing is rendered.
+ * @param curr The current user's account performing the action.
+ * @param target The target user whose profile is being displayed.
+ * @param isFriend Whether the target user is currently a friend of the current user.
+ * @param onDismiss Callback invoked when the dialog should be dismissed.
+ * @param actions Implementation of [UserProfilePopupActions] providing block and friend management
+ *   functionality.
+ */
+@Composable
+fun UserProfilePopup(
+    visible: Boolean,
+    curr: Account,
+    target: Account,
+    isFriend: Boolean,
+    online: Boolean,
+    onDismiss: () -> Unit,
+    actions: UserProfilePopupActions
+) {
+  if (!visible) return
+
+  var snackbarMessage by remember { mutableStateOf<String?>(null) }
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  LaunchedEffect(snackbarMessage) {
+    snackbarMessage?.let { message ->
+      snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+      snackbarMessage = null
+    }
+  }
+
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box {
+          Card(
+              modifier = Modifier.fillMaxWidth().padding(Dimensions.Spacing.extraMedium),
+              shape = RoundedCornerShape(Dimensions.CornerRadius.extraLarge),
+              colors = CardDefaults.cardColors(containerColor = AppColors.secondary)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Spacing.xxLarge)) {
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.Top) {
+                        Column(modifier = Modifier.weight(1f)) {
+                          Text(
+                              text = target.name,
+                              color = AppColors.textIcons,
+                              fontSize = Dimensions.TextSize.large,
+                              fontWeight = FontWeight.Bold,
+                              modifier =
+                                  Modifier.testTag(
+                                      CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME))
+
+                          Text(
+                              text = "@" + target.handle,
+                              color = AppColors.textIcons,
+                              fontSize = Dimensions.TextSize.heading,
+                              modifier =
+                                  Modifier.padding(top = Dimensions.Spacing.medium)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE))
+                        }
+
+                        // Profile image
+                        if (target.photoUrl.isNullOrBlank()) {
+                          Box(
+                              modifier =
+                                  Modifier.size(Dimensions.IconSize.massive)
+                                      .clip(CircleShape)
+                                      .background(AppColors.textIconsFade)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR),
+                              contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "No avatar for display",
+                                    tint = AppColors.divider,
+                                    modifier = Modifier.size(Dimensions.IconSize.giant))
+                              }
+                        } else {
+                          Image(
+                              painter = rememberAsyncImagePainter(target.photoUrl),
+                              contentDescription = "User's avatar",
+                              contentScale = ContentScale.Crop,
+                              modifier =
+                                  Modifier.size(Dimensions.IconSize.massive)
+                                      .clip(CircleShape)
+                                      .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR))
+                        }
+                      }
+
+                  var isExpanded by remember { mutableStateOf(false) }
+                  var showShowMore by remember { mutableStateOf(false) }
+                  val maxLinesNotExpanded = 3
+                  val maxLinesExpanded = 5
+                  val description = target.description ?: "This user does not have a description."
+
+                  // Bio
+                  Text(
+                      text = description,
+                      color = AppColors.textIcons,
+                      modifier =
+                          Modifier.padding(
+                                  bottom = Dimensions.Spacing.medium,
+                                  top = Dimensions.Spacing.extraLarge)
+                              .testTag(CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION),
+                      fontSize = Dimensions.TextSize.subtitle,
+                      maxLines = if (isExpanded) maxLinesExpanded else maxLinesNotExpanded,
+                      overflow = TextOverflow.Ellipsis,
+                      onTextLayout = { textLayoutResult ->
+                        showShowMore = textLayoutResult.hasVisualOverflow
+                      })
+
+                  if (showShowMore || isExpanded) {
+                    Text(
+                        text = if (isExpanded) "Show less" else "Show more",
+                        color =
+                            AppColors.textIcons.copy(
+                                alpha = Dimensions.Alpha.dialogIconTranslucent),
+                        fontSize = Dimensions.TextSize.standard,
+                        modifier =
+                            Modifier.padding(top = Dimensions.Spacing.small).clickable {
+                              isExpanded = !isExpanded
+                            })
+                  }
+
+                  // Action buttons
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraLarge)) {
+                        // Block button
+                        Button(
+                            onClick = {
+                              actions.onBlock(curr, target)
+                              snackbarMessage = "Blocked ${target.name} successfully."
+                            },
+                            modifier =
+                                Modifier.weight(0.7f)
+                                    .testTag(
+                                        CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON),
+                            enabled = online,
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = AppColors.negative,
+                                    contentColor = AppColors.textIcons),
+                            shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                            contentPadding =
+                                PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
+                              Icon(
+                                  imageVector = Icons.Default.Block,
+                                  contentDescription = "Block",
+                                  tint = AppColors.textIcons,
+                                  modifier = Modifier.size(Dimensions.IconSize.standard))
+                              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                              Text(
+                                  text = "Block",
+                                  color = AppColors.textIcons,
+                                  fontSize = Dimensions.TextSize.subtitle)
+                            }
+
+                        // Send friend request button
+                        if (!isFriend) {
+                          val isRequestSent =
+                              curr.relationships[target.uid] == RelationshipStatus.SENT
+                          Button(
+                              onClick = {
+                                if (!isRequestSent) {
+                                  actions.onSendFriendRequest(curr, target)
+                                  snackbarMessage = "Friend request sent to ${target.name}."
+                                } else {
+                                  actions.onCancel(curr, target)
+                                  snackbarMessage =
+                                      "Successfully canceled friend request to ${target.name}."
+                                }
+                              },
+                              modifier =
+                                  Modifier.weight(1f)
+                                      .testTag(
+                                          CommonComponentsTestTags
+                                              .USER_PROFILE_POPUP_SEND_REQUEST_BUTTON),
+                              enabled = online,
+                              colors =
+                                  ButtonDefaults.buttonColors(
+                                      containerColor =
+                                          if (isRequestSent) AppColors.neutral
+                                          else AppColors.affirmative,
+                                      contentColor = AppColors.textIcons,
+                                      disabledContainerColor =
+                                          if (isRequestSent) AppColors.neutral
+                                          else ButtonDefaults.buttonColors().disabledContainerColor,
+                                      disabledContentColor = AppColors.textIcons),
+                              shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                              contentPadding =
+                                  PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
+                                Icon(
+                                    imageVector =
+                                        if (isRequestSent) Icons.Default.Person
+                                        else Icons.Default.PersonAdd,
+                                    contentDescription =
+                                        if (isRequestSent) "Cancel request"
+                                        else "Send friend request",
+                                    tint = AppColors.textIcons,
+                                    modifier = Modifier.size(Dimensions.IconSize.standard))
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                                Text(
+                                    text =
+                                        if (isRequestSent) "Cancel request"
+                                        else "Send friend request",
+                                    color = AppColors.textIcons,
+                                    fontSize = Dimensions.TextSize.subtitle)
+                              }
+                        } else {
+                          Button(
+                              onClick = {
+                                actions.onRemoveFriend(curr, target)
+                                snackbarMessage = "${target.name} removed from friends."
+                              },
+                              modifier =
+                                  Modifier.weight(1f)
+                                      .testTag(
+                                          CommonComponentsTestTags
+                                              .USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON),
+                              enabled = online,
+                              colors =
+                                  ButtonDefaults.buttonColors(
+                                      containerColor = AppColors.primary,
+                                      contentColor = AppColors.textIcons),
+                              shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                              contentPadding =
+                                  PaddingValues(vertical = Dimensions.Spacing.extraLarge)) {
+                                Icon(
+                                    imageVector = Icons.Default.PersonRemove,
+                                    contentDescription = "Remove friend",
+                                    tint = AppColors.textIcons,
+                                    modifier = Modifier.size(Dimensions.IconSize.standard))
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                                Text(
+                                    text = "Remove friend",
+                                    color = AppColors.textIcons,
+                                    fontSize = Dimensions.TextSize.subtitle)
+                              }
+                        }
+                      }
+                }
+              }
+
+          // Snackbar
+          SnackbarHost(
+              hostState = snackbarHostState,
+              modifier =
+                  Modifier.align(Alignment.BottomCenter)
+                      .padding(Dimensions.Spacing.extraLarge)
+                      .offset(y = SNACKBAR_OFFSET),
+              snackbar = { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = AppColors.primary,
+                    contentColor = AppColors.textIcons)
+              })
+        }
+      }
 }

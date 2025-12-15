@@ -82,6 +82,7 @@ import com.github.meeplemeet.model.discussions.Poll
 import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.components.UserProfilePopup
 import com.github.meeplemeet.ui.navigation.EmailVerificationBanner
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -125,6 +126,7 @@ object DiscussionTestTags {
   const val MESSAGE_OPTIONS_CARD = "message_options_card"
   const val MESSAGE_EDIT_BUTTON = "message_options_edit"
   const val MESSAGE_DELETE_BUTTON = "message_options_delete"
+  const val MESSAGE_PROFILE_PICTURE = "message_profile_picture"
 
   fun pollVoteButton(msgIndex: Int, optIndex: Int) = "poll_msg${msgIndex}_opt${optIndex}_vote"
 
@@ -213,6 +215,7 @@ fun DiscussionScreen(
     discussion: Discussion,
     verified: Boolean,
     viewModel: DiscussionViewModel = viewModel(),
+    online: Boolean,
     onBack: () -> Unit,
     onOpenDiscussionInfo: (Discussion) -> Unit = {},
     onCreateSessionClick: (Discussion) -> Unit = {},
@@ -239,6 +242,10 @@ fun DiscussionScreen(
   val messageAnchors = remember { mutableStateMapOf<String, MessageAnchor>() }
   var messagesContainerTopPx by remember { mutableIntStateOf(0) }
   var selectedMessageAnchor by remember { mutableStateOf<MessageAnchor?>(null) }
+
+  // User profile popup state
+  var showUserProfilePopup by remember { mutableStateOf(false) }
+  var selectedUserForPopup by remember { mutableStateOf<Account?>(null) }
 
   val sendPhoto: suspend (String) -> Unit = { path ->
     isSending = true
@@ -329,6 +336,7 @@ fun DiscussionScreen(
                           ProfilePicture(
                               profilePictureUrl = discussion.profilePictureUrl,
                               size = Dimensions.ButtonSize.medium,
+                              onClick = {},
                               backgroundColor = AppColors.neutral)
                           Spacer(Modifier.width(Dimensions.Spacing.large))
                           Text(
@@ -443,7 +451,8 @@ fun DiscussionScreen(
                                         msgIndex = index,
                                         poll = message.poll,
                                         authorName = sender,
-                                        currentUserId = account.uid,
+                                        account = account,
+                                        senderAccount = senderAccount,
                                         profilePictureUrl =
                                             if (isMine) account.photoUrl
                                             else userCache[message.senderId]?.photoUrl,
@@ -457,7 +466,13 @@ fun DiscussionScreen(
                                           }
                                         },
                                         createdAt = message.createdAt.toDate(),
-                                        showProfilePicture = isLastFromSender)
+                                        showProfilePicture = isLastFromSender,
+                                        onProfileClick = {
+                                          if (!isMine && senderAccount != null) {
+                                            selectedUserForPopup = senderAccount
+                                            showUserProfilePopup = true
+                                          }
+                                        })
                                 message.photoUrl != null ->
                                     PhotoBubble(
                                         message,
@@ -467,14 +482,26 @@ fun DiscussionScreen(
                                         isFirstFromSender,
                                         messages,
                                         userCache,
-                                        account)
+                                        account,
+                                        onProfileClick = {
+                                          if (!isMine && senderAccount != null) {
+                                            selectedUserForPopup = senderAccount
+                                            showUserProfilePopup = true
+                                          }
+                                        })
                                 else ->
                                     ChatBubble(
                                         message,
                                         senderAccount,
                                         account,
                                         isLastFromSender,
-                                        isFirstFromSender)
+                                        isFirstFromSender,
+                                        onProfileClick = {
+                                          if (!isMine && senderAccount != null) {
+                                            selectedUserForPopup = senderAccount
+                                            showUserProfilePopup = true
+                                          }
+                                        })
                               }
                             }
 
@@ -533,7 +560,8 @@ fun DiscussionScreen(
                                         msgIndex = msgIndex,
                                         poll = actionMessage.poll,
                                         authorName = senderOverlay,
-                                        currentUserId = account.uid,
+                                        account = account,
+                                        senderAccount = userCache[actionMessage.senderId],
                                         profilePictureUrl =
                                             if (actionMessage.senderId == account.uid)
                                                 account.photoUrl
@@ -554,7 +582,8 @@ fun DiscussionScreen(
                                           }
                                         },
                                         createdAt = actionMessage.createdAt.toDate(),
-                                        showProfilePicture = isLastFromSenderOverlay)
+                                        showProfilePicture = isLastFromSenderOverlay,
+                                        onProfileClick = {})
                                   }
                                   actionMessage.photoUrl != null -> {
                                     PhotoBubble(
@@ -565,15 +594,17 @@ fun DiscussionScreen(
                                         showSenderName = isFirstFromSenderOverlay,
                                         allMessages = messages,
                                         userCache = userCache,
-                                        currentAccount = account)
+                                        currentAccount = account,
+                                        onProfileClick = {})
                                   }
                                   else -> {
                                     ChatBubble(
                                         actionMessage,
-                                        account,
+                                        userCache[actionMessage.senderId],
                                         account,
                                         isLastFromSenderOverlay,
-                                        isFirstFromSenderOverlay)
+                                        isFirstFromSenderOverlay,
+                                        onProfileClick = {})
                                   }
                                 }
                               }
@@ -890,6 +921,22 @@ fun DiscussionScreen(
               }
             }
       }
+
+  // User profile popup
+  if (showUserProfilePopup && selectedUserForPopup != null) {
+    val selectedAccount = selectedUserForPopup!!
+    val currentRelationship = account.relationships[selectedAccount.uid]
+    val isFriend = currentRelationship == RelationshipStatus.FRIEND
+
+    UserProfilePopup(
+        visible = true,
+        curr = account,
+        target = selectedAccount,
+        isFriend = isFriend,
+        onDismiss = { showUserProfilePopup = false },
+        online = online,
+        actions = viewModel)
+  }
 }
 
 /**
@@ -904,6 +951,7 @@ fun DiscussionScreen(
 private fun MessageProfilePicture(
     showProfilePicture: Boolean,
     profilePictureUrl: String?,
+    onClick: () -> Unit,
     isMine: Boolean
 ) {
   if (isMine) Spacer(Modifier.width(Dimensions.Spacing.small))
@@ -912,7 +960,9 @@ private fun MessageProfilePicture(
     ProfilePicture(
         profilePictureUrl = profilePictureUrl,
         size = Dimensions.AvatarSize.small,
-        backgroundColor = if (isMine) AppColors.focus else AppColors.neutral)
+        backgroundColor = if (isMine) AppColors.focus else AppColors.neutral,
+        onClick = onClick,
+        testTag = if (!isMine) DiscussionTestTags.MESSAGE_PROFILE_PICTURE else "")
   } else {
     Spacer(Modifier.width(Dimensions.AvatarSize.small))
   }
@@ -937,14 +987,16 @@ fun PollBubble(
     msgIndex: Int,
     poll: Poll,
     authorName: String,
-    currentUserId: String,
+    account: Account,
+    senderAccount: Account?,
     profilePictureUrl: String?,
     createdAt: Date,
     onVote: (optionIndex: Int, isRemoving: Boolean) -> Unit,
-    showProfilePicture: Boolean = true
+    showProfilePicture: Boolean = true,
+    onProfileClick: () -> Unit = {}
 ) {
   val isMine = authorName == DiscussionCommons.YOU_SENDER_NAME
-  val userVotes = poll.getUserVotes(currentUserId) ?: emptyList()
+  val userVotes = poll.getUserVotes(account.uid) ?: emptyList()
   val counts = poll.getVoteCountsByOption()
   val total = poll.getTotalVotes()
 
@@ -952,7 +1004,13 @@ fun PollBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
+        if (!isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = onProfileClick,
+              isMine = false)
+        }
 
         Column(horizontalAlignment = if (isMine) Alignment.End else Alignment.Start) {
 
@@ -1132,7 +1190,13 @@ fun PollBubble(
               }
         }
 
-        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
+        if (isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = {},
+              isMine = true)
+        }
       }
 }
 
@@ -1146,7 +1210,8 @@ private fun PhotoBubble(
     showSenderName: Boolean = true,
     allMessages: List<Message> = emptyList(),
     userCache: Map<String, Account> = emptyMap(),
-    currentAccount: Account
+    currentAccount: Account,
+    onProfileClick: () -> Unit = {}
 ) {
   var showFullImage by remember { mutableStateOf(false) }
   val profilePictureUrl =
@@ -1156,7 +1221,13 @@ private fun PhotoBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
+        if (!isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = onProfileClick,
+              isMine = false)
+        }
 
         Box(
             modifier =
@@ -1224,7 +1295,13 @@ private fun PhotoBubble(
               }
             }
 
-        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
+        if (isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = {},
+              isMine = true)
+        }
       }
 
   if (showFullImage) {
@@ -1389,7 +1466,8 @@ fun ChatBubble(
     senderAccount: Account?,
     currentAccount: Account,
     showProfilePicture: Boolean = true,
-    showSenderName: Boolean = true
+    showSenderName: Boolean = true,
+    onProfileClick: () -> Unit = {}
 ) {
   val isMine = message.senderId == currentAccount.uid
   val senderName =
@@ -1401,7 +1479,13 @@ fun ChatBubble(
       modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Spacing.small),
       horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
       verticalAlignment = Alignment.Bottom) {
-        if (!isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = false)
+        if (!isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = onProfileClick,
+              isMine = false)
+        }
 
         // Message bubble
         Box(
@@ -1460,7 +1544,13 @@ fun ChatBubble(
               }
             }
 
-        if (isMine) MessageProfilePicture(showProfilePicture, profilePictureUrl, isMine = true)
+        if (isMine) {
+          MessageProfilePicture(
+              showProfilePicture = showProfilePicture,
+              profilePictureUrl = profilePictureUrl,
+              onClick = {},
+              isMine = true)
+        }
       }
 }
 
