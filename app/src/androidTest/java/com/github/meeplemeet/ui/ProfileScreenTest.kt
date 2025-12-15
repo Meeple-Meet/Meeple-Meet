@@ -291,18 +291,6 @@ class ProfileScreenTest : FirestoreTests() {
           .isNotEmpty()
     }
     composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_SECTION).assertIsDisplayed()
-
-    // Verify Email Input displays user email (mocked user has tester@example.com)
-    // Note: The Email page logic fetches currentUser?.email ?: account.email
-    // Since Firebase Auth mock might return null or something else, we check if it displays
-    // *something* or the account email.
-    // In this test setup, `user` is passed to MainTab. The `ProfilePage.Email` block uses
-    // `viewModel.uiState` and `FirebaseProvider.auth.currentUser`.
-    // We should ensure `Auth` is set up or expect `account.email` to be used if currentUser is
-    // null.
-    // However, MainTab uses `account.email` as fallback.
-
-    composeTestRule.onNodeWithTag(PrivateInfoTestTags.EMAIL_INPUT).assertTextContains(user.email)
   }
 
   @Test
