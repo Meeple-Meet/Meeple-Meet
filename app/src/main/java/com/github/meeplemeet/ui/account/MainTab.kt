@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -99,6 +100,7 @@ import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.components.ClosableToast
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.ThemeMode
@@ -982,124 +984,149 @@ fun PublicInfoInputs(
 ) {
   var name by remember { mutableStateOf(account.name) }
   var desc by remember { mutableStateOf(account.description ?: "") }
+  var toast by remember { mutableStateOf<ToastData?>(null) }
+  var isInputFocused by remember { mutableStateOf(false) }
 
-  Column(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Top) {
-        // HANDLE VALIDATION
-        val errorMsg by viewModel.errorMessage.collectAsState()
-        var handle by remember { mutableStateOf(account.handle) }
-        var showErrors by remember { mutableStateOf(false) }
-        val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
+  Box(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top) {
+          // HANDLE VALIDATION
+          val errorMsg by viewModel.errorMessage.collectAsState()
+          var handle by remember { mutableStateOf(account.handle) }
+          var showErrors by remember { mutableStateOf(false) }
+          val errorHandle = showErrors && errorMsg.isNotBlank() && handle != account.handle
 
-        FocusableInputField(
-            enabled = online,
-            value = handle,
-            modifier =
-                Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
-                    .padding(bottom = Dimensions.Padding.medium)
-                    .fillMaxWidth(),
-            onValueChange = {
-              if (it.length < 32) handle = it
-              if (it.isNotBlank()) {
-                showErrors = true
-                viewModel.checkHandleAvailable(it)
-              } else {
-                showErrors = false
-              }
-            },
-            label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
-            leadingIcon = {
-              Text(
-                  text = MainTabUi.PublicInfo.HANDLE_PREFIX,
-                  style = MaterialTheme.typography.bodyLarge,
-                  color = AppColors.textIcons,
-                  modifier = Modifier.padding(start = Dimensions.Padding.medium))
-            },
-            singleLine = true,
-            isError = errorHandle,
-            onFocusChanged = { focused ->
-              onInputFocusChanged(focused)
-              if (!focused && !errorHandle) viewModel.setAccountHandle(account, newHandle = handle)
-            })
-
-        if (errorHandle) {
-          Text(
-              text = errorMsg,
-              color = AppColors.negative,
-              style = MaterialTheme.typography.bodySmall,
-              textAlign = TextAlign.Center,
+          FocusableInputField(
+              enabled = online,
+              value = handle,
               modifier =
-                  Modifier.padding(
-                          top = Dimensions.Padding.small,
-                          start = Dimensions.Padding.large,
-                          end = Dimensions.Padding.large,
-                          bottom = Dimensions.Padding.small)
-                      .testTag(PublicInfoTestTags.ERROR_HANDLE))
+                  Modifier.testTag(PublicInfoTestTags.INPUT_HANDLE)
+                      .padding(bottom = Dimensions.Padding.medium)
+                      .fillMaxWidth(),
+              onValueChange = {
+                if (it.length < 32) handle = it
+                if (it.isNotBlank()) {
+                  showErrors = true
+                  viewModel.checkHandleAvailable(it)
+                } else {
+                  showErrors = false
+                }
+              },
+              label = { Text(text = MainTabUi.PublicInfo.HANDLE_INPUT_FIELD) },
+              leadingIcon = {
+                Text(
+                    text = MainTabUi.PublicInfo.HANDLE_PREFIX,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textIcons,
+                    modifier = Modifier.padding(start = Dimensions.Padding.medium))
+              },
+              singleLine = true,
+              isError = errorHandle,
+              onFocusChanged = { focused ->
+                onInputFocusChanged(focused)
+                isInputFocused = focused
+                if (!focused && !errorHandle)
+                    viewModel.setAccountHandle(account, newHandle = handle)
+              },
+              trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.QuestionMark,
+                    contentDescription = "Handle information",
+                    modifier =
+                        Modifier.clickable {
+                          toast =
+                              if (toast == null)
+                                  ToastData("A unique name others use to find and recognize you.")
+                              else null
+                        })
+              })
+
+          if (errorHandle) {
+            Text(
+                text = errorMsg,
+                color = AppColors.negative,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier =
+                    Modifier.padding(
+                            top = Dimensions.Padding.small,
+                            start = Dimensions.Padding.large,
+                            end = Dimensions.Padding.large,
+                            bottom = Dimensions.Padding.small)
+                        .testTag(PublicInfoTestTags.ERROR_HANDLE))
+          }
+
+          // NAME VALIDATION
+          val nameError = name.isBlank()
+          FocusableInputField(
+              label = { Text(text = MainTabUi.PublicInfo.NAME_INPUT_FIELD) },
+              modifier =
+                  Modifier.testTag(PublicInfoTestTags.INPUT_USERNAME)
+                      .padding(bottom = Dimensions.Padding.medium)
+                      .fillMaxWidth(),
+              value = name,
+              onValueChange = { if (it.length < 90) name = it },
+              trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    modifier = Modifier.clickable(onClick = { name = "" }))
+              },
+              isError = nameError,
+              onFocusChanged = { focused ->
+                onInputFocusChanged(focused)
+                if (!focused && !nameError) {
+                  viewModel.setAccountName(account, name)
+                }
+              })
+
+          if (nameError) {
+            Text(
+                text = MainTabUi.PublicInfo.NAME_INPUT_FIELD_ERR,
+                color = AppColors.negative,
+                style = MaterialTheme.typography.bodySmall,
+                modifier =
+                    Modifier.padding(
+                            start = Dimensions.Padding.extraLarge,
+                            end = Dimensions.Padding.extraLarge,
+                            top = Dimensions.Padding.small)
+                        .testTag(PublicInfoTestTags.ERROR_USERNAME)
+                        .fillMaxWidth())
+          }
+
+          // DESCRIPTION
+          FocusableInputField(
+              label = { Text(MainTabUi.PublicInfo.DESC_INPUT_FIELD) },
+              modifier =
+                  Modifier.testTag(PublicInfoTestTags.INPUT_DESCRIPTION)
+                      .padding(bottom = Dimensions.Padding.medium)
+                      .fillMaxWidth(),
+              value = desc,
+              trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    modifier = Modifier.clickable(onClick = { desc = "" }))
+              },
+              onValueChange = { if (it.length < 90) desc = it },
+              singleLine = false,
+              onFocusChanged = { focused ->
+                onInputFocusChanged(focused)
+                if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
+              })
+
+          Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
         }
 
-        // NAME VALIDATION
-        val nameError = name.isBlank()
-        FocusableInputField(
-            label = { Text(text = MainTabUi.PublicInfo.NAME_INPUT_FIELD) },
-            modifier =
-                Modifier.testTag(PublicInfoTestTags.INPUT_USERNAME)
-                    .padding(bottom = Dimensions.Padding.medium)
-                    .fillMaxWidth(),
-            value = name,
-            onValueChange = { if (it.length < 90) name = it },
-            trailingIcon = {
-              Icon(
-                  imageVector = Icons.Default.Cancel,
-                  contentDescription = null,
-                  modifier = Modifier.clickable(onClick = { name = "" }))
-            },
-            isError = nameError,
-            onFocusChanged = { focused ->
-              onInputFocusChanged(focused)
-              if (!focused && !nameError) {
-                viewModel.setAccountName(account, name)
-              }
-            })
-
-        if (nameError) {
-          Text(
-              text = MainTabUi.PublicInfo.NAME_INPUT_FIELD_ERR,
-              color = AppColors.negative,
-              style = MaterialTheme.typography.bodySmall,
-              modifier =
-                  Modifier.padding(
-                          start = Dimensions.Padding.extraLarge,
-                          end = Dimensions.Padding.extraLarge,
-                          top = Dimensions.Padding.small)
-                      .testTag(PublicInfoTestTags.ERROR_USERNAME)
-                      .fillMaxWidth())
-        }
-
-        // DESCRIPTION
-        FocusableInputField(
-            label = { Text(MainTabUi.PublicInfo.DESC_INPUT_FIELD) },
-            modifier =
-                Modifier.testTag(PublicInfoTestTags.INPUT_DESCRIPTION)
-                    .padding(bottom = Dimensions.Padding.medium)
-                    .fillMaxWidth(),
-            value = desc,
-            trailingIcon = {
-              Icon(
-                  imageVector = Icons.Default.Cancel,
-                  contentDescription = null,
-                  modifier = Modifier.clickable(onClick = { desc = "" }))
-            },
-            onValueChange = { if (it.length < 90) desc = it },
-            singleLine = false,
-            onFocusChanged = { focused ->
-              onInputFocusChanged(focused)
-              if (!focused) viewModel.setAccountDescription(account, newDescription = desc)
-            })
-
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-      }
+    if (toast != null) {
+      ClosableToast(
+          message = toast?.message ?: "",
+          onDismiss = { toast = null },
+          modifier = Modifier.align(Alignment.TopEnd).zIndex(10f).offset(y = (-60).dp))
+    }
+  }
 }
 
 /**
