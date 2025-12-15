@@ -6,9 +6,9 @@ import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
@@ -160,7 +160,7 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
     composeTestRule.waitForIdle()
 
-    Espresso.closeSoftKeyboard()
+    composeTestRule.onRoot().performClick()
 
     // Bob should see the discussion that Alice created and added him to
     composeTestRule.waitUntil(15_000) {
