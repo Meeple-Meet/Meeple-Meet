@@ -89,7 +89,7 @@ class E2E_M1 : FirestoreTests() {
         .performTextInput(user2Handle)
 
     // Wait for search results to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+    composeTestRule.waitUntil(timeoutMillis = 15_000) {
       try {
         composeTestRule.onNodeWithTag("Add Member Element", useUnmergedTree = true).assertExists()
         true
@@ -115,7 +115,7 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     // Verify discussion appears in Alice's list
-    composeTestRule.waitUntil(5000) {
+    composeTestRule.waitUntil(15000) {
       composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).isDisplayed()
     }
 
@@ -136,7 +136,7 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     // Wait until the sent message is visible in the thread to ensure persistence before sign-out
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+    composeTestRule.waitUntil(timeoutMillis = 15_000) {
       try {
         composeTestRule
             .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)

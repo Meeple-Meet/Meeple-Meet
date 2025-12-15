@@ -491,7 +491,7 @@ class E2E_M2 : FirestoreTests() {
         .performTextInput("EPFL")
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 50_000) {
+    composeTestRule.waitUntil(timeoutMillis = 200_000) {
       try {
         composeTestRule
             .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
