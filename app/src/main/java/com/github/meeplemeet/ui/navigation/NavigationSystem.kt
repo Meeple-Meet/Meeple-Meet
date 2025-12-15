@@ -168,6 +168,7 @@ enum class MeepleMeetScreen(
   Friends("Friends"),
   OnBoarding("OnBoarding"),
   SessionViewer("Session Viewer"),
+  SpaceRental("Rent Space")
 }
 
 /**
