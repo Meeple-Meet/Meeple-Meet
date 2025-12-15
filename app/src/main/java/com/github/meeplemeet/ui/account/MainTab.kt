@@ -986,7 +986,6 @@ fun PublicInfoInputs(
   var name by remember { mutableStateOf(account.name) }
   var desc by remember { mutableStateOf(account.description ?: "") }
   var toast by remember { mutableStateOf<ToastData?>(null) }
-  var isInputFocused by remember { mutableStateOf(false) }
 
   Box(modifier = Modifier.fillMaxWidth()) {
     Column(
@@ -1027,7 +1026,6 @@ fun PublicInfoInputs(
               isError = errorHandle,
               onFocusChanged = { focused ->
                 onInputFocusChanged(focused)
-                isInputFocused = focused
                 if (!focused && !errorHandle)
                     viewModel.setAccountHandle(account, newHandle = handle)
               },
