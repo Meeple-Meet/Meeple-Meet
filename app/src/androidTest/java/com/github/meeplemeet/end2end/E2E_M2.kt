@@ -611,6 +611,18 @@ class E2E_M2 : FirestoreTests() {
         .performClick()
     composeTestRule.waitForIdle()
 
+    // Wait for Opening Hours dialog to dismiss
+    composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      try {
+        composeTestRule
+            .onAllNodesWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isEmpty()
+      } catch (_: Throwable) {
+        false
+      }
+    }
+
     // Seed a couple of games so the search dialog has results
     runBlocking {
       val gamesPath = com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
