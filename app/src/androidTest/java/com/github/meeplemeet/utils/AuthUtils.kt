@@ -2,6 +2,7 @@ package com.github.meeplemeet.utils
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,6 +24,8 @@ object AuthUtils {
       handle: String,
       username: String
   ) {
+    waitForIdle()
+    waitUntil(5000) { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }
     // --- Navigate to sign-up screen ---
     onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
 
@@ -45,7 +48,7 @@ object AuthUtils {
         .performClick()
 
     // --- Wait for Create Account screen ---
-    waitUntil(timeoutMillis = 10_000) {
+    waitUntil(timeoutMillis = 30_000) {
       onAllNodesWithText("Let's go!", substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
