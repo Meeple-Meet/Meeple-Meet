@@ -494,7 +494,7 @@ fun FilterRow(
                               NotificationsTabTestTags.FILTER_CHIP_PREFIX + filter.name),
                       onClick = { onSelected(filter) })
 
-                  Spacer(Modifier.width(Dimensions.Padding.extraLarge))
+                  Spacer(Modifier.width(Dimensions.Padding.extraMedium))
                 }
               }
 
@@ -565,12 +565,11 @@ fun FilterChip(
   Box(
       modifier =
           modifier
-              .clip(RoundedCornerShape(Dimensions.CornerRadius.small))
               .border(
                   if (selected) Dimensions.DividerThickness.medium
                   else Dimensions.DividerThickness.standard,
                   border,
-                  RoundedCornerShape(Dimensions.CornerRadius.extraLarge))
+                  RoundedCornerShape(Dimensions.CornerRadius.medium))
               .clickable { onClick() }
               .padding(
                   horizontal = Dimensions.Padding.extraLarge,
