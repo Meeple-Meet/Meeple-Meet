@@ -232,7 +232,7 @@ public fun FeedCard(
         modifier =
             Modifier.fillMaxWidth()
                 .clickable(onClick = onClick)
-                .background(MessagingColors.messagingSurface)
+                .background(AppColors.primary)
                 .padding(
                     horizontal = Dimensions.Spacing.large, vertical = Dimensions.Spacing.large),
         horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.large)) {
@@ -240,8 +240,7 @@ public fun FeedCard(
           Box(
               modifier =
                   Modifier.size(Dimensions.AvatarSize.large)
-                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium))
-                      .background(MessagingColors.messagingBackground),
+                      .clip(RoundedCornerShape(Dimensions.CornerRadius.medium)),
               contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Article,

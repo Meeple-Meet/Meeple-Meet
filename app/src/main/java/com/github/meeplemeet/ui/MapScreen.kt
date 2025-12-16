@@ -25,7 +25,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -120,6 +119,7 @@ import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.LocalThemeIsDark
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -173,7 +173,6 @@ object MapScreenTestTags {
   const val PREVIEW_OPENING_HOURS = "previewOpeningHours"
   const val PREVIEW_GAME = "previewGame"
   const val PREVIEW_DATE = "previewDate"
-  const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
   const val PREVIEW_NAVIGATE_BUTTON = "previewNavigateButton"
   const val CLUSTER_SHEET = "clusterSheet"
@@ -464,13 +463,14 @@ fun MapScreen(
         when {
           markerPreview != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedPin() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(pin = uiState.selectedPin)
                   } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
-                        onClose = { viewModel.clearSelectedPin() },
                         pin = uiState.selectedPin!!,
                         userLocation = userLocation,
                         onRedirect = onRedirect)
@@ -479,7 +479,9 @@ fun MapScreen(
           }
           clusterPreviews != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedCluster() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedCluster() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(null)
                   } else {
@@ -538,7 +540,7 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
           // --- Google Map content ---
-          val isDarkTheme = isSystemInDarkTheme()
+          val isDarkTheme = LocalThemeIsDark.current
           val mapStyleOptions =
               if (isDarkTheme) {
                 MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
@@ -1056,14 +1058,12 @@ private fun MarkerPreviewLoadingSheet(pin: GeoPinWithLocation?) {
  *     - Date with calendar icon
  *
  * The sheet includes:
- * - A close button (top-right)
  * - A "View details" button
  * - A "Navigate" button opening Google Maps directions
  */
 @Composable
 private fun MarkerPreviewSheet(
     preview: MarkerPreview,
-    onClose: () -> Unit,
     pin: GeoPinWithLocation,
     userLocation: Location?,
     onRedirect: (StorableGeoPin) -> Unit
@@ -1084,14 +1084,6 @@ private fun MarkerPreviewSheet(
               style = MaterialTheme.typography.titleLarge,
               modifier =
                   Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
-
-          IconButton(
-              onClick = onClose,
-              modifier =
-                  Modifier.align(Alignment.TopEnd)
-                      .testTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON)) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close preview")
-              }
         }
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
