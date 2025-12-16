@@ -81,7 +81,7 @@ object CreateAccountScreenUi {
   val xxLargeSpacing = Dimensions.Spacing.xxLarge
   const val IMAGE_SCREEN_SIZE_SCALING = 0.62f
   const val TITLE_FONT_SIZE_SCALING = 0.95f
-  val TITLE_FONT_SIZE_MIN_SIZE = 18f.sp
+  val TITLE_FONT_SIZE_MIN_SIZE = 18f
 }
 
 /**
@@ -433,7 +433,8 @@ private fun AutoSizeSingleLineTitle(
           MaterialTheme.typography.headlineSmall.copy(
               fontSize = fontSize, color = AppColors.neutral),
       onTextLayout = { layout ->
-        if (layout.hasVisualOverflow && fontSize > CreateAccountScreenUi.TITLE_FONT_SIZE_MIN_SIZE) {
+        if (layout.hasVisualOverflow &&
+            fontSize > CreateAccountScreenUi.TITLE_FONT_SIZE_MIN_SIZE.sp) {
           fontSize = (fontSize.value * CreateAccountScreenUi.TITLE_FONT_SIZE_SCALING).sp
         }
       })

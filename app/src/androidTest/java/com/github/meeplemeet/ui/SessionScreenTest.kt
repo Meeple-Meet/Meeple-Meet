@@ -8,9 +8,11 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso.pressBack
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.sessions.SessionViewModel
@@ -30,9 +32,6 @@ import kotlinx.coroutines.tasks.await
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.test.espresso.Espresso.pressBack
-
 
 class SessionViewerScreenTest : FirestoreTests() {
 
@@ -186,8 +185,10 @@ class SessionViewerScreenTest : FirestoreTests() {
           .assertIsDisplayed()
     }
 
-      checkpoint("Game details dialog opens and dismisses (covers Dialog, onClose, onDismissRequest)") {
-          // Open dialog (triggers the Dialog { BoxWithConstraints { GameDetailsCard(...) } } branch)
+    checkpoint(
+        "Game details dialog opens and dismisses (covers Dialog, onClose, onDismissRequest)") {
+          // Open dialog (triggers the Dialog { BoxWithConstraints { GameDetailsCard(...) } }
+          // branch)
           compose
               .onNodeWithContentDescription("Game details", useUnmergedTree = true)
               .assertExists()
@@ -195,7 +196,10 @@ class SessionViewerScreenTest : FirestoreTests() {
 
           // Verify dialog content is visible
           compose.waitUntil(timeoutMillis = 5_000) {
-              compose.onAllNodesWithText("Overview:", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            compose
+                .onAllNodesWithText("Overview:", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
           }
           compose.onNodeWithText("Overview:", useUnmergedTree = true).assertIsDisplayed()
 
@@ -207,7 +211,10 @@ class SessionViewerScreenTest : FirestoreTests() {
 
           // Wait until dialog content disappears
           compose.waitUntil(timeoutMillis = 5_000) {
-              compose.onAllNodesWithText("Overview:", useUnmergedTree = true).fetchSemanticsNodes().isEmpty()
+            compose
+                .onAllNodesWithText("Overview:", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isEmpty()
           }
 
           // Open again and dismiss via back (covers onDismissRequest = { showGameDetails = false })
@@ -217,17 +224,23 @@ class SessionViewerScreenTest : FirestoreTests() {
               .performClick()
 
           compose.waitUntil(timeoutMillis = 5_000) {
-              compose.onAllNodesWithText("Overview:", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            compose
+                .onAllNodesWithText("Overview:", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
           }
 
           pressBack()
 
           compose.waitUntil(timeoutMillis = 5_000) {
-              compose.onAllNodesWithText("Overview:", useUnmergedTree = true).fetchSemanticsNodes().isEmpty()
+            compose
+                .onAllNodesWithText("Overview:", useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isEmpty()
           }
-      }
+        }
 
-      checkpoint("Participants list and custom scrollbar are visible with many participants") {
+    checkpoint("Participants list and custom scrollbar are visible with many participants") {
       compose.waitUntilAtLeastOneExists(
           hasTestTag(SessionViewerTestTags.PARTICIPANTS_LIST), timeoutMillis = 5_000)
 
