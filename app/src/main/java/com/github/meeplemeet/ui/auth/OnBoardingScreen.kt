@@ -57,8 +57,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -135,7 +135,7 @@ object OnBoardingNumbers {
   const val PAGE_POSTS: Int = 3
   const val PAGE_MAP: Int = 4
   const val PAGE_LETS_GO: Int = 6
-    const val PAGE_NOTIFICATION: Int = 5
+  const val PAGE_NOTIFICATION: Int = 5
 
   val DATE_AND_TIME_PREVIEW_HEIGHT: Dp = 10.dp
   const val DATE_PREVIEW_WIDTH_FACTOR = 0.55f
@@ -314,9 +314,10 @@ private fun OnBoardingPager(
           OnBoardingNumbers.PAGE_POSTS -> PostsPage()
           OnBoardingNumbers.PAGE_MAP -> MapExplorationPage()
           OnBoardingNumbers.PAGE_LETS_GO -> LetsGoPage()
-            OnBoardingNumbers.PAGE_NOTIFICATION -> NotificationPermissionPage(
-                permissionGranted = notificationGranted,
-                onRequestPermission = requestNotificationPermission)
+          OnBoardingNumbers.PAGE_NOTIFICATION ->
+              NotificationPermissionPage(
+                  permissionGranted = notificationGranted,
+                  onRequestPermission = requestNotificationPermission)
           else -> StandardOnBoardingPage(pageData = pages[page], pageIndex = page)
         }
       }
