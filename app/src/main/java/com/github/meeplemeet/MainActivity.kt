@@ -188,6 +188,7 @@ object HttpClientProvider {
 }
 
 const val LOADING_SCREEN_TAG = "Loading Screen"
+const val DB_FETCH_TIMER = 300L
 
 /**
  * `MainActivity` is the entry point of the application. It sets up the content view with the
@@ -713,7 +714,7 @@ fun MeepleMeetApp(
           // If discussion has no session and we haven't waited yet, wait briefly for Firestore
           LaunchedEffect(discussion?.session, hasWaited) {
             if (discussion != null && discussion!!.session == null && !hasWaited) {
-              delay(300) // Wait 300ms for Firestore to emit fresh data
+              delay(DB_FETCH_TIMER) // Wait 300ms for Firestore to emit fresh data
               hasWaited = true
             }
           }
