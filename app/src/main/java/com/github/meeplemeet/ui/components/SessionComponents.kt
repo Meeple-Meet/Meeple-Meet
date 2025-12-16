@@ -350,9 +350,7 @@ fun IconTextField(
  * A text field with optional leading and trailing icons.
  *
  * @param value The current value of the text field.
- * @param onValueChange Callback function to be invoked when the text field value changes.
  * @param placeholder Placeholder text to be displayed when the text field is empty.
- * @param editable Whether the text field is editable or read-only.
  * @param leadingIcon Optional composable for the leading icon.
  * @param trailingIcon Optional composable for the trailing icon.
  * @param modifier Modifier to be applied to the OutlinedTextField.
@@ -360,9 +358,7 @@ fun IconTextField(
 @Composable
 fun IconTextFieldNew(
     value: String,
-    onValueChange: (String) -> Unit,
     placeholder: String,
-    editable: Boolean = true,
     leadingIcon: @Composable (() -> Unit),
     trailingIcon: @Composable (() -> Unit),
     modifier: Modifier
@@ -627,9 +623,7 @@ fun DatePickerDockedField(
   Box(modifier = Modifier.testTag(testTagDate)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = {},
         placeholder = label,
-        editable = editable,
         leadingIcon = {
           Icon(
               Icons.Default.CalendarToday,
@@ -754,9 +748,7 @@ fun TimePickerField(
   Box(modifier = Modifier.testTag(SessionComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = {},
         placeholder = label,
-        editable = false,
         leadingIcon = {
           Icon(Icons.Default.Timer, contentDescription = LABEL_TIME, tint = AppColors.neutral)
         },
