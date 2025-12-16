@@ -601,7 +601,6 @@ fun <T> TwoPerRowGrid(
  * @param value The currently selected date.
  * @param onValueChange Callback function to be invoked when a new date is selected.
  * @param label The label text for the date field.
- * @param editable Whether the date field is editable or read-only.
  * @param displayFormatter The formatter to display the selected date.
  * @param zoneId The time zone to be used for date selection.
  */
@@ -611,7 +610,6 @@ fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = LABEL_DATE,
-    editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
     testTagPick: String = SessionComponentsTestTags.DATE_PICK_BUTTON,
@@ -868,7 +866,7 @@ fun DateAndTimePicker(
                 onFocusChanged(it.isFocused)
               }) {
                 DatePickerDockedField(
-                    value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+                    value = date, onValueChange = onDateChange, label = LABEL_DATE)
               }
 
           Box(
