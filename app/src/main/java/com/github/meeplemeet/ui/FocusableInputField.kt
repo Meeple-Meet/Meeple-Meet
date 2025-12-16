@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
-import com.github.meeplemeet.ui.sessions.SessionsOverviewScreenTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.utils.KeyboardUtils
@@ -183,6 +182,7 @@ fun FocusableBasicTextField(
     onValueChange: (String) -> Unit = {},
     onClearQuery: () -> Unit = {},
     testTag: String = "",
+    testTagClear: String = "",
     enabled: Boolean = true,
     readOnly: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -264,9 +264,7 @@ fun FocusableBasicTextField(
               if (value.isNotEmpty()) {
                 IconButton(
                     onClick = onClearQuery,
-                    modifier =
-                        Modifier.size(Dimensions.IconSize.large)
-                            .testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)) {
+                    modifier = Modifier.size(Dimensions.IconSize.large).testTag(testTagClear)) {
                       Icon(
                           imageVector = Icons.Default.Close,
                           contentDescription = "Clear search",

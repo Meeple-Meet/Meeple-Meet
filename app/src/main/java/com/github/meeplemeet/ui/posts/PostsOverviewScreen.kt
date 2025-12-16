@@ -411,6 +411,7 @@ fun PostsTopBar(
             onValueChange = onQueryChange,
             onClearQuery = onClearQuery,
             testTag = FeedsOverviewTestTags.SEARCH_TEXT_FIELD,
+            testTagClear = FeedsOverviewTestTags.SEARCH_CLEAR,
             onFocusChanged = onFocusChanged)
       }
 }

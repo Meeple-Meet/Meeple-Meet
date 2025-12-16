@@ -458,6 +458,7 @@ fun DiscussionsTopBar(
             onValueChange = onQueryChange,
             onClearQuery = onClearQuery,
             testTag = DiscussionOverviewTestTags.SEARCH_TEXT_FIELD,
+            testTagClear = DiscussionOverviewTestTags.SEARCH_CLEAR,
             onFocusChanged = onFocusChanged)
       }
 }

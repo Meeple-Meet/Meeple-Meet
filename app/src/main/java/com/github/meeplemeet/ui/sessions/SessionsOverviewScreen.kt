@@ -802,6 +802,7 @@ fun SessionsTopBar(
               onValueChange = onQueryChange,
               onClearQuery = onClearQuery,
               testTag = SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD,
+              testTagClear = SessionsOverviewScreenTestTags.SEARCH_CLEAR,
               onFocusChanged = onFocusChanged)
         }
 
