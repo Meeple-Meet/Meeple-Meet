@@ -463,7 +463,9 @@ fun MapScreen(
         when {
           markerPreview != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedPin() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(pin = uiState.selectedPin)
                   } else {
@@ -477,7 +479,9 @@ fun MapScreen(
           }
           clusterPreviews != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedCluster() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedCluster() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(null)
                   } else {
