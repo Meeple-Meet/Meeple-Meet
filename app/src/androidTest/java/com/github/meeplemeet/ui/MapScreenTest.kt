@@ -342,6 +342,52 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
       composeRule.waitForIdle()
     }
 
+    checkpoint("ownedFilter_notVisibleForRegularUser") {
+      currentAccountState.value = regularAccount
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).assertDoesNotExist()
+    }
+
+    checkpoint("ownedFilter_visibleForShopOwner") {
+      currentAccountState.value = shopOwnerAccount
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).assertIsDisplayed()
+    }
+
+    checkpoint("ownedFilter_visibleForSpaceRenter") {
+      currentAccountState.value = spaceRenterAccount
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).assertIsDisplayed()
+    }
+
+    checkpoint("ownedFilter_canBeToggled") {
+      currentAccountState.value = shopOwnerAccount
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
+      composeRule.waitForIdle()
+
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).assertIsDisplayed()
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).performClick()
+      composeRule.waitForIdle()
+
+      // Toggle back off
+      composeRule.onNodeWithTag(MapScreenTestTags.FILTER_OWNED_SWITCH).performClick()
+      composeRule.waitForIdle()
+    }
+
     checkpoint("filterIntegration_hidesAndShowsPins") {
       runBlocking {
         val shop =
