@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -83,9 +85,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
@@ -158,6 +162,12 @@ object PublicInfoTestTags {
   const val BUSINESS_CARD = "businesses_section"
 }
 
+object EmailVerificationTestTags {
+  const val VERIFICATION_SECTION = "verification_section"
+  const val USER_EMAIL = "user_email"
+  const val RESEND_MAIL_VERIFICATION_BTN = "resend_mail_verification_btn"
+}
+
 object PrivateInfoTestTags {
 
   // ------------------------------------------------------------
@@ -169,10 +179,7 @@ object PrivateInfoTestTags {
   // EMAIL SECTION
   // ------------------------------------------------------------
   const val EMAIL_SECTION = "email_section"
-
   const val EMAIL_INPUT = "email_input"
-  const val EMAIL_VERIFIED_LABEL = "email_verified_label"
-  const val EMAIL_NOT_VERIFIED_LABEL = "email_not_verified_label"
 
   const val EMAIL_SEND_BUTTON = "email_send_verification_btn"
   const val EMAIL_TOAST = "email_section_toast"
@@ -238,6 +245,8 @@ object MainTabUi {
   val AVATAR_SIZE = 130.dp
   val OFFSET_X = 4.dp
   val OFFSET_Y = (-4).dp
+  val OFFSET_EMAIL = 35.dp
+  val PADDING_BOTTOM_SCROLL = 110.dp
   const val MAX_NOTIF_COUNT = 9
 
   object Misc {
@@ -282,8 +291,6 @@ object MainTabUi {
 
     const val TOAST_MSG = "Sent"
     const val SEND_ICON_DESC = "Resend Verification Email"
-    const val VERIFIED_MSG = "Account Verified"
-    const val UNVERIFIED_MSG = "Account not Verified"
     const val EMAIL_INVALID_MSG = "Invalid Email Format"
     const val ROLES_TITLE = "Your Roles"
     const val SELL_ITEMS_LABEL = "Sell Items"
@@ -380,6 +387,7 @@ fun MainTab(
   val offlineData by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   val businesses by viewModel.businesses.collectAsState()
+  val uiState by viewModel.uiState.collectAsState()
 
   val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -446,13 +454,10 @@ fun MainTab(
         }
     ProfilePage.Email ->
         SubPageScaffold("Email Settings", onBack = { currentPage = ProfilePage.Main }) {
-          val uiState by viewModel.uiState.collectAsState()
-
           // Get email from Firebase Auth instead of Firestore account
           // Refresh whenever this page is composed or uiState changes
-          val currentUser = com.github.meeplemeet.FirebaseProvider.auth.currentUser
+          val currentUser = FirebaseProvider.auth.currentUser
           val email = currentUser?.email ?: account.email
-          val isVerified = uiState.isEmailVerified
 
           // Refresh email and verification status when entering this section
           LaunchedEffect(currentPage) {
@@ -464,14 +469,9 @@ fun MainTab(
 
           EmailSection(
               email = email,
-              isVerified = isVerified,
               online = online,
               onEmailChange = { /* Email field is disabled, this is not used */},
               onFocusChanged = { focused -> onInputFocusChanged(focused) },
-              onSendVerification = {
-                viewModel.sendVerificationEmail()
-                viewModel.refreshEmailVerificationStatus()
-              },
               onChangeEmail = { newEmail, password -> viewModel.changeEmail(newEmail, password) },
               isLoading = uiState.isLoading,
               errorMsg = uiState.errorMsg,
@@ -599,6 +599,15 @@ fun MainTabContent(
 ) {
   var showDelDialog by remember { mutableStateOf(false) }
   val focusManager = LocalFocusManager.current
+  val uiState by viewModel.uiState.collectAsState()
+  var toast by remember { mutableStateOf<ToastData?>(null) }
+
+  // Get current email (prefer auth email as it's the one being verified)
+  val currentUser = FirebaseProvider.auth.currentUser
+  val userEmail = currentUser?.email ?: account.email
+
+  // Refresh email status on resume
+  LaunchedEffect(Unit) { viewModel.refreshEmailVerificationStatus() }
 
   Column(
       modifier =
@@ -633,7 +642,79 @@ fun MainTabContent(
                     onInputFocusChanged = onInputFocusChanged)
               }
         }
-        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
+
+        // Email verification part
+        val notVerified = !uiState.isEmailVerified
+        Text(
+            text = "Email",
+            fontSize = Dimensions.TextSize.heading,
+            modifier = Modifier.fillMaxWidth().padding(bottom = Dimensions.Padding.medium))
+
+        Box(
+            contentAlignment = Alignment.BottomCenter,
+            modifier = Modifier.testTag(EmailVerificationTestTags.VERIFICATION_SECTION)) {
+              Card(
+                  border =
+                      if (!notVerified)
+                          BorderStroke(Dimensions.DividerThickness.standard, AppColors.divider)
+                      else null,
+                  colors =
+                      CardDefaults.cardColors(
+                          containerColor =
+                              if (notVerified) AppColors.neutral else AppColors.primary),
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
+                  modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .padding(start = Dimensions.Padding.extraLarge, end = 0.dp),
+                        contentAlignment = Alignment.Center) {
+                          // Email Address
+                          Text(
+                              text = userEmail,
+                              color = AppColors.textIcons,
+                              modifier =
+                                  Modifier.align(Alignment.CenterStart)
+                                      .testTag(EmailVerificationTestTags.USER_EMAIL))
+
+                          IconButton(
+                              onClick = {
+                                if (notVerified) {
+                                  viewModel.sendVerificationEmail()
+                                  viewModel.refreshEmailVerificationStatus()
+                                  toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
+                                }
+                              },
+                              enabled = online,
+                              modifier =
+                                  Modifier.align(Alignment.CenterEnd)
+                                      .testTag(
+                                          EmailVerificationTestTags.RESEND_MAIL_VERIFICATION_BTN)) {
+                                Spacer(modifier = Modifier.width(Dimensions.Spacing.large))
+                                Icon(
+                                    imageVector =
+                                        if (notVerified) Icons.AutoMirrored.Filled.Send
+                                        else Icons.Default.Check,
+                                    contentDescription = MainTabUi.PrivateInfo.SEND_ICON_DESC,
+                                    tint =
+                                        if (notVerified) AppColors.textIcons
+                                        else AppColors.affirmative,
+                                    modifier = Modifier.size(Dimensions.IconSize.large))
+                              }
+                        }
+                  }
+
+              Box(
+                  modifier =
+                      Modifier.align(Alignment.BottomCenter)
+                          .offset(y = MainTabUi.OFFSET_EMAIL)
+                          .zIndex(1f)) {
+                    ToastHost(toast = toast, onToastFinished = { toast = null })
+                  }
+            }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xxxLarge))
 
         Text(
             text = MainTabUi.SettingRows.HEADER,
@@ -711,6 +792,8 @@ fun MainTabContent(
                     onDelete()
                   })
             }
+
+        Spacer(modifier = Modifier.height(MainTabUi.PADDING_BOTTOM_SCROLL))
       }
 }
 
@@ -1238,17 +1321,14 @@ fun AvatarChooserDialog(
 @Composable
 fun EmailSection(
     email: String,
-    isVerified: Boolean,
     online: Boolean,
     onEmailChange: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    onSendVerification: () -> Unit,
     onChangeEmail: (newEmail: String, password: String) -> Unit,
     isLoading: Boolean = false,
     errorMsg: String? = null,
     successMsg: String? = null
 ) {
-  var toast by remember { mutableStateOf<ToastData?>(null) }
   var localEmail by remember { mutableStateOf(email) }
   var showErrors by remember { mutableStateOf(false) }
   var newEmail by remember { mutableStateOf("") }
@@ -1268,31 +1348,6 @@ fun EmailSection(
 
   Box(modifier = Modifier.fillMaxWidth().testTag(PrivateInfoTestTags.EMAIL_SECTION)) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically) {
-            FocusableInputField(
-                enabled = online,
-                label = { Text(text = MainTabUi.PrivateInfo.EMAIL_INPUT_FIELD) },
-                value = email,
-                onValueChange = { new ->
-                  localEmail = new
-                  onEmailChange(new)
-
-                  showErrors = new.isNotBlank()
-                },
-                isError = emailError,
-                /*onFocusChanged = { focused ->
-                  if (!focused && !emailError) {
-                    onFocusChanged(false)
-                  } else onFocusChanged(focused)
-                },*/
-                modifier =
-                    Modifier.weight(Dimensions.Weight.full)
-                        .testTag(PrivateInfoTestTags.EMAIL_INPUT))
-          }
-
       Row(modifier = Modifier.fillMaxWidth()) {
         if (emailError) {
           Text(
@@ -1303,61 +1358,8 @@ fun EmailSection(
                   Modifier.padding(
                           start = Dimensions.Padding.extraLarge, top = Dimensions.Padding.small)
                       .testTag(PrivateInfoTestTags.EMAIL_ERROR_LABEL))
-        } else if (isVerified) {
-          Text(
-              text = MainTabUi.PrivateInfo.VERIFIED_MSG,
-              color = AppColors.affirmative,
-              modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_VERIFIED_LABEL))
-        } else {
-          Text(
-              text = MainTabUi.PrivateInfo.UNVERIFIED_MSG,
-              color = AppColors.negative,
-              modifier = Modifier.testTag(PrivateInfoTestTags.EMAIL_NOT_VERIFIED_LABEL))
         }
       }
-
-      if (!isVerified && !emailError) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-              Button(
-                  enabled = online,
-                  modifier =
-                      Modifier.padding(top = Dimensions.Padding.medium)
-                          .testTag(PrivateInfoTestTags.EMAIL_SEND_BUTTON),
-                  shape = ButtonDefaults.shape,
-                  colors =
-                      ButtonColors(
-                          containerColor = AppColors.affirmative,
-                          disabledContainerColor = AppColors.affirmative,
-                          contentColor = AppColors.textIcons,
-                          disabledContentColor = AppColors.negative),
-                  onClick = {
-                    onSendVerification()
-                    toast = ToastData(message = MainTabUi.PrivateInfo.TOAST_MSG)
-                  }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                      Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                      Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-                      Text(text = MainTabUi.PrivateInfo.SEND_ICON_DESC)
-                    }
-                  }
-              Box(
-                  modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small),
-                  contentAlignment = Alignment.Center) {
-                    ToastHost(toast = toast, onToastFinished = { toast = null })
-                  }
-            }
-      }
-
-      Spacer(modifier = Modifier.height(Dimensions.Spacing.huge))
-
-      HorizontalDivider(
-          modifier = Modifier.fillMaxWidth(),
-          thickness = Dimensions.DividerThickness.standard,
-          color = AppColors.textIcons.copy(alpha = 0.5f))
-
-      Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
       Text(
           text = MainTabUi.EmailSection.CHANGE_EMAIL_TITLE,
@@ -1367,6 +1369,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.NEW_EMAIL_INPUT_FIELD) },
+          enabled = online,
           value = newEmail,
           onValueChange = { new ->
             newEmail = new
@@ -1401,6 +1404,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.CONFIRM_EMAIL_INPUT_FIELD) },
+          enabled = online,
           value = confirmEmail,
           onValueChange = { new ->
             confirmEmail = new
@@ -1427,6 +1431,7 @@ fun EmailSection(
 
       FocusableInputField(
           label = { Text(text = MainTabUi.EmailSection.PASSWORD_INPUT_FIELD) },
+          enabled = online,
           value = password,
           onValueChange = { password = it },
           visualTransformation =
@@ -1560,7 +1565,7 @@ fun RolesSection(
     online: Boolean
 ) {
 
-  var expanded by remember { mutableStateOf(!hasNoRoles(account)) }
+  var expanded by remember { mutableStateOf(hasNoRoles(account)) }
 
   var isShopChecked by remember { mutableStateOf(account.shopOwner) }
   var isSpaceRented by remember { mutableStateOf(account.spaceRenter) }

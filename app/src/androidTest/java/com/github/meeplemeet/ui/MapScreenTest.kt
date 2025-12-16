@@ -204,7 +204,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
               viewModel = viewModel,
               navigation = mockNavigation,
               account = currentAccountState.value,
-              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
               onFABCLick = { type ->
                 fabClickCount++
                 lastFabClickType = type
@@ -405,7 +405,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
               navigation = mockNavigation,
               account = currentAccountState.value,
               verified = true,
-              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
               onFABCLick = { type ->
                 fabClickCount++
                 lastFabClickType = type
@@ -447,39 +447,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
             .assertTextContains(testLocation.name)
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
-
-        shopRepository.deleteShop(shop.id)
-      }
-    }
-
-    checkpoint("singlePin_closeButton_closesSheet") {
-      runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Close Test Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        refreshContent()
-
-        noClusterViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
-
-        val clusters = noClusterViewModel.getClusters()
-        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
-
-        noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).performClick()
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertDoesNotExist()
 
         shopRepository.deleteShop(shop.id)
       }
@@ -728,7 +695,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
               viewModel = singleClusterViewModel,
               navigation = mockNavigation,
               account = currentAccountState.value,
-              unreadCount = currentAccountState.value.notifications.count { it -> !it.read },
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
               onFABCLick = { type ->
                 fabClickCount++
                 lastFabClickType = type

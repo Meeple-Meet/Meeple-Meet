@@ -294,6 +294,7 @@ fun DiscussionCard(
           ProfilePicture(
               profilePictureUrl = profilePictureUrl,
               size = Dimensions.AvatarSize.extraLarge,
+              onClick = {},
               backgroundColor = AppColors.neutral)
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))

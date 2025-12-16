@@ -137,11 +137,18 @@ class DiscussionViewModel(
    * @throws IllegalArgumentException if sender is not the message author
    * @see DiscussionRepository.deleteMessage for low-level deletion
    */
-  fun deleteMessage(discussion: Discussion, message: Message, sender: Account) {
+  fun deleteMessage(
+      discussion: Discussion,
+      message: Message,
+      sender: Account,
+      lastMessage: Message?
+  ) {
     if (message.senderId != sender.uid)
         throw IllegalArgumentException("Can not delete someone else's message")
 
-    viewModelScope.launch { discussionRepository.deleteMessage(discussion.uid, message.uid) }
+    viewModelScope.launch {
+      discussionRepository.deleteMessage(discussion, message.uid, lastMessage)
+    }
   }
 
   /**

@@ -37,6 +37,7 @@ object Dimensions {
     val xxxLarge: Dp = 32.dp
     val huge: Dp = 36.dp
     val giant: Dp = 56.dp
+    val veryVeryLarge: Dp = 96.dp
   }
 
   // Icon sizes

@@ -7,8 +7,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.discussions.DiscussionScreen
 import com.github.meeplemeet.ui.discussions.DiscussionTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -52,14 +54,19 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             email = "alice@test.com",
             photoUrl = null)
 
+    // Create a test discussion    // Create initial account with a long description
+    val longDescription =
+        "Start " +
+            "A very long description that should definitely overflow because it repeats many times. "
+                .repeat(10) +
+            " End"
     otherUser =
         accountRepository.createAccount(
             userHandle = "otheruser_${Random.nextInt(1000000)}",
             name = "Bob",
             email = "bob@test.com",
             photoUrl = null)
-
-    // Create a test discussion with messages
+    accountRepository.setAccountDescription(otherUser.uid, longDescription)
     testDiscussion =
         discussionRepository.createDiscussion(
             name = "Test Discussion",
@@ -113,8 +120,9 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         galleryDiscussion, otherUser, "Second photo", "https://example.com/picB.jpg")
     val refreshedGalleryDiscussion = discussionRepository.getDiscussion(galleryDiscussion.uid)
 
-    // Use mutable state to switch discussions
+    // Use mutable state to switch discussions and update user state
     val currentDiscussionState = mutableStateOf(testDiscussion)
+    val currentUserState = mutableStateOf(currentUser)
 
     composeTestRule.setContent {
       AppTheme(themeMode = ThemeMode.LIGHT) {
@@ -122,7 +130,8 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
             viewModel = viewModel,
             discussion = currentDiscussionState.value,
             verified = true,
-            account = currentUser,
+            account = currentUserState.value,
+            online = true,
             onBack = { backPressed = true })
       }
     }
@@ -705,6 +714,206 @@ class DiscussionScreenIntegrationTest : FirestoreTests() {
         val repoMessages = runBlocking { discussionRepository.getMessages(testDiscussion.uid) }
         assertTrue(repoMessages.none { it.poll?.question == pollQuestion })
       }
+    }
+
+    checkpoint("User info popup") {
+      // Make sure we're viewing the test discussion with Bob's messages
+      currentDiscussionState.value = testDiscussion
+      composeTestRule.waitForIdle()
+
+      checkpoint("Click on profile picture") {
+        // Wait for profile pictures to appear
+        // Note: Only profile pictures from OTHER users have the MESSAGE_PROFILE_PICTURE tag
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.MESSAGE_PROFILE_PICTURE, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Click the first found filtered profile picture (which should be Bob's)
+        composeTestRule
+            .onAllNodesWithTag(DiscussionTestTags.MESSAGE_PROFILE_PICTURE, useUnmergedTree = true)[
+                0]
+            .performClick()
+        composeTestRule.waitForIdle()
+      }
+
+      checkpoint("Assert UserProfilePopup fields exist") {
+        // Wait for popup to appear and verify username tag exists
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(
+                  CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        // Assert username is displayed (using test tag only, not text to avoid duplicates)
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert handle is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert avatar is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert description is displayed
+        // Assert description is displayed
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION, useUnmergedTree = true)
+            .assertExists()
+
+        // Assert overflow "Show more" is displayed for our long description
+        composeTestRule.onNodeWithText("Show more").assertExists()
+
+        // Assert expansion works
+        composeTestRule.onNodeWithText("Show more").performClick()
+        composeTestRule.onNodeWithText("Show less").assertExists()
+
+        // Collapse again
+        composeTestRule.onNodeWithText("Show less").performClick()
+        composeTestRule.onNodeWithText("Show more").assertExists()
+      }
+
+      checkpoint("Assert UserProfilePopup buttons are clickable") {
+        // Assert block button exists and can be clicked
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
+
+        // Assert send friend request button exists and can be clicked
+        // (since otherUser is not currently a friend)
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
+      }
+
+      checkpoint("Verify UserProfilePopup actions") {
+        // 1. Click Send Friend Request
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .performClick()
+
+        // Verify Snackbar appears
+        composeTestRule.onNodeWithText("Friend request sent to ${otherUser.name}.").assertExists()
+
+        // Verify relationship status updates to SENT
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          account.relationships[otherUser.uid] == RelationshipStatus.SENT
+        }
+
+        // Manually update the LOCAL state to reflect the change, triggering recomposition
+        val sentRelationships = currentUser.relationships.toMutableMap()
+        sentRelationships[otherUser.uid] = RelationshipStatus.SENT
+        currentUserState.value = currentUser.copy(relationships = sentRelationships)
+        composeTestRule.waitForIdle()
+
+        // Assert button changes after sending request
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Cancel request").assertExists()
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertIsEnabled()
+
+        // 2. Click Block
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        // Verify Snackbar appears
+        composeTestRule.onNodeWithText("Blocked ${otherUser.name} successfully.").assertExists()
+
+        // Verify relationship status updates to BLOCKED
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          account.relationships[otherUser.uid] == RelationshipStatus.BLOCKED
+        }
+      }
+
+      checkpoint("Verify Remove Friend action") {
+        // 1. Manually set relationship to FRIEND
+        val friendRelationships = currentUser.relationships.toMutableMap()
+        friendRelationships[otherUser.uid] = RelationshipStatus.FRIEND
+        val friendUser = currentUser.copy(relationships = friendRelationships)
+
+        // Update repository
+        runBlocking { accountRepository.resetRelationship(currentUser.uid, otherUser.uid) }
+
+        // Force update UI state to show FRIEND status
+        currentUserState.value = friendUser
+        composeTestRule.waitForIdle()
+
+        // 2. Verify "Remove Friend" button is now visible (and others hidden)
+        composeTestRule.waitUntil(5_000) {
+          composeTestRule
+              .onAllNodesWithTag(
+                  CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                  useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        }
+
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                useUnmergedTree = true)
+            .assertExists()
+            .assertHasClickAction()
+
+        // Block button should still be there? Yes.
+        // Send Request should be GONE.
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+                useUnmergedTree = true)
+            .assertDoesNotExist()
+
+        // 3. Click Remove Friend
+        composeTestRule
+            .onNodeWithTag(
+                CommonComponentsTestTags.USER_PROFILE_POPUP_REMOVE_FRIEND_BUTTON,
+                useUnmergedTree = true)
+            .performClick()
+
+        // 4. Verify Snackbar
+        composeTestRule.onNodeWithText("${otherUser.name} removed from friends.").assertExists()
+
+        // 5. Verify Backend State (Relationship removed)
+        composeTestRule.waitUntil(5_000) {
+          val account = runBlocking { accountRepository.getAccount(currentUser.uid) }
+          // Relationship should be removed (null) or not FRIEND/SENT/BLOCKED
+          val rel = account.relationships[otherUser.uid]
+          rel == null ||
+              rel ==
+                  RelationshipStatus
+                      .PENDING // Depending on how remove friend is implemented (usually completely
+          // removes)
+        }
+      }
+
+      // removes)
     }
 
     // Cleanup photo discussions

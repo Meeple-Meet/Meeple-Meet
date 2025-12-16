@@ -295,6 +295,13 @@ class FirestoreRepositoryTests : FirestoreTests() {
   }
 
   @Test
+  fun updateFcmTokenUpdatesToken() = runBlocking {
+    accountRepository.updateFcmToken(testAccount1.uid, "test-fcm-token-12345")
+    val updated = accountRepository.getAccount(testAccount1.uid)
+    assertEquals("test-fcm-token-12345", updated.fcmToken)
+  }
+
+  @Test
   fun setAccountNotificationSettingsUpdatesSettings() = runBlocking {
     accountRepository.setAccountNotificationSettings(
         testAccount1.uid, com.github.meeplemeet.model.account.NotificationSettings.FRIENDS_ONLY)

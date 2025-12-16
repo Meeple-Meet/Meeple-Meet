@@ -1042,7 +1042,7 @@ object OfflineModeManager {
    */
   fun cachePosts(posts: List<Post>) {
     CoroutineScope(dispatcher).launch {
-      val newState = LinkedHashMap<String, Post>(MAX_CACHED_POSTS, LOAD_FACTOR, true)
+      val newState = LinkedHashMap<String, Post>()
 
       for (post in posts) {
         try {
@@ -1054,7 +1054,8 @@ object OfflineModeManager {
         }
       }
 
-      _offlineModeFlow.value = _offlineModeFlow.value.copy(posts = newState)
+      val (capped, _) = cap(newState, MAX_CACHED_POSTS)
+      _offlineModeFlow.value = _offlineModeFlow.value.copy(posts = capped)
     }
   }
 

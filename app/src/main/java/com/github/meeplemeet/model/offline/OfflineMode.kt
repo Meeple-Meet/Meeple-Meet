@@ -14,7 +14,6 @@ const val MAX_CACHED_SHOPS = 20
 const val MAX_CACHED_SPACE_RENTERS = 20
 const val MAX_CACHED_POSTS = 3
 const val MAX_CACHED_CREATED_POSTS = 2
-const val MAX_CACHED_PINS = 50
 
 const val LOAD_FACTOR = 0.9f
 
@@ -41,9 +40,9 @@ const val LOAD_FACTOR = 0.9f
 data class OfflineMode(
     val accounts: LinkedHashMap<String, Pair<Account, Map<String, Any>>> =
         LinkedHashMap(MAX_CACHED_ACCOUNTS, LOAD_FACTOR, true),
-    val posts: LinkedHashMap<String, Post> = LinkedHashMap(MAX_CACHED_POSTS, LOAD_FACTOR, true),
+    val posts: LinkedHashMap<String, Post> = LinkedHashMap(MAX_CACHED_POSTS, LOAD_FACTOR, false),
     val postsToAdd: LinkedHashMap<String, Post> =
-        LinkedHashMap(MAX_CACHED_CREATED_POSTS, LOAD_FACTOR, true),
+        LinkedHashMap(MAX_CACHED_CREATED_POSTS, LOAD_FACTOR, false),
     val discussions: LinkedHashMap<String, Triple<Discussion, List<Message>, List<Message>>> =
         LinkedHashMap(MAX_CACHED_DISCUSSIONS, LOAD_FACTOR, true),
     val shops: LinkedHashMap<String, Pair<Shop, Map<String, Any>>> =

@@ -1,6 +1,12 @@
 // AI helped generate some of this code especially for magic numbers
 package com.github.meeplemeet.ui.auth
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -29,6 +35,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SportsEsports
@@ -51,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +67,10 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.shared.location.Location
@@ -122,7 +134,8 @@ object OnBoardingNumbers {
   const val PAGE_SESSIONS: Int = 2
   const val PAGE_POSTS: Int = 3
   const val PAGE_MAP: Int = 4
-  const val PAGE_LETS_GO: Int = 5
+  const val PAGE_LETS_GO: Int = 6
+    const val PAGE_NOTIFICATION: Int = 5
 
   val DATE_AND_TIME_PREVIEW_HEIGHT: Dp = 10.dp
   const val DATE_PREVIEW_WIDTH_FACTOR = 0.55f
@@ -267,6 +280,26 @@ private fun OnBoardingPager(
     hasInteractedWithDiscussion: MutableState<Boolean>,
     modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
+  var notificationGranted by remember { mutableStateOf(hasNotificationPermission(context)) }
+  val lifecycleOwner = LocalLifecycleOwner.current
+
+  val requestNotificationPermission: () -> Unit = { openNotificationSettings(context) }
+
+  LaunchedEffect(pagerState.currentPage) {
+    notificationGranted = hasNotificationPermission(context)
+  }
+
+  DisposableEffect(lifecycleOwner) {
+    val observer = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        notificationGranted = hasNotificationPermission(context)
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
+
   HorizontalPager(
       state = pagerState,
       modifier = modifier.fillMaxWidth().testTag(OnBoardingTestTags.PAGER),
@@ -281,9 +314,26 @@ private fun OnBoardingPager(
           OnBoardingNumbers.PAGE_POSTS -> PostsPage()
           OnBoardingNumbers.PAGE_MAP -> MapExplorationPage()
           OnBoardingNumbers.PAGE_LETS_GO -> LetsGoPage()
+            OnBoardingNumbers.PAGE_NOTIFICATION -> NotificationPermissionPage(
+                permissionGranted = notificationGranted,
+                onRequestPermission = requestNotificationPermission)
           else -> StandardOnBoardingPage(pageData = pages[page], pageIndex = page)
         }
       }
+}
+
+private fun hasNotificationPermission(context: Context): Boolean {
+  return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+      ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+          PackageManager.PERMISSION_GRANTED
+}
+
+private fun openNotificationSettings(context: Context) {
+  val intent =
+      Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+          .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+  context.startActivity(intent)
 }
 
 /**
@@ -301,6 +351,71 @@ fun StandardOnBoardingPage(pageData: OnBoardPage, pageIndex: Int) {
         PageImage(imageRes = pageData.image)
         PageTitle(title = pageData.title, pageIndex = pageIndex)
         PageDescription(description = pageData.description)
+      }
+}
+
+/**
+ * Composable for the notification permission onboarding page.
+ *
+ * @param permissionGranted Whether notification permission is granted
+ * @param onRequestPermission Callback to request notification permission
+ */
+@Composable
+private fun NotificationPermissionPage(
+    permissionGranted: Boolean,
+    onRequestPermission: () -> Unit
+) {
+  val statusText =
+      when {
+        permissionGranted -> "Notifications are enabled"
+        else -> "Stay in the loop with replies, invites, and updates."
+      }
+
+  Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center,
+      modifier =
+          Modifier.fillMaxSize()
+              .padding(horizontal = Dimensions.Padding.large)
+              .background(AppColors.primary)) {
+        Box(
+            modifier =
+                Modifier.size(Dimensions.MapDimensions.offsetX180)
+                    .clip(CircleShape)
+                    .background(AppColors.focus.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center) {
+              Icon(
+                  imageVector = Icons.Filled.Notifications,
+                  contentDescription = null,
+                  tint = AppColors.focus,
+                  modifier = Modifier.size(Dimensions.Padding.veryVeryLarge))
+            }
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
+
+        PageTitle(title = "Enable notifications", pageIndex = 5)
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.textIcons,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = Dimensions.Padding.medium))
+
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.xLarge))
+        if (!permissionGranted) {
+          Button(
+              onClick = onRequestPermission,
+              colors =
+                  ButtonDefaults.buttonColors(
+                      containerColor = AppColors.focus,
+                      disabledContainerColor = AppColors.primary.copy(alpha = 0.5f)),
+              modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.large)) {
+                Text(text = "Allow notifications", color = AppColors.textIcons)
+              }
+        }
       }
 }
 

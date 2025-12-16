@@ -98,13 +98,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.account.AccountViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.discussions.EDIT_MAX_THRESHOLD
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
 import com.github.meeplemeet.ui.FocusableInputField
+import com.github.meeplemeet.ui.components.UserProfilePopup
 import com.github.meeplemeet.ui.discussions.CharacterCounter
 import com.github.meeplemeet.ui.discussions.ProfilePicture
 import com.github.meeplemeet.ui.navigation.EmailVerificationBanner
@@ -250,8 +250,9 @@ private fun PostTagsRow(tags: List<String>) {
  * @param account The current user's account information.
  * @param postId The ID of the post to display.
  * @param postViewModel ViewModel for managing post data.
- * @param accountViewModel ViewModel for managing user data.
+ * @param verified Whether the user is verified or not
  * @param onBack Lambda to invoke when the back button is pressed.
+ * @param onVerifyClick Lambda that redirects the user for his account verification
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,12 +260,12 @@ fun PostScreen(
     account: Account,
     postId: String,
     verified: Boolean,
-    postViewModel: PostViewModel = viewModel(),
-    accountViewModel: AccountViewModel = postViewModel,
+    online: Boolean,
+    viewModel: PostViewModel = viewModel(),
     onBack: () -> Unit = {},
     onVerifyClick: () -> Unit = {}
 ) {
-  val post: Post? by postViewModel.postFlow(postId).collectAsState()
+  val post: Post? by viewModel.postFlow(postId).collectAsState()
 
   val userCache = remember { mutableStateMapOf<String, Account>() }
   val scope = rememberCoroutineScope()
@@ -276,6 +277,10 @@ fun PostScreen(
   var isSending by remember { mutableStateOf(false) }
   var isReplyingToComment by remember { mutableStateOf(false) }
   var editTarget by remember { mutableStateOf<PostEditTarget?>(null) }
+
+  // User profile popup state
+  var showUserProfilePopup by remember { mutableStateOf(false) }
+  var selectedUserForPopup by remember { mutableStateOf<Account?>(null) }
 
   // Track if post was ever loaded to distinguish between loading and deleted states
   var postEverLoaded by remember { mutableStateOf(false) }
@@ -328,7 +333,8 @@ fun PostScreen(
               walk(p.comments)
             }
             .filterNot { it.isBlank() || it in userCache }
-    accountViewModel.getAccounts(toFetch, context) {
+
+    viewModel.getAccounts(toFetch, context) {
       it.forEach { acc -> if (acc != null) userCache[acc.uid] = acc }
     }
   }
@@ -366,13 +372,13 @@ fun PostScreen(
                         val value = topComment.trim()
                         when (target) {
                           PostEditTarget.TITLE ->
-                              postViewModel.editPost(author = account, post = p, newTitle = value)
+                              viewModel.editPost(author = account, post = p, newTitle = value)
                           PostEditTarget.BODY ->
-                              postViewModel.editPost(author = account, post = p, newBody = value)
+                              viewModel.editPost(author = account, post = p, newBody = value)
                         }
                         editTarget = null
                       } else {
-                        postViewModel.addComment(
+                        viewModel.addComment(
                             author = account, post = p, parentId = p.id, text = topComment.trim())
                       }
 
@@ -404,7 +410,7 @@ fun PostScreen(
               onDeletePost = {
                 scope.launch {
                   deleted = true
-                  runCatching { postViewModel.deletePost(account, currentPost) }
+                  runCatching { viewModel.deletePost(account, currentPost) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_POST) }
                   onBack()
                 }
@@ -419,21 +425,43 @@ fun PostScreen(
               },
               onReply = { parentId, text ->
                 scope.launch {
-                  runCatching { postViewModel.addComment(account, currentPost, parentId, text) }
+                  runCatching { viewModel.addComment(account, currentPost, parentId, text) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_SEND_REPLY) }
                 }
               },
               onDeleteComment = { comment ->
                 scope.launch {
-                  runCatching { postViewModel.removeComment(account, currentPost, comment) }
+                  runCatching { viewModel.removeComment(account, currentPost, comment) }
                       .onFailure { snackbarHostState.showSnackbar(ERROR_NOT_DELETED_COMMENT) }
                 }
               },
               onReplyingStateChanged = { _, isReplying -> isReplyingToComment = isReplying },
               resolveUser = { uid -> userCache[uid] },
+              onProfileClick = { clickedAccount ->
+                if (clickedAccount.uid != account.uid) {
+                  selectedUserForPopup = clickedAccount
+                  showUserProfilePopup = true
+                }
+              },
               modifier = Modifier.padding(padding))
         }
       }
+
+  // User profile popup
+  if (showUserProfilePopup && selectedUserForPopup != null) {
+    val selectedAccount = selectedUserForPopup!!
+    val currentRelationship = account.relationships[selectedAccount.uid]
+    val isFriend = currentRelationship == RelationshipStatus.FRIEND
+
+    UserProfilePopup(
+        visible = true,
+        curr = account,
+        target = selectedAccount,
+        isFriend = isFriend,
+        onDismiss = { showUserProfilePopup = false },
+        online = online,
+        actions = viewModel)
+  }
 }
 
 /* ================================================================
@@ -589,6 +617,7 @@ private fun PostContent(
     post: Post,
     currentUser: Account,
     verified: Boolean,
+    modifier: Modifier = Modifier,
     onDeletePost: () -> Unit,
     onEditPostBody: () -> Unit,
     onEditPostTitle: () -> Unit,
@@ -596,7 +625,7 @@ private fun PostContent(
     onDeleteComment: (Comment) -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     resolveUser: ResolveUser,
-    modifier: Modifier = Modifier
+    onProfileClick: (Account) -> Unit = {}
 ) {
   val listState = rememberLazyListState()
   val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
@@ -624,7 +653,8 @@ private fun PostContent(
               canEdit = canEditPost,
               onDelete = onDeletePost,
               onEditBody = onEditPostBody,
-              onEditTitle = onEditPostTitle)
+              onEditTitle = onEditPostTitle,
+              onProfileClick = onProfileClick)
         }
 
         items(items = post.comments, key = { it.id }, contentType = { "root_comment" }) { root ->
@@ -636,7 +666,8 @@ private fun PostContent(
               onReply = onReply,
               onDelete = onDeleteComment,
               onReplyingStateChanged = onReplyingStateChanged,
-              expandedStates = expandedStates)
+              expandedStates = expandedStates,
+              onProfileClick = onProfileClick)
         }
       }
 }
@@ -660,7 +691,8 @@ private fun PostCard(
     canEdit: Boolean,
     onDelete: () -> Unit,
     onEditBody: () -> Unit,
-    onEditTitle: () -> Unit
+    onEditTitle: () -> Unit,
+    onProfileClick: (Account) -> Unit = {}
 ) {
   val isOwner = post.authorId == currentUser.uid
   val showEdit = canEdit && isOwner
@@ -673,7 +705,7 @@ private fun PostCard(
           Box(modifier = Modifier.fillMaxWidth().testTag(PostTags.postCard(post.id))) {
             Column(modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large)) {
               // Header
-              PostHeader(post = post, author = author)
+              PostHeader(post = post, author = author, onProfileClick = onProfileClick)
 
               Spacer(Modifier.height(Dimensions.Padding.large))
 
@@ -807,7 +839,7 @@ private fun PostEditableRow(
  * @param author The author of the post.
  */
 @Composable
-private fun PostHeader(post: Post, author: Account?) {
+private fun PostHeader(post: Post, author: Account?, onProfileClick: (Account) -> Unit = {}) {
   Row(
       modifier = Modifier.fillMaxWidth().testTag(PostTags.POST_HEADER),
       verticalAlignment = Alignment.CenterVertically,
@@ -815,6 +847,7 @@ private fun PostHeader(post: Post, author: Account?) {
         ProfilePicture(
             profilePictureUrl = author?.photoUrl,
             size = Dimensions.AvatarSize.small,
+            onClick = { author?.let { onProfileClick(it) } },
             backgroundColor = MessagingColors.redditOrange,
             modifier = Modifier.clearAndSetSemantics { testTag = PostTags.POST_AVATAR })
         Row(
@@ -863,7 +896,8 @@ private fun ThreadCard(
     onReply: (parentId: String, text: String) -> Unit,
     onDelete: (Comment) -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
-    expandedStates: MutableMap<String, Boolean>
+    expandedStates: MutableMap<String, Boolean>,
+    onProfileClick: (Account) -> Unit = {}
 ) {
   val expanded = expandedStates[root.id] ?: false
 
@@ -896,7 +930,8 @@ private fun ThreadCard(
                     },
                     onDelete = { onDelete(root) },
                     onReplyingStateChanged = onReplyingStateChanged,
-                    onCardClick = { expandedStates[root.id] = !expanded })
+                    onCardClick = { expandedStates[root.id] = !expanded },
+                    onProfileClick = onProfileClick)
 
                 AnimatedVisibility(
                     visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
@@ -912,7 +947,8 @@ private fun ThreadCard(
                             onReplyingStateChanged = onReplyingStateChanged,
                             expandedStates = expandedStates,
                             depth = 1,
-                            gutterColor = MessagingColors.redditOrange)
+                            gutterColor = MessagingColors.redditOrange,
+                            onProfileClick = onProfileClick)
                       }
                     }
               }
@@ -946,7 +982,8 @@ private fun CommentsTree(
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
     expandedStates: MutableMap<String, Boolean>,
     depth: Int = 0,
-    gutterColor: Color = MaterialTheme.colorScheme.outline
+    gutterColor: Color = MaterialTheme.colorScheme.outline,
+    onProfileClick: (Account) -> Unit = {}
 ) {
   if (depth > 0) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).testTag(PostTags.treeDepth(depth))) {
@@ -979,7 +1016,8 @@ private fun CommentsTree(
                   onCardClick =
                       if (c.children.isNotEmpty()) {
                         { expandedStates[c.id] = !expanded }
-                      } else null)
+                      } else null,
+                  onProfileClick = onProfileClick)
 
               if (c.children.isNotEmpty()) {
                 AnimatedVisibility(
@@ -994,7 +1032,8 @@ private fun CommentsTree(
                           onReplyingStateChanged = onReplyingStateChanged,
                           expandedStates = expandedStates,
                           depth = depth + 1,
-                          gutterColor = gutterColor)
+                          gutterColor = gutterColor,
+                          onProfileClick = onProfileClick)
                     }
               }
             }
@@ -1021,7 +1060,8 @@ private fun CommentsTree(
                 onCardClick =
                     if (c.children.isNotEmpty()) {
                       { expandedStates[c.id] = !expanded }
-                    } else null)
+                    } else null,
+                onProfileClick = onProfileClick)
             if (c.children.isNotEmpty()) {
               AnimatedVisibility(
                   visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
@@ -1035,7 +1075,8 @@ private fun CommentsTree(
                         onReplyingStateChanged = onReplyingStateChanged,
                         expandedStates = expandedStates,
                         depth = 1,
-                        gutterColor = gutterColor)
+                        gutterColor = gutterColor,
+                        onProfileClick = onProfileClick)
                   }
             }
           }
@@ -1102,7 +1143,8 @@ private fun CommentItem(
     onReply: (String) -> Unit,
     onDelete: () -> Unit,
     onReplyingStateChanged: (commentId: String, isReplying: Boolean) -> Unit,
-    onCardClick: (() -> Unit)? = null
+    onCardClick: (() -> Unit)? = null,
+    onProfileClick: (Account) -> Unit = {}
 ) {
   var replying by rememberSaveable(comment.id) { mutableStateOf(false) }
   var replyText by rememberSaveable(comment.id) { mutableStateOf("") }
@@ -1120,6 +1162,7 @@ private fun CommentItem(
           ProfilePicture(
               profilePictureUrl = if (isBlocked) null else author?.photoUrl,
               size = Dimensions.AvatarSize.tiny,
+              onClick = { if (!isBlocked) author?.let { onProfileClick(it) } },
               backgroundColor = MessagingColors.redditOrange,
               modifier = Modifier.clearAndSetSemantics {})
           Text(

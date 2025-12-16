@@ -140,7 +140,7 @@ class DiscussionRepository(
           try {
             val newUuid = sessionRepository.newUUID()
             var newUrl: String? = null
-            if (discussionObj.session!!.photoUrl != null) {
+            if (discussionObj.session.photoUrl != null) {
               newUrl = imageRepository.moveSessionPhoto(context, id, newUuid)
             }
             sessionRepository.archiveSession(id, newUuid, newUrl)
@@ -509,12 +509,13 @@ class DiscussionRepository(
    *   deleted (consider using [ImageRepository] if photo cleanup is needed)
    *
    * @param messageId The UID of the message to delete (document ID in messages subcollection).
-   * @param discussionId The UID of the discussion containing the message.
+   * @param discussion The discussion containing the message.
    * @see editMessage for modifying message content instead of deleting
    * @see messagesCollection for accessing the messages subcollection
    */
-  suspend fun deleteMessage(discussionId: String, messageId: String) {
-    messagesCollection(discussionId).document(messageId).delete().await()
+  suspend fun deleteMessage(discussion: Discussion, messageId: String, lastMessage: Message?) {
+    messagesCollection(discussion.uid).document(messageId).delete().await()
+    sendMessageToDiscussion(discussion, lastMessage?.let { toNoUid(lastMessage) }, true)
   }
 
   /**
@@ -574,35 +575,38 @@ class DiscussionRepository(
    */
   private suspend fun sendMessageToDiscussion(
       discussion: Discussion,
-      messageNoUid: MessageNoUid
+      messageNoUid: MessageNoUid?,
+      onlyUpdatePreview: Boolean = false
   ): String {
     val batch = FirebaseFirestore.getInstance().batch()
 
     // Add message to subcollection
     val messageRef = messagesCollection(discussion.uid).document()
-    batch.set(messageRef, messageNoUid)
+    if (!onlyUpdatePreview && messageNoUid != null) batch.set(messageRef, messageNoUid)
 
     // Update previews for all participants
     discussion.participants.forEach { userId ->
       val ref =
           accounts.document(userId).collection(Account::previews.name).document(discussion.uid)
-      val unreadCountValue = if (userId == messageNoUid.senderId) 0 else FieldValue.increment(1)
+      val unreadCountValue = if (userId == messageNoUid?.senderId) 0 else FieldValue.increment(1)
 
       // Determine preview text based on message type
       val previewText =
           when {
-            messageNoUid.poll != null -> "Poll: ${messageNoUid.poll.question}"
-            messageNoUid.photoUrl != null -> PHOTO_MESSAGE_PREVIEW
-            else -> messageNoUid.content
+            messageNoUid?.poll != null -> "Poll: ${messageNoUid.poll.question}"
+            messageNoUid?.photoUrl != null -> PHOTO_MESSAGE_PREVIEW
+            else -> messageNoUid?.content
           }
 
       batch.set(
           ref,
-          mapOf(
-              "lastMessage" to previewText,
-              "lastMessageSender" to messageNoUid.senderId,
-              "lastMessageAt" to messageNoUid.createdAt,
-              "unreadCount" to unreadCountValue),
+          messageNoUid?.let {
+            mapOf(
+                "lastMessage" to previewText,
+                "lastMessageSender" to messageNoUid.senderId,
+                "lastMessageAt" to messageNoUid.createdAt,
+                "unreadCount" to unreadCountValue)
+          } ?: DiscussionPreviewNoUid(),
           SetOptions.merge())
     }
 
@@ -658,7 +662,7 @@ class DiscussionRepository(
             try {
               val newUuid = sessionRepository.newUUID()
               var newUrl: String? = null
-              if (discussion.session?.photoUrl != null) {
+              if (discussion.session.photoUrl != null) {
                 newUrl = imageRepository.moveSessionPhoto(context, discussionId, newUuid)
               }
               sessionRepository.archiveSession(discussionId, newUuid, newUrl)
