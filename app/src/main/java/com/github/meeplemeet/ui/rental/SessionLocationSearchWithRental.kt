@@ -18,6 +18,7 @@ import com.github.meeplemeet.ui.components.SessionLocationSearchButton
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.launch
 
 /**
  * A search bar for selecting a session location, with the option to choose from the user's active
@@ -31,7 +32,7 @@ import java.time.LocalTime
  * @param account The user's account.
  * @param discussion The discussion associated with the session.
  * @param sessionViewModel ViewModel for managing session state.
- * @param rentalViewModel ViewModel for managing rentals (defaults to [RentalViewModel]).
+ * @param rentalViewModel ViewModel for managing rentals.
  * @param onRentalSelected Callback invoked when a rental is selected, providing the rental ID and a
  *   constructed [Location].
  * @param sessionDate Current session date (optional, used for validation).
@@ -44,15 +45,34 @@ fun SessionLocationSearchWithRental(
     discussion: Discussion,
     sessionViewModel: CreateSessionViewModel,
     rentalViewModel: RentalViewModel = viewModel(),
-    onRentalSelected: (String, Location) -> Unit = { _, _ -> },
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
     sessionDate: LocalDate? = null,
     sessionTime: LocalTime? = null,
-    onDateTimeUpdate: ((LocalDate, LocalTime) -> Unit)? = null
+    onDateTimeUpdate: ((LocalDate, LocalTime) -> Unit)? = null,
+    currentRentalId: String? = null
 ) {
   var showRentalSelector by remember { mutableStateOf(false) }
   val activeRentals by rentalViewModel.activeSpaceRentals.collectAsStateWithLifecycle()
   val snackbarHostState = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
+
+  // Check if current rental is still valid when date/time changes
+  LaunchedEffect(sessionDate, sessionTime, currentRentalId) {
+    if (currentRentalId != null && sessionDate != null && sessionTime != null) {
+      val currentRental = activeRentals.find { it.rental.uid == currentRentalId }
+      if (currentRental != null) {
+        val isStillCompatible = checkRentalCompatibility(currentRental, sessionDate, sessionTime)
+        if (!isStillCompatible) {
+          // Clear the rental association
+          onRentalSelected(null, Location())
+          scope.launch {
+            snackbarHostState.showSnackbar(
+                "Session time moved outside rental period. Rental unlinked.")
+          }
+        }
+      }
+    }
+  }
 
   LaunchedEffect(account.uid) { rentalViewModel.loadActiveSpaceRentals(account.uid) }
 

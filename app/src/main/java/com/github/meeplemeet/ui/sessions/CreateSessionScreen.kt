@@ -319,10 +319,13 @@ fun CreateSessionScreen(
                   onTimeChange = { form = form.copy(time = it) },
                   onFocusChanged = { isInputFocused = it },
                   onRentalSelected = { rentalId, location ->
-                    selectedRentalId = rentalId
-                    viewModel.setLocation(account, discussion, location)
+                    selectedRentalId = rentalId // Can be null if rental was unliked
+                    if (rentalId != null) {
+                      viewModel.setLocation(account, discussion, location)
+                    }
                   },
-                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
+                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION),
+                  currentRentalId = selectedRentalId)
 
               // Participants section (player selection and slider)
               ParticipantsSection(
@@ -451,7 +454,8 @@ fun OrganisationSection(
     onDateChange: (LocalDate?) -> Unit,
     onTimeChange: (LocalTime?) -> Unit,
     onFocusChanged: (Boolean) -> Unit = {},
-    onRentalSelected: (String, Location) -> Unit = { _, _ -> }
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   SectionCard(
       modifier
@@ -513,7 +517,8 @@ fun OrganisationSection(
                 onDateChange(newDate)
                 onTimeChange(newTime)
               },
-              onRentalSelected = onRentalSelected)
+              onRentalSelected = onRentalSelected,
+              currentRentalId = currentRentalId)
         }
       }
 }

@@ -395,9 +395,12 @@ fun SessionEditScreen(
                   onFormChange = callbacks.onFormChange,
                   onFocusChanged = callbacks.onFocusChanged,
                   onRentalSelected = { rentalId, location ->
-                    selectedRentalId = rentalId
-                    viewModel.setLocation(account, discussion, location)
-                  })
+                    selectedRentalId = rentalId // Can be null if it was unlinked
+                    if (rentalId != null) {
+                      viewModel.setLocation(account, discussion, location)
+                    }
+                  },
+                  currentRentalId = selectedRentalId)
 
               SessionEditParticipantsBlock(
                   account = account,
@@ -551,7 +554,8 @@ private fun EditOrganisationSection(
     rentalViewModel: RentalViewModel,
     onFormChange: (SessionForm) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    onRentalSelected: (String, Location) -> Unit = { _, _ -> }
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   SectionCard(
       Modifier.testTag(SessionEditTestTags.ORG_SECTION)
@@ -577,7 +581,8 @@ private fun EditOrganisationSection(
             rentalViewModel = rentalViewModel,
             onFormChange = onFormChange,
             onFocusChanged = onFocusChanged,
-            onRentalSelected = onRentalSelected)
+            onRentalSelected = onRentalSelected,
+            currentRentalId = currentRentalId)
       }
 }
 
@@ -660,7 +665,8 @@ private fun EditScheduleAndLocationSection(
     rentalViewModel: RentalViewModel,
     onFormChange: (SessionForm) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    onRentalSelected: (String, Location) -> Unit = { _, _ -> }
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   Text(
       text = SessionEditStrings.SCHEDULE_AND_LOCATION_TEXT,
@@ -690,7 +696,8 @@ private fun EditScheduleAndLocationSection(
         onDateTimeUpdate = { newDate, newTime ->
           onFormChange(form.copy(date = newDate, time = newTime))
         },
-        onRentalSelected = onRentalSelected)
+        onRentalSelected = onRentalSelected,
+        currentRentalId = currentRentalId)
   }
 }
 

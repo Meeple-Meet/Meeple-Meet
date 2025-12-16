@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +51,8 @@ fun RentalSelectorDialog(
     sessionDate: LocalDate? = null,
     sessionTime: LocalTime? = null,
     onSelectRental: (RentalResourceInfo) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    currentRentalId: String? = null
 ) {
   Dialog(onDismissRequest = onDismiss) {
     Surface(
@@ -135,10 +135,12 @@ fun RentalSelectorDialog(
                     items(rentals, key = { it.rental.uid }) { rentalInfo ->
                       val isCompatible =
                           checkRentalCompatibility(rentalInfo, sessionDate, sessionTime)
+                      val isCurrentRental = rentalInfo.rental.uid == currentRentalId
 
                       RentalSelectorItem(
                           rentalInfo = rentalInfo,
                           isCompatible = isCompatible,
+                          isCurrentRental = isCurrentRental,
                           onClick = {
                             if (isCompatible) {
                               onSelectRental(rentalInfo)
@@ -160,7 +162,7 @@ fun RentalSelectorDialog(
  *
  * @return true if compatible or if no date/time specified, false otherwise.
  */
-private fun checkRentalCompatibility(
+fun checkRentalCompatibility(
     rentalInfo: RentalResourceInfo,
     sessionDate: LocalDate?,
     sessionTime: LocalTime?
@@ -197,6 +199,7 @@ private fun checkRentalCompatibility(
 private fun RentalSelectorItem(
     rentalInfo: RentalResourceInfo,
     isCompatible: Boolean,
+    isCurrentRental: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -213,11 +216,32 @@ private fun RentalSelectorItem(
       colors =
           CardDefaults.cardColors(
               containerColor =
-                  if (isCompatible) MaterialTheme.colorScheme.surface
-                  else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
+                  if (!isCompatible) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                  else if (isCurrentRental) MaterialTheme.colorScheme.primaryContainer
+                  else MaterialTheme.colorScheme.surface)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+              // Current rental indicator
+              if (isCurrentRental) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()) {
+                      Icon(
+                          Icons.Default.Check,
+                          contentDescription = null,
+                          tint = MaterialTheme.colorScheme.primary,
+                          modifier = Modifier.size(Dimensions.IconSize.small))
+                      Spacer(Modifier.width(Dimensions.Spacing.small))
+                      Text(
+                          "Currently selected",
+                          style = MaterialTheme.typography.bodySmall,
+                          color = MaterialTheme.colorScheme.primary,
+                          fontWeight = FontWeight.Bold)
+                    }
+                Spacer(Modifier.height(Dimensions.Spacing.small))
+              }
+
               // Incompatibility warning
               if (!isCompatible) {
                 Row(

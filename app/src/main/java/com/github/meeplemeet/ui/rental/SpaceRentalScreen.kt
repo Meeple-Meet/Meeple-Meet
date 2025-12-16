@@ -146,7 +146,8 @@ fun SpaceRentalScreen(
         }
       }
 
-  val isValid = !hasValidationErrors && totalCost > 0
+  // Allow free spaces (cost = 0)
+  val isValid = !hasValidationErrors && (totalCost > 0 || space.costPerHour == 0.0)
 
   LaunchedEffect(errorMessage) {
     errorMessage?.let {
@@ -275,7 +276,7 @@ fun SpaceRentalScreen(
                         isStartDateTime = false)
                   }
 
-              // Cost
+              // Cost (only show if > 0)
               if (totalCost > 0) {
                 SectionCard(
                     modifier = Modifier.fillMaxWidth().testTag(SpaceRentalTestTags.COST_SECTION)) {
@@ -292,6 +293,26 @@ fun SpaceRentalScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold)
+                          }
+                    }
+              } else if (space.costPerHour == 0.0 && !hasValidationErrors) {
+                // Show free space message
+                SectionCard(
+                    modifier = Modifier.fillMaxWidth().testTag(SpaceRentalTestTags.COST_SECTION)) {
+                      Row(
+                          modifier = Modifier.fillMaxWidth(),
+                          horizontalArrangement = Arrangement.Center,
+                          verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(Dimensions.Spacing.small))
+                            Text(
+                                text = "This space is free to use",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold)
                           }
                     }
               }
