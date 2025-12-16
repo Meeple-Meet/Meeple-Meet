@@ -47,7 +47,7 @@ object MessagingColors {
 
   // Dividers
   val divider: Color
-    @Composable get() = if (LocalThemeIsDark.current) Color(0xFFAAAAAAA) else Color(0xFFE5E5EA)
+    @Composable get() = if (LocalThemeIsDark.current) Color(0xFFAAAAAA) else Color(0xFFE5E5EA)
 
   val thickDivider: Color
     @Composable get() = if (LocalThemeIsDark.current) Color(0xFF151E26) else Color(0xFFE5E5EA)
