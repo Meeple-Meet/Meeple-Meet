@@ -5,7 +5,6 @@ import com.github.meeplemeet.model.FirestoreRepository
 import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionNoUid
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
@@ -48,7 +47,7 @@ class SessionRepository(
     val session = Session(name, gameId, gameName, date, location, participants.toList())
     discussions.document(discussionId).update(DiscussionNoUid::session.name, session).await()
 
-    geoPinsRepo.upsertGeoPin(ref = discussionId, type = PinType.SESSION, location = location)
+    geoPinsRepo.upsertSessionGeoPin(ref = discussionId, location = location)
 
     return discussionRepo.getDiscussion(discussionId)
   }
@@ -95,7 +94,7 @@ class SessionRepository(
 
     discussions.document(discussionId).update(updates).await()
 
-    if (location != null) geoPinsRepo.upsertGeoPin(discussionId, PinType.SESSION, location)
+    if (location != null) geoPinsRepo.updateGeoPinLocation(discussionId, location)
 
     return discussionRepo.getDiscussion(discussionId)
   }

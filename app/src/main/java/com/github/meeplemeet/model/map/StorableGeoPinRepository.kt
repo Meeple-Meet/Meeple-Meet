@@ -103,6 +103,19 @@ class StorableGeoPinRepository(private val geoOps: GeoFirestoreOperations? = nul
   }
 
   /**
+   * Updates only the geographic location of an existing geo-pin.
+   *
+   * This method does not modify any metadata (type, ownerId) and should be used when the associated
+   * object changes address without changing ownership.
+   *
+   * @param ref ID of the pin to update.
+   * @param location New geographic location.
+   */
+  suspend fun updateGeoPinLocation(ref: String, location: Location) {
+    retry("update geolocation for $ref") { setGeoLocation(ref, location) }
+  }
+
+  /**
    * Deletes a geo-pin document and removes its geolocation data.
    *
    * Geolocation removal is attempted with retry logic to handle transient failures. The Firestore
