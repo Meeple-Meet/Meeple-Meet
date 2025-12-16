@@ -484,6 +484,217 @@ class MapViewModelTest : FirestoreTests() {
   }
 
   // ============================================================================
+  // OWNERSHIP FILTER TESTS
+  // ============================================================================
+
+  @Test
+  fun setShowOwnedBusinessesOnly_invalidatesCache() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
+
+    val shop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    viewModel.getClusters(testAccount1)
+    val version1 = viewModel.uiState.value.cacheVersion
+
+    viewModel.setShowOwnedBusinessesOnly(true)
+
+    val version2 = viewModel.uiState.value.cacheVersion
+    assertTrue(version2 > version1)
+    assertTrue(viewModel.uiState.value.showOwnedBusinessesOnly)
+
+    shopRepository.deleteShop(shop.id)
+  }
+
+  @Test
+  fun setShowOwnedBusinessesOnly_filtersNonOwnedBusinesses() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    // Create shop owned by testAccount1
+    val ownedShop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "My Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    // Create shop owned by testAccount2
+    val otherShop =
+        shopRepository.createShop(
+            owner = testAccount2,
+            name = "Other Shop",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    // Both shops visible initially
+    val allClusters = viewModel.getClusters(testAccount1)
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == ownedShop.id })
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == otherShop.id })
+
+    // Enable owned-only filter
+    viewModel.setShowOwnedBusinessesOnly(true)
+
+    // Only owned shop visible
+    val ownedClusters = viewModel.getClusters(testAccount1)
+    assertTrue(ownedClusters.flatMap { it.items }.any { it.geoPin.uid == ownedShop.id })
+    assertFalse(ownedClusters.flatMap { it.items }.any { it.geoPin.uid == otherShop.id })
+
+    shopRepository.deleteShop(ownedShop.id)
+    shopRepository.deleteShop(otherShop.id)
+  }
+
+  @Test
+  fun setShowOwnedBusinessesOnly_sessionsAlwaysVisible() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    // Create shop owned by testAccount2
+    val otherShop =
+        shopRepository.createShop(
+            owner = testAccount2,
+            name = "Other Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    // Create session
+    db.collection(GAMES_COLLECTION_PATH)
+        .document("test_game_owned_session")
+        .set(
+            GameNoUid(
+                name = "Catan",
+                description = "Strategy board game",
+                imageURL = "https://example.com/catan.jpg",
+                minPlayers = 3,
+                maxPlayers = 4,
+                recommendedPlayers = null,
+                averagePlayTime = null,
+                genres = emptyList()))
+        .await()
+
+    val testGame = gameRepository.getGameById("test_game_owned_session")
+    val discussion =
+        discussionRepository.createDiscussion("Test Session", "Test discussion", testAccount1.uid)
+
+    sessionRepository.createSession(
+        discussion.uid,
+        "Test Session",
+        testGame.uid,
+        testGame.name,
+        Timestamp.now(),
+        testLocation,
+        testAccount1.uid)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    // Enable owned-only filter
+    viewModel.setShowOwnedBusinessesOnly(true)
+
+    // Session still visible, other shop not visible
+    val clusters = viewModel.getClusters(testAccount1)
+    assertTrue(clusters.flatMap { it.items }.any { it.geoPin.uid == discussion.uid })
+    assertFalse(clusters.flatMap { it.items }.any { it.geoPin.uid == otherShop.id })
+
+    shopRepository.deleteShop(otherShop.id)
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    discussionRepository.deleteDiscussion(context, discussion)
+  }
+
+  @Test
+  fun setShowOwnedBusinessesOnly_worksWithSpaces() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    // Set testAccount1 as space renter
+    accountRepository.setAccountRole(testAccount1.uid, isShopOwner = false, isSpaceRenter = true)
+    val updatedAccount1 = accountRepository.getAccount(testAccount1.uid)
+
+    // Create space owned by testAccount1
+    val ownedSpace =
+        spaceRenterRepository.createSpaceRenter(
+            owner = updatedAccount1,
+            name = "My Space",
+            address = testLocation,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    // Create space owned by testAccount2
+    accountRepository.setAccountRole(testAccount2.uid, isShopOwner = false, isSpaceRenter = true)
+    val updatedAccount2 = accountRepository.getAccount(testAccount2.uid)
+
+    val otherSpace =
+        spaceRenterRepository.createSpaceRenter(
+            owner = updatedAccount2,
+            name = "Other Space",
+            address = testLocationNearby,
+            openingHours = testOpeningHours,
+            spaces = listOf(Space(seats = 10, costPerHour = 25.0)))
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    // Both spaces visible initially
+    val allClusters = viewModel.getClusters(updatedAccount1)
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == ownedSpace.id })
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == otherSpace.id })
+
+    // Enable owned-only filter
+    viewModel.setShowOwnedBusinessesOnly(true)
+
+    // Only owned space visible
+    val ownedClusters = viewModel.getClusters(updatedAccount1)
+    assertTrue(ownedClusters.flatMap { it.items }.any { it.geoPin.uid == ownedSpace.id })
+    assertFalse(ownedClusters.flatMap { it.items }.any { it.geoPin.uid == otherSpace.id })
+
+    spaceRenterRepository.deleteSpaceRenter(ownedSpace.id)
+    spaceRenterRepository.deleteSpaceRenter(otherSpace.id)
+  }
+
+  @Test
+  fun setShowOwnedBusinessesOnly_disablingShowsAllAgain() = runBlocking {
+    val viewModel = MapViewModel(clusterManager = ClusterManager(noClusterStrategy))
+
+    val ownedShop =
+        shopRepository.createShop(
+            owner = testAccount1,
+            name = "My Shop",
+            address = testLocation,
+            openingHours = testOpeningHours)
+
+    val otherShop =
+        shopRepository.createShop(
+            owner = testAccount2,
+            name = "Other Shop",
+            address = testLocationNearby,
+            openingHours = testOpeningHours)
+
+    viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
+    delay(3000)
+
+    // Enable filter
+    viewModel.setShowOwnedBusinessesOnly(true)
+    val ownedClusters = viewModel.getClusters(testAccount1)
+    assertFalse(ownedClusters.flatMap { it.items }.any { it.geoPin.uid == otherShop.id })
+
+    // Disable filter
+    viewModel.setShowOwnedBusinessesOnly(false)
+    val allClusters = viewModel.getClusters(testAccount1)
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == ownedShop.id })
+    assertTrue(allClusters.flatMap { it.items }.any { it.geoPin.uid == otherShop.id })
+
+    shopRepository.deleteShop(ownedShop.id)
+    shopRepository.deleteShop(otherShop.id)
+  }
+
+  // ============================================================================
   // SINGLE PIN SELECTION TESTS
   // ============================================================================
 
