@@ -1380,7 +1380,8 @@ fun EmailSection(
               Modifier.fillMaxWidth()
                   .padding(top = Dimensions.Padding.medium)
                   .testTag(EmailSectionTestTags.NEW_EMAIL_INPUT),
-          singleLine = true)
+          singleLine = true,
+          onFocusChanged = onFocusChanged)
 
       Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
         if (newEmailError) {
@@ -1415,7 +1416,8 @@ fun EmailSection(
               Modifier.fillMaxWidth()
                   .padding(top = Dimensions.Padding.medium)
                   .testTag(EmailSectionTestTags.CONFIRM_EMAIL_INPUT),
-          singleLine = true)
+          singleLine = true,
+          onFocusChanged = onFocusChanged)
 
       Row(modifier = Modifier.fillMaxWidth().padding(top = Dimensions.Padding.small)) {
         if (emailsDontMatch) {
@@ -1448,7 +1450,8 @@ fun EmailSection(
               Modifier.fillMaxWidth()
                   .padding(top = Dimensions.Padding.medium)
                   .testTag(EmailSectionTestTags.PASSWORD_INPUT),
-          singleLine = true)
+          singleLine = true,
+          onFocusChanged = onFocusChanged)
 
       Button(
           onClick = {
