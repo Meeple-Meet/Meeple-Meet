@@ -365,7 +365,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val initialClusters = viewModel.getClusters()
+        val initialClusters = viewModel.getClusters(regularAccount)
         assertTrue(initialClusters.size >= 2)
 
         composeRule.onNodeWithTag(MapScreenTestTags.FILTER_BUTTON).performClick()
@@ -374,7 +374,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
           !viewModel.uiState.value.activeFilters.contains(PinType.SHOP)
         }
 
-        val filteredClusters = viewModel.getClusters()
+        val filteredClusters = viewModel.getClusters(regularAccount)
         assertTrue(
             filteredClusters.all { cluster ->
               cluster.items.all { it.geoPin.type != PinType.SHOP }
@@ -430,7 +430,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val cluster = clusters.find { it.items.size == 1 && it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
         assertEquals(1, cluster!!.items.size)
@@ -467,7 +467,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
 
@@ -511,7 +511,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
 
@@ -543,7 +543,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
         assertNotNull(cluster)
 
@@ -599,7 +599,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val cluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
         assertNotNull(cluster)
 
@@ -657,7 +657,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = noClusterViewModel.getClusters()
+        val clusters = noClusterViewModel.getClusters(regularAccount)
         val sessionCluster = clusters.find { it.items[0].geoPin.uid == discussion.uid }
         assertNull(sessionCluster)
 
@@ -668,7 +668,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = shopOwnerAccount.uid)
         delay(5000)
 
-        val ownerClusters = ownerViewModel.getClusters()
+        val ownerClusters = ownerViewModel.getClusters(regularAccount)
         val ownerSessionCluster = ownerClusters.find { it.items[0].geoPin.uid == discussion.uid }
         assertNotNull(ownerSessionCluster)
 
@@ -728,7 +728,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         assertEquals(1, clusters.size)
         assertTrue(clusters[0].items.size >= 2)
 
@@ -773,7 +773,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         singleClusterViewModel.selectCluster(clusters[0])
 
         composeRule.waitForIdle()
@@ -809,7 +809,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         assertTrue(clusters.isNotEmpty())
 
         // Select the cluster and show the sheet
@@ -856,7 +856,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         singleClusterViewModel.selectCluster(clusters[0])
         delay(5000)
 
@@ -903,7 +903,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         assertTrue(clusters[0].items.size >= 2)
 
         singleClusterViewModel.selectCluster(clusters[0])
@@ -941,7 +941,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val clusters = singleClusterViewModel.getClusters()
+        val clusters = singleClusterViewModel.getClusters(regularAccount)
         assertEquals(1, clusters.size)
         assertTrue(clusters[0].items.size >= 5)
 
@@ -972,7 +972,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
         delay(5000)
 
-        val allTypeClusters = singleClusterViewModel.getClusters()
+        val allTypeClusters = singleClusterViewModel.getClusters(regularAccount)
         assertTrue(allTypeClusters[0].items.size >= 2)
 
         // Filter to only shops
@@ -982,7 +982,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
           !singleClusterViewModel.uiState.value.activeFilters.contains(PinType.SPACE)
         }
 
-        val shopOnlyClusters = singleClusterViewModel.getClusters()
+        val shopOnlyClusters = singleClusterViewModel.getClusters(regularAccount)
         assertTrue(shopOnlyClusters[0].items.all { it.geoPin.type == PinType.SHOP })
 
         shopRepository.deleteShop(shop.id)
@@ -1028,12 +1028,12 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
         mapViewModel.updateZoomLevel(initialZoom)
         delay(5000)
-        val clustersAtInitialZoom = mapViewModel.getClusters()
+        val clustersAtInitialZoom = mapViewModel.getClusters(regularAccount)
 
         // Change zoom level
         mapViewModel.updateZoomLevel(newZoom)
         delay(5000)
-        val clustersAtNewZoom = mapViewModel.getClusters()
+        val clustersAtNewZoom = mapViewModel.getClusters(regularAccount)
 
         val state = mapViewModel.uiState.value
         assertEquals(newZoom, state.currentZoomLevel)

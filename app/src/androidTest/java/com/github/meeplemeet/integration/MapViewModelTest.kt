@@ -107,7 +107,7 @@ class MapViewModelTest : FirestoreTests() {
   @Test
   fun initialClusters_isEmpty() {
     val viewModel = MapViewModel(clusterManager = ClusterManager(singleClusterStrategy))
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
 
     assertTrue(clusters.isEmpty())
   }
@@ -268,7 +268,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
 
     assertEquals(1, clusters.size)
     assertTrue(clusters[0].items.size >= 2)
@@ -298,7 +298,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
 
     assertTrue(clusters.size >= 2)
     assertTrue(clusters.all { it.items.size == 1 })
@@ -321,13 +321,13 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val clusters1 = viewModel.getClusters()
+    val clusters1 = viewModel.getClusters(testAccount1)
     val state1 = viewModel.uiState.value
     assertNotNull(state1.clusterCache)
 
     val cacheVersion = state1.cacheVersion
 
-    val clusters2 = viewModel.getClusters()
+    val clusters2 = viewModel.getClusters(testAccount1)
     val state2 = viewModel.uiState.value
 
     assertEquals(cacheVersion, state2.clusterCache!!.version)
@@ -350,7 +350,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    viewModel.getClusters()
+    viewModel.getClusters(testAccount1)
     val version1 = viewModel.uiState.value.cacheVersion
 
     viewModel.updateFilters(setOf(PinType.SHOP))
@@ -358,7 +358,7 @@ class MapViewModelTest : FirestoreTests() {
     val version2 = viewModel.uiState.value.cacheVersion
     assertTrue(version2 > version1)
 
-    viewModel.getClusters()
+    viewModel.getClusters(testAccount1)
     val cache2 = viewModel.uiState.value.clusterCache
     assertNotNull(cache2)
     assertEquals(version2, cache2!!.version)
@@ -380,7 +380,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    viewModel.getClusters()
+    viewModel.getClusters(testAccount1)
     val version1 = viewModel.uiState.value.cacheVersion
 
     viewModel.updateZoomLevel(16f)
@@ -405,7 +405,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    viewModel.getClusters()
+    viewModel.getClusters(testAccount1)
     val version1 = viewModel.uiState.value.cacheVersion
 
     val shop2 =
@@ -451,7 +451,7 @@ class MapViewModelTest : FirestoreTests() {
     delay(3000)
 
     viewModel.updateFilters(setOf(PinType.SHOP))
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
 
     assertTrue(clusters.all { cluster -> cluster.items.all { it.geoPin.type == PinType.SHOP } })
 
@@ -473,11 +473,11 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    assertTrue(viewModel.getClusters().isNotEmpty())
+    assertTrue(viewModel.getClusters(testAccount1).isNotEmpty())
 
     viewModel.updateFilters(emptySet())
 
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
     assertTrue(clusters.isEmpty())
 
     shopRepository.deleteShop(shop.id)
@@ -570,7 +570,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val clusters = viewModel.getClusters()
+    val clusters = viewModel.getClusters(testAccount1)
     assertTrue(clusters.isNotEmpty())
 
     val cluster = clusters[0]
@@ -609,7 +609,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val cluster = viewModel.getClusters()[0]
+    val cluster = viewModel.getClusters(testAccount1)[0]
     viewModel.selectCluster(cluster)
     delay(4500)
 
@@ -651,7 +651,7 @@ class MapViewModelTest : FirestoreTests() {
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
     delay(3000)
 
-    val cluster = viewModel.getClusters()[0]
+    val cluster = viewModel.getClusters(testAccount1)[0]
     viewModel.selectCluster(cluster)
     delay(4500)
 
