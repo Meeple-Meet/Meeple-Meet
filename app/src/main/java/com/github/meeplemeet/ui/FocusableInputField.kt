@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LocalTextStyle
@@ -20,10 +21,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import com.github.meeplemeet.utils.KeyboardUtils
 
@@ -149,4 +153,73 @@ fun FocusableInputField(
       interactionSource = interactionSource,
       shape = shape,
       colors = colors)
+}
+
+/**
+ * Wraps [BasicTextField] and automatically clears focus when the soft keyboard is dismissed via its
+ * system toggle, preventing fields from staying focused unintentionally.
+ */
+@Composable
+fun FocusableBasicTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    interactionSource: MutableInteractionSource? = null,
+    cursorBrush: Brush = SolidColor(androidx.compose.ui.graphics.Color.Black),
+    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
+        @Composable { innerTextField -> innerTextField() },
+    onFocusChanged: (Boolean) -> Unit = {}
+) {
+  var hasFocus by remember { mutableStateOf(false) }
+  val latestHasFocus by rememberUpdatedState(hasFocus)
+  val focusManager = LocalFocusManager.current
+  val globalObserver = LocalFocusableFieldObserver.current
+  val focusToken = remember { Any() }
+  val activity = LocalContext.current.findActivity()
+
+  DisposableEffect(focusManager, UiBehaviorConfig.clearFocusOnKeyboardHide) {
+    if (!UiBehaviorConfig.clearFocusOnKeyboardHide) return@DisposableEffect onDispose {}
+    val unregister =
+        activity?.let { act ->
+          KeyboardUtils.registerOnKeyboardHidden(act) {
+            if (latestHasFocus) focusManager.clearFocus(force = true)
+          }
+        }
+    onDispose { unregister?.invoke() }
+  }
+
+  DisposableEffect(focusToken) { onDispose { globalObserver(focusToken, false) } }
+
+  BasicTextField(
+      value = value,
+      onValueChange = onValueChange,
+      modifier =
+          modifier.onFocusChanged {
+            if (hasFocus != it.isFocused) {
+              hasFocus = it.isFocused
+              onFocusChanged(it.isFocused)
+              globalObserver(focusToken, it.isFocused)
+            }
+          },
+      enabled = enabled,
+      readOnly = readOnly,
+      textStyle = textStyle,
+      keyboardOptions = keyboardOptions,
+      keyboardActions = keyboardActions,
+      singleLine = singleLine,
+      maxLines = maxLines,
+      minLines = minLines,
+      visualTransformation = visualTransformation,
+      interactionSource = interactionSource ?: remember { MutableInteractionSource() },
+      cursorBrush = cursorBrush,
+      decorationBox = decorationBox)
 }

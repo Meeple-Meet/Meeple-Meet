@@ -5,9 +5,6 @@
  */
 package com.github.meeplemeet.ui.posts
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -16,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
@@ -27,13 +23,11 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -44,6 +38,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
+import com.github.meeplemeet.ui.FocusableBasicTextField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -52,7 +47,6 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
-import com.github.meeplemeet.utils.KeyboardUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -65,15 +59,6 @@ object FeedsOverviewTestTags {
 
 object PostOverviewScreenUi {
   val xxxLargePadding = Dimensions.Padding.xxxLarge
-}
-
-private fun Context.findActivity(): Activity? {
-  var context = this
-  while (context is ContextWrapper) {
-    if (context is Activity) return context
-    context = context.baseContext
-  }
-  return null
 }
 
 /* ==========  CONSTANTS  ====================================================== */
@@ -124,19 +109,6 @@ fun PostsOverviewScreen(
       }
 
   val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-  val activity = context.findActivity()
-  val latestIsInputFocused by rememberUpdatedState(isInputFocused)
-
-  DisposableEffect(focusManager, UiBehaviorConfig.clearFocusOnKeyboardHide) {
-    if (!UiBehaviorConfig.clearFocusOnKeyboardHide) return@DisposableEffect onDispose {}
-    val unregister =
-        activity?.let { act ->
-          KeyboardUtils.registerOnKeyboardHidden(act) {
-            if (latestIsInputFocused) focusManager.clearFocus(force = true)
-          }
-        }
-    onDispose { unregister?.invoke() }
-  }
 
   Scaffold(
       topBar = {
@@ -437,7 +409,7 @@ fun PostsTopBar(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        BasicTextField(
+        FocusableBasicTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier =
@@ -447,13 +419,13 @@ fun PostsTopBar(
                         AppColors.secondary,
                         androidx.compose.foundation.shape.RoundedCornerShape(
                             Dimensions.CornerRadius.round))
-                    .onFocusChanged { onFocusChanged(it.isFocused) }
                     .testTag(FeedsOverviewTestTags.SEARCH_TEXT_FIELD),
             singleLine = true,
             textStyle =
                 androidx.compose.ui.text.TextStyle(
                     color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
+            onFocusChanged = onFocusChanged,
             decorationBox = { innerTextField ->
               Row(
                   modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
