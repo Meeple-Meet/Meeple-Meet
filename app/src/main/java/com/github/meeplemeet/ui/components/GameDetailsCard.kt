@@ -225,12 +225,31 @@ fun GameDescription(description: String) {
  */
 @Composable
 fun InfoChip(text: String, iconVector: ImageVector? = null, compact: Boolean = false) {
-  val vPad = if (compact) Dimensions.Padding.mediumSmall else Dimensions.Padding.large
-  val startPad = if (compact) Dimensions.Padding.small else CUSTOM_PADDING_START
-  val endPad = if (compact) Dimensions.Padding.mediumSmall else CUSTOM_PADDING_END
-  val fontSize =
-      if (compact) MaterialTheme.typography.labelLarge.fontSize
-      else MaterialTheme.typography.titleMedium.fontSize
+  val typography = MaterialTheme.typography
+
+  val (vPad, startPad, endPad) =
+      if (compact) {
+        Triple(
+            Dimensions.Padding.mediumSmall,
+            Dimensions.Padding.small,
+            Dimensions.Padding.mediumSmall)
+      } else {
+        Triple(Dimensions.Padding.large, CUSTOM_PADDING_START, CUSTOM_PADDING_END)
+      }
+
+  val (fontSize, maxLines, overflow) =
+      if (compact) {
+        Triple(typography.labelLarge.fontSize, second = 2, TextOverflow.Clip)
+      } else {
+        Triple(typography.titleMedium.fontSize, second = 1, TextOverflow.Ellipsis)
+      }
+
+  val textPadding =
+      if (iconVector != null) {
+        PaddingValues(start = startPad, end = endPad, top = vPad, bottom = vPad)
+      } else {
+        PaddingValues(horizontal = endPad, vertical = vPad)
+      }
 
   Surface(
       shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
@@ -239,23 +258,20 @@ fun InfoChip(text: String, iconVector: ImageVector? = null, compact: Boolean = f
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center) {
-              if (iconVector != null) {
+              iconVector?.let {
                 Icon(
-                    imageVector = iconVector,
+                    imageVector = it,
                     contentDescription = null,
                     modifier = Modifier.padding(start = Dimensions.Padding.mediumSmall))
               }
 
               Text(
                   text = text,
-                  modifier =
-                      if (iconVector != null)
-                          Modifier.padding(vertical = vPad).padding(start = startPad, end = endPad)
-                      else Modifier.padding(vertical = vPad, horizontal = endPad),
-                  style = MaterialTheme.typography.labelLarge,
+                  modifier = Modifier.padding(textPadding),
+                  style = typography.labelLarge,
                   fontSize = fontSize,
-                  maxLines = if (compact) 2 else 1,
-                  overflow = if (compact) TextOverflow.Clip else TextOverflow.Ellipsis)
+                  maxLines = maxLines,
+                  overflow = overflow)
             }
       }
 }
