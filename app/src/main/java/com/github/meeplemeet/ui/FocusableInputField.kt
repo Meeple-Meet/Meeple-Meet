@@ -3,13 +3,29 @@ package com.github.meeplemeet.ui
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -19,16 +35,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import com.github.meeplemeet.ui.sessions.SessionsOverviewScreenTestTags
+import com.github.meeplemeet.ui.theme.AppColors
+import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.utils.KeyboardUtils
 
 /**
@@ -163,21 +183,17 @@ fun FocusableInputField(
 fun FocusableBasicTextField(
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
+    onClearQuery: () -> Unit,
+    testTag: String,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    textStyle: TextStyle = LocalTextStyle.current,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
-    singleLine: Boolean = false,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    maxLines: Int = 1,
     minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     interactionSource: MutableInteractionSource? = null,
-    cursorBrush: Brush = SolidColor(androidx.compose.ui.graphics.Color.Black),
-    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() },
-    onFocusChanged: (Boolean) -> Unit = {}
+    onFocusChanged: (Boolean) -> Unit,
 ) {
   var hasFocus by remember { mutableStateOf(false) }
   val latestHasFocus by rememberUpdatedState(hasFocus)
@@ -203,23 +219,63 @@ fun FocusableBasicTextField(
       value = value,
       onValueChange = onValueChange,
       modifier =
-          modifier.onFocusChanged {
-            if (hasFocus != it.isFocused) {
-              hasFocus = it.isFocused
-              onFocusChanged(it.isFocused)
-              globalObserver(focusToken, it.isFocused)
-            }
-          },
+          Modifier.fillMaxWidth()
+              .height(Dimensions.ContainerSize.searchFieldHeight)
+              .background(
+                  AppColors.secondary,
+                  androidx.compose.foundation.shape.RoundedCornerShape(
+                      Dimensions.CornerRadius.round))
+              .testTag(testTag)
+              .onFocusChanged {
+                if (hasFocus != it.isFocused) {
+                  hasFocus = it.isFocused
+                  onFocusChanged(it.isFocused)
+                  globalObserver(focusToken, it.isFocused)
+                }
+              },
       enabled = enabled,
       readOnly = readOnly,
-      textStyle = textStyle,
+      textStyle = TextStyle(color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
       keyboardOptions = keyboardOptions,
       keyboardActions = keyboardActions,
-      singleLine = singleLine,
+      singleLine = true,
       maxLines = maxLines,
       minLines = minLines,
       visualTransformation = visualTransformation,
       interactionSource = interactionSource ?: remember { MutableInteractionSource() },
-      cursorBrush = cursorBrush,
-      decorationBox = decorationBox)
+      cursorBrush = SolidColor(AppColors.textIcons),
+      decorationBox = { innerTextField ->
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
+            verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                  imageVector = Icons.Default.Search,
+                  contentDescription = "Search",
+                  tint = AppColors.textIconsFade,
+                  modifier = Modifier.size(Dimensions.IconSize.standard))
+              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+              Box(modifier = Modifier.weight(1f)) {
+                if (value.isEmpty()) {
+                  Text(
+                      text = "Search",
+                      color = AppColors.textIconsFade,
+                      fontSize = Dimensions.TextSize.subtitle)
+                }
+                innerTextField()
+              }
+              if (value.isNotEmpty()) {
+                IconButton(
+                    onClick = onClearQuery,
+                    modifier =
+                        Modifier.size(Dimensions.IconSize.large)
+                            .testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)) {
+                      Icon(
+                          imageVector = Icons.Default.Close,
+                          contentDescription = "Clear search",
+                          tint = AppColors.textIconsFade,
+                          modifier = Modifier.size(Dimensions.IconSize.standard))
+                    }
+              }
+            }
+      })
 }

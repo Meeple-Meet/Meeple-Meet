@@ -23,8 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -458,53 +456,8 @@ fun DiscussionsTopBar(
         FocusableBasicTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(Dimensions.ContainerSize.searchFieldHeight)
-                    .background(
-                        AppColors.secondary,
-                        androidx.compose.foundation.shape.RoundedCornerShape(
-                            Dimensions.CornerRadius.round))
-                    .testTag(DiscussionOverviewTestTags.SEARCH_TEXT_FIELD),
-            singleLine = true,
-            textStyle =
-                androidx.compose.ui.text.TextStyle(
-                    color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
-            onFocusChanged = onFocusChanged,
-            decorationBox = { innerTextField ->
-              Row(
-                  modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = AppColors.textIconsFade,
-                        modifier = Modifier.size(Dimensions.IconSize.standard))
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-                    Box(modifier = Modifier.weight(1f)) {
-                      if (query.isEmpty()) {
-                        Text(
-                            text = "Search",
-                            color = AppColors.textIconsFade,
-                            fontSize = Dimensions.TextSize.subtitle)
-                      }
-                      innerTextField()
-                    }
-                    if (query.isNotEmpty()) {
-                      IconButton(
-                          onClick = onClearQuery,
-                          modifier =
-                              Modifier.size(Dimensions.IconSize.large)
-                                  .testTag(DiscussionOverviewTestTags.SEARCH_CLEAR)) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear search",
-                                tint = AppColors.textIconsFade,
-                                modifier = Modifier.size(Dimensions.IconSize.standard))
-                          }
-                    }
-                  }
-            })
+            onClearQuery = onClearQuery,
+            testTag = DiscussionOverviewTestTags.SEARCH_TEXT_FIELD,
+            onFocusChanged = onFocusChanged)
       }
 }
