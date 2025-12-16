@@ -104,6 +104,7 @@ import com.google.firebase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -704,16 +705,37 @@ fun MeepleMeetApp(
         }
 
         composable(MeepleMeetScreen.SessionViewer.name) {
+          var hasWaited by remember { mutableStateOf(false) }
+
+          // Reset hasWaited when discussionId changes
+          LaunchedEffect(discussionId) { hasWaited = false }
+
+          // If discussion has no session and we haven't waited yet, wait briefly for Firestore
+          LaunchedEffect(discussion?.session, hasWaited) {
+            if (discussion != null && discussion!!.session == null && !hasWaited) {
+              delay(300) // Wait 300ms for Firestore to emit fresh data
+              hasWaited = true
+            }
+          }
+
           if (discussion == null) {
             LoadingScreen()
-          } else if (discussion!!.session != null &&
-              discussion!!.session!!.participants.contains(account!!.uid)) {
-            SessionScreen(
-                account = account!!,
-                discussion = discussion!!,
-                onBack = { navigationActions.goBack() },
-                onEditClick = { navigationActions.navigateTo(MeepleMeetScreen.Session) })
+          } else if (discussion!!.session != null) {
+            if (discussion!!.session!!.participants.contains(account!!.uid)) {
+              SessionScreen(
+                  account = account!!,
+                  discussion = discussion!!,
+                  onBack = { navigationActions.goBack() },
+                  onEditClick = { navigationActions.navigateTo(MeepleMeetScreen.Session) })
+            } else {
+              // User is not a participant - redirect to discussion
+              navigationActions.navigateTo(MeepleMeetScreen.Discussion)
+            }
+          } else if (!hasWaited) {
+            // Still waiting for fresh data from Firestore
+            LoadingScreen()
           } else {
+            // Waited and still no session - redirect to discussion
             navigationActions.navigateTo(MeepleMeetScreen.Discussion)
           }
         }
