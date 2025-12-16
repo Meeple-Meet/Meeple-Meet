@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreenTestTags
 import com.github.meeplemeet.ui.theme.AppColors
@@ -66,8 +65,7 @@ private fun Context.findActivity(): Activity? {
 
 private val NoOpFocusableObserver: (Any, Boolean) -> Unit = { _, _ -> }
 
-val LocalFocusableFieldObserver =
-    staticCompositionLocalOf<(Any, Boolean) -> Unit> { NoOpFocusableObserver }
+val LocalFocusableFieldObserver = staticCompositionLocalOf { NoOpFocusableObserver }
 
 /**
  * Wraps [OutlinedTextField] and automatically clears focus when the soft keyboard is dismissed via
@@ -182,9 +180,9 @@ fun FocusableInputField(
 @Composable
 fun FocusableBasicTextField(
     value: String,
-    onValueChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    testTag: String,
+    onValueChange: (String) -> Unit = {},
+    onClearQuery: () -> Unit = {},
+    testTag: String = "",
     enabled: Boolean = true,
     readOnly: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -193,7 +191,7 @@ fun FocusableBasicTextField(
     minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     interactionSource: MutableInteractionSource? = null,
-    onFocusChanged: (Boolean) -> Unit,
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
   var hasFocus by remember { mutableStateOf(false) }
   val latestHasFocus by rememberUpdatedState(hasFocus)
