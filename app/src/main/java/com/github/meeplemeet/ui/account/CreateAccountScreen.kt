@@ -1,6 +1,9 @@
 /** Documentation was written with the help of ChatGPT */
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.github.meeplemeet.ui.account
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -30,6 +33,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
@@ -70,11 +76,12 @@ object CreateAccountScreenUi {
   val extraLargePadding = Dimensions.Padding.extraLarge
   val smallPadding = Dimensions.Padding.small
   val mediumPadding = Dimensions.Padding.medium
-  val largePadding = Dimensions.Padding.large
-  val tinyPadding = Dimensions.Padding.tiny
   val extraLargeSpacing = Dimensions.Spacing.extraLarge
   val mediumSpacing = Dimensions.Spacing.medium
   val xxLargeSpacing = Dimensions.Spacing.xxLarge
+  const val IMAGE_SCREEN_SIZE_SCALING = 0.62f
+  const val TITLE_FONT_SIZE_SCALING = 0.95f
+  val TITLE_FONT_SIZE_MIN_SIZE = 18f.sp
 }
 
 /**
@@ -90,6 +97,7 @@ object CreateAccountScreenUi {
  * @param onBack Callback function to be executed when the user wants to go back to the previous
  *   screen.
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun CreateAccountScreen(
     account: Account,
@@ -199,22 +207,21 @@ fun CreateAccountScreen(
         Column(
             modifier =
                 Modifier.fillMaxSize()
+                    .background(AppColors.primary)
+                    .padding(padding)
                     .imePadding()
                     .verticalScroll(scrollState)
-                    .background(AppColors.primary)
                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .padding(CreateAccountScreenUi.xxLargePadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top) {
-
+              // App logo displayed on top of text.
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
-              Box(
-                  modifier =
-                      Modifier.size(
-                          Dimensions.IconSize.massive
-                              .times(3)
-                              .plus(Dimensions.Padding.extraLarge))) {
+
+              BoxWithConstraints(
+                  modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val logoSize = (maxWidth * CreateAccountScreenUi.IMAGE_SCREEN_SIZE_SCALING)
                     Image(
                         painter =
                             painterResource(
@@ -222,15 +229,15 @@ fun CreateAccountScreen(
                                     if (isDarkTheme) R.drawable.logo_dark
                                     else R.drawable.logo_clear),
                         contentDescription = "Meeple Meet Logo",
-                        modifier = Modifier.fillMaxSize())
+                        modifier = Modifier.size(logoSize).fillMaxSize())
                   }
+
               /** Title text shown below the image placeholder. */
-              Text(
-                  "You're almost there!",
-                  style =
-                      TextStyle(
-                          fontSize = Dimensions.TextSize.extraLarge, color = AppColors.neutral),
-                  modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
+              AutoSizeSingleLineTitle(
+                  text = "You're almost there!",
+                  modifier =
+                      Modifier.fillMaxWidth()
+                          .padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
               /** Input field for entering the user's unique handle. */
               FocusableInputField(
@@ -398,4 +405,36 @@ fun RoleCheckBox(
                   style = MaterialTheme.typography.bodySmall)
             }
       }
+}
+
+/**
+ * Composable that displays a single-line title text which automatically adjusts its font size to
+ * fit within its container without overflowing.
+ *
+ * @param text The title text to display.
+ * @param modifier Optional [Modifier] for styling the Text composable.
+ */
+@Composable
+private fun AutoSizeSingleLineTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+  var fontSize by remember(text) { mutableStateOf(Dimensions.TextSize.extraLarge) }
+
+  Text(
+      text = text,
+      modifier = modifier,
+      color = AppColors.neutral,
+      maxLines = 1,
+      softWrap = false,
+      textAlign = TextAlign.Center,
+      overflow = TextOverflow.Clip,
+      style =
+          MaterialTheme.typography.headlineSmall.copy(
+              fontSize = fontSize, color = AppColors.neutral),
+      onTextLayout = { layout ->
+        if (layout.hasVisualOverflow && fontSize > CreateAccountScreenUi.TITLE_FONT_SIZE_MIN_SIZE) {
+          fontSize = (fontSize.value * CreateAccountScreenUi.TITLE_FONT_SIZE_SCALING).sp
+        }
+      })
 }
