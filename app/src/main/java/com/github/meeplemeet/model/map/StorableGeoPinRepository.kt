@@ -42,16 +42,64 @@ class StorableGeoPinRepository(private val geoOps: GeoFirestoreOperations? = nul
    *   represents).
    * @param type Updated pin type. See [PinType]
    * @param location Updated location.
+   * @param ownerId Owner identifier for business pins, or null for session pins.
    * @return The created or updated [StorableGeoPin] instance.
    * @throws Exception if geolocation cannot be set after all retries.
    */
-  suspend fun upsertGeoPin(ref: String, type: PinType, location: Location): StorableGeoPin {
-    val pin = StorableGeoPin(uid = ref, type = type)
+  private suspend fun upsertGeoPin(
+      ref: String,
+      type: PinType,
+      location: Location,
+      ownerId: String?
+  ): StorableGeoPin {
+    val pin = StorableGeoPin(uid = ref, type = type, ownerId = ownerId)
 
     collection.document(pin.uid).set(toNoUid(pin), SetOptions.merge()).await()
     retry("set geolocation for $ref") { setGeoLocation(pin.uid, location) }
 
     return pin
+  }
+
+  /**
+   * Creates or updates a business geo-pin (SHOP or SPACE).
+   *
+   * This method enforces the business invariant that only business pins (SHOP or SPACE) may have an
+   * owner. The provided [ownerId] must be non-null and will be stored with the pin.
+   *
+   * @param ref ID of the external object this pin represents (shop or space).
+   * @param type Pin type. Must be either [PinType.SHOP] or [PinType.SPACE].
+   * @param location Geographic location of the pin.
+   * @param ownerId Identifier of the user owning the business.
+   * @return The created or updated [StorableGeoPin] instance.
+   * @throws IllegalArgumentException if [type] is not SHOP or SPACE.
+   * @throws Exception if geolocation cannot be set after all retries.
+   */
+  suspend fun upsertBusinessGeoPin(
+      ref: String,
+      type: PinType,
+      location: Location,
+      ownerId: String
+  ): StorableGeoPin {
+    require(type == PinType.SPACE || type == PinType.SHOP) {
+      "Business geo-pin must be of type SHOP or SPACE"
+    }
+
+    return upsertGeoPin(ref = ref, type = type, location = location, ownerId = ownerId)
+  }
+
+  /**
+   * Creates or updates a session geo-pin.
+   *
+   * Session pins do not have an owner and are visible to all session participants. Ownership
+   * information is therefore intentionally omitted.
+   *
+   * @param ref ID of the session this pin represents.
+   * @param location Geographic location of the session.
+   * @return The created or updated [StorableGeoPin] instance.
+   * @throws Exception if geolocation cannot be set after all retries.
+   */
+  suspend fun upsertSessionGeoPin(ref: String, location: Location): StorableGeoPin {
+    return upsertGeoPin(ref = ref, type = PinType.SESSION, location = location, ownerId = null)
   }
 
   /**
