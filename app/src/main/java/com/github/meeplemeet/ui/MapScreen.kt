@@ -173,7 +173,6 @@ object MapScreenTestTags {
   const val PREVIEW_OPENING_HOURS = "previewOpeningHours"
   const val PREVIEW_GAME = "previewGame"
   const val PREVIEW_DATE = "previewDate"
-  const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
   const val PREVIEW_NAVIGATE_BUTTON = "previewNavigateButton"
   const val CLUSTER_SHEET = "clusterSheet"
@@ -470,7 +469,6 @@ fun MapScreen(
                   } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
-                        onClose = { viewModel.clearSelectedPin() },
                         pin = uiState.selectedPin!!,
                         userLocation = userLocation,
                         onRedirect = onRedirect)
@@ -1056,14 +1054,12 @@ private fun MarkerPreviewLoadingSheet(pin: GeoPinWithLocation?) {
  *     - Date with calendar icon
  *
  * The sheet includes:
- * - A close button (top-right)
  * - A "View details" button
  * - A "Navigate" button opening Google Maps directions
  */
 @Composable
 private fun MarkerPreviewSheet(
     preview: MarkerPreview,
-    onClose: () -> Unit,
     pin: GeoPinWithLocation,
     userLocation: Location?,
     onRedirect: (StorableGeoPin) -> Unit
@@ -1084,14 +1080,6 @@ private fun MarkerPreviewSheet(
               style = MaterialTheme.typography.titleLarge,
               modifier =
                   Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
-
-          IconButton(
-              onClick = onClose,
-              modifier =
-                  Modifier.align(Alignment.TopEnd)
-                      .testTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON)) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close preview")
-              }
         }
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
