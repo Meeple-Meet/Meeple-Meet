@@ -1,6 +1,9 @@
 /** Documentation was generated using ChatGPT. */
 package com.github.meeplemeet.ui.sessions
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -55,12 +58,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -75,6 +80,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -82,6 +88,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
+import com.github.meeplemeet.utils.KeyboardUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Timer
@@ -101,6 +108,15 @@ object SessionsOverviewScreenTestTags {
   const val TEST_TAG_HISTORY = "historyToggle"
   const val SEARCH_TEXT_FIELD = "SessionSearchTextField"
   const val SEARCH_CLEAR = "SessionSearchClear"
+}
+
+private fun Context.findActivity(): Activity? {
+  var context = this
+  while (context is ContextWrapper) {
+    if (context is Activity) return context
+    context = context.baseContext
+  }
+  return null
 }
 /**
  * Main screen that lists gaming sessions for the logged-in user.
@@ -167,8 +183,22 @@ fun SessionsOverviewScreen(
   }
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
+  var isInputFocused by remember { mutableStateOf(false) }
 
   val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+  val activity = context.findActivity()
+  val latestIsInputFocused by rememberUpdatedState(isInputFocused)
+
+  DisposableEffect(focusManager, UiBehaviorConfig.clearFocusOnKeyboardHide) {
+    if (!UiBehaviorConfig.clearFocusOnKeyboardHide) return@DisposableEffect onDispose {}
+    val unregister =
+        activity?.let { act ->
+          KeyboardUtils.registerOnKeyboardHidden(act) {
+            if (latestIsInputFocused) focusManager.clearFocus(force = true)
+          }
+        }
+    onDispose { unregister?.invoke() }
+  }
 
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -181,15 +211,19 @@ fun SessionsOverviewScreen(
               query = searchQuery,
               onQueryChange = { searchQuery = it },
               onClearQuery = { searchQuery = "" },
+              onFocusChanged = { isInputFocused = it },
               focusManager = focusManager)
         },
         bottomBar = {
-          BottomBarWithVerification(
-              currentScreen = MeepleMeetScreen.SessionsOverview,
-              unreadCount = unreadCount,
-              onTabSelected = { navigation.navigateTo(it) },
-              verified = verified,
-              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+          val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+          if (!(shouldHide && isInputFocused)) {
+            BottomBarWithVerification(
+                currentScreen = MeepleMeetScreen.SessionsOverview,
+                unreadCount = unreadCount,
+                onTabSelected = { navigation.navigateTo(it) },
+                verified = verified,
+                onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+          }
         }) { innerPadding ->
           Box(
               modifier =
@@ -772,6 +806,7 @@ fun SessionsTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     focusManager: FocusManager
 ) {
   Column(modifier = Modifier.fillMaxWidth()) {
@@ -803,6 +838,7 @@ fun SessionsTopBar(
                           AppColors.secondary,
                           androidx.compose.foundation.shape.RoundedCornerShape(
                               Dimensions.CornerRadius.round))
+                      .onFocusChanged { onFocusChanged(it.isFocused) }
                       .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
               singleLine = true,
               textStyle =

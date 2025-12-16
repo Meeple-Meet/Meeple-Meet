@@ -5,6 +5,9 @@
  */
 package com.github.meeplemeet.ui.posts
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,11 +27,13 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -39,6 +44,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostOverviewViewModel
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -46,6 +52,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.MessagingColors
+import com.github.meeplemeet.utils.KeyboardUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,6 +65,15 @@ object FeedsOverviewTestTags {
 
 object PostOverviewScreenUi {
   val xxxLargePadding = Dimensions.Padding.xxxLarge
+}
+
+private fun Context.findActivity(): Activity? {
+  var context = this
+  while (context is ContextWrapper) {
+    if (context is Activity) return context
+    context = context.baseContext
+  }
+  return null
 }
 
 /* ==========  CONSTANTS  ====================================================== */
@@ -92,6 +108,7 @@ fun PostsOverviewScreen(
   val posts by viewModel.posts.collectAsState()
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
+  var isInputFocused by remember { mutableStateOf(false) }
 
   val postsSorted =
       remember(posts, searchQuery) {
@@ -107,6 +124,19 @@ fun PostsOverviewScreen(
       }
 
   val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+  val activity = context.findActivity()
+  val latestIsInputFocused by rememberUpdatedState(isInputFocused)
+
+  DisposableEffect(focusManager, UiBehaviorConfig.clearFocusOnKeyboardHide) {
+    if (!UiBehaviorConfig.clearFocusOnKeyboardHide) return@DisposableEffect onDispose {}
+    val unregister =
+        activity?.let { act ->
+          KeyboardUtils.registerOnKeyboardHidden(act) {
+            if (latestIsInputFocused) focusManager.clearFocus(force = true)
+          }
+        }
+    onDispose { unregister?.invoke() }
+  }
 
   Scaffold(
       topBar = {
@@ -117,16 +147,20 @@ fun PostsOverviewScreen(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
             onClearQuery = { searchQuery = "" },
+            onFocusChanged = { isInputFocused = it },
             focusManager = focusManager)
       },
       bottomBar = {
-        BottomBarWithVerification(
-            currentScreen = MeepleMeetScreen.PostsOverview,
-            modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
-            unreadCount = unreadCount,
-            onTabSelected = { screen -> navigation.navigateTo(screen) },
-            verified = verified,
-            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          BottomBarWithVerification(
+              currentScreen = MeepleMeetScreen.PostsOverview,
+              modifier = Modifier.testTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU),
+              unreadCount = unreadCount,
+              onTabSelected = { screen -> navigation.navigateTo(screen) },
+              verified = verified,
+              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+        }
       }) { innerPadding ->
         if (postsSorted.isEmpty()) {
           Box(
@@ -365,6 +399,7 @@ fun PostsTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     focusManager: FocusManager
 ) {
   Column(
@@ -412,6 +447,7 @@ fun PostsTopBar(
                         AppColors.secondary,
                         androidx.compose.foundation.shape.RoundedCornerShape(
                             Dimensions.CornerRadius.round))
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
                     .testTag(FeedsOverviewTestTags.SEARCH_TEXT_FIELD),
             singleLine = true,
             textStyle =
