@@ -55,13 +55,11 @@ object SignInScreenTestTags {
 }
 
 object SignInScreenUi {
-  val xxLargePadding = Dimensions.Padding.xxLarge
   val mediumSpacing = Dimensions.Spacing.medium
   val extraLargePadding = Dimensions.Padding.extraLarge
   val smallPadding = Dimensions.Padding.small
   val extraLargeSpacing = Dimensions.Spacing.extraLarge
   val mediumPadding = Dimensions.Padding.medium
-  val largeSpacing = Dimensions.Spacing.large
 }
 
 /**
@@ -149,7 +147,7 @@ fun SignInScreen(
               .imePadding()
               .background(MaterialTheme.colorScheme.background)
               .verticalScroll(rememberScrollState())
-              .padding(SignInScreenUi.xxLargePadding)
+              .padding(Dimensions.Padding.large)
               .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.SpaceBetween) {
@@ -158,21 +156,13 @@ fun SignInScreen(
 
         // App logo - changes based on theme
         val isDarkTheme = isSystemInDarkTheme()
-        Box(
-            modifier =
-                Modifier.size(
-                    Dimensions.IconSize.massive.times(3).plus(Dimensions.Padding.extraLarge))) {
-              Image(
-                  painter =
-                      painterResource(
-                          id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
-                  contentDescription = "Meeple Meet Logo",
-                  modifier = Modifier.fillMaxSize())
-            }
 
-        Spacer(
-            modifier =
-                Modifier.height(Dimensions.Spacing.xxLarge.plus(Dimensions.Spacing.extraSmall)))
+        Image(
+            painter =
+                painterResource(
+                    id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+            contentDescription = "Meeple Meet Logo",
+            modifier = Modifier.size(Dimensions.IconSize.massive.times(3)).fillMaxSize())
 
         // Welcome message
         Text(
@@ -328,7 +318,7 @@ fun SignInScreen(
             }
 
         // Divider between authentication methods
-        Spacer(modifier = Modifier.height(SignInScreenUi.largeSpacing))
+        Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
         Text(
             "OR",
             style =
