@@ -120,7 +120,8 @@ fun SessionsOverviewScreen(
     verified: Boolean,
     navigation: NavigationActions,
     viewModel: SessionOverviewViewModel = viewModel(),
-    onSelectSession: (String) -> Unit = {}
+    onSelectSession: (String) -> Unit = {},
+    unreadCount: Int
 ) {
   val context = LocalContext.current
   val sessionMap by
@@ -185,6 +186,7 @@ fun SessionsOverviewScreen(
         bottomBar = {
           BottomBarWithVerification(
               currentScreen = MeepleMeetScreen.SessionsOverview,
+              unreadCount = unreadCount,
               onTabSelected = { navigation.navigateTo(it) },
               verified = verified,
               onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })

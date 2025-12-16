@@ -76,6 +76,7 @@ import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
+import com.github.meeplemeet.ui.components.UserProfilePopup
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -323,6 +324,8 @@ fun FriendsScreen(
     verified: Boolean,
     navigationActions: NavigationActions,
     onBack: () -> Unit,
+    onNavigate: (MeepleMeetScreen) -> Unit = {},
+    unreadCount: Int,
     viewModel: FriendsScreenViewModel = viewModel(),
 ) {
   val context = LocalContext.current
@@ -378,6 +381,7 @@ fun FriendsScreen(
         val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
         if (!(shouldHide && isInputFocused)) {
           BottomBarWithVerification(
+              unreadCount = unreadCount,
               currentScreen = MeepleMeetScreen.Profile,
               onTabSelected = { navigationActions.navigateTo(it) },
               verified = verified,
@@ -450,6 +454,28 @@ private fun FriendsManagementContent(
 ) {
   val isSearching = searchQuery.isNotBlank()
 
+  // --- Popup state & actions ---
+  var showPopup by remember { mutableStateOf(false) }
+  var selectedUser by remember { mutableStateOf<Account?>(null) }
+
+  if (showPopup && selectedUser != null) {
+    val user = selectedUser!!
+    val isFriend = account.relationships[user.uid] == RelationshipStatus.FRIEND
+    UserProfilePopup(
+        visible = showPopup,
+        curr = account,
+        target = user,
+        isFriend = isFriend,
+        online = true,
+        onDismiss = { showPopup = false },
+        actions = viewModel)
+  }
+
+  val onAvatarClick: (Account) -> Unit = { user ->
+    selectedUser = user
+    showPopup = true
+  }
+
   if (isSearching) {
     FriendsSearchResultsDropdown(
         currentAccount = account,
@@ -458,6 +484,7 @@ private fun FriendsManagementContent(
         onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
         onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
         onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
+        onAvatarClick = onAvatarClick,
         onClearFocus = onClearFocus,
     )
   } else {
@@ -468,6 +495,7 @@ private fun FriendsManagementContent(
             friends = lists.friends,
             onBlockToggle = { friend -> toggleBlock(account, friend, viewModel) },
             onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
+            onAvatarClick = onAvatarClick,
             onClearFocus = onClearFocus,
         )
       }
@@ -477,6 +505,7 @@ private fun FriendsManagementContent(
             sentRequests = lists.sentRequests,
             onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
             onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
+            onAvatarClick = onAvatarClick,
             onClearFocus = onClearFocus,
         )
       }
@@ -484,6 +513,7 @@ private fun FriendsManagementContent(
         BlockedUsersList(
             blockedUsers = lists.blockedUsers,
             onUnblock = { other -> viewModel.unblockUser(account, other) },
+            onAvatarClick = onAvatarClick,
             onClearFocus = onClearFocus,
         )
       }
@@ -707,6 +737,7 @@ private fun RelationshipUserRow(
     onBlockClick: () -> Unit,
     onSecondaryActionClick: () -> Unit,
     showSecondaryAction: Boolean = true,
+    onAvatarClick: () -> Unit = {},
 ) {
   val (itemPrefix, blockButtonPrefix, actionButtonPrefix) = prefixesFor(context)
 
@@ -726,7 +757,8 @@ private fun RelationshipUserRow(
         account = user,
         modifier =
             Modifier.size(FriendsManagementDefaults.Avatar.SIZE)
-                .testTag("${FriendsManagementTestTags.AVATAR_PREFIX}${user.uid}"),
+                .testTag("${FriendsManagementTestTags.AVATAR_PREFIX}${user.uid}")
+                .clickable { onAvatarClick() },
     )
 
     Spacer(Modifier.width(FriendsManagementDefaults.Layout.ITEM_AVATAR_NAME_SPACING))
@@ -951,6 +983,7 @@ private fun FriendsList(
     friends: List<Account>,
     onBlockToggle: (Account) -> Unit,
     onRemoveFriend: (Account) -> Unit,
+    onAvatarClick: (Account) -> Unit,
     onClearFocus: () -> Unit = {},
 ) {
   FriendsListContainer(
@@ -968,6 +1001,7 @@ private fun FriendsList(
         context = UserRowContext.FRIEND_LIST,
         onBlockClick = { onBlockToggle(friend) },
         onSecondaryActionClick = { onRemoveFriend(friend) },
+        onAvatarClick = { onAvatarClick(friend) },
     )
   }
 }
@@ -987,6 +1021,7 @@ private fun SentRequestsList(
     sentRequests: List<Account>,
     onBlockToggle: (Account) -> Unit,
     onCancelRequest: (Account) -> Unit,
+    onAvatarClick: (Account) -> Unit,
     onClearFocus: () -> Unit = {},
 ) {
   FriendsListContainer(
@@ -1004,6 +1039,7 @@ private fun SentRequestsList(
         context = UserRowContext.FRIEND_LIST,
         onBlockClick = { onBlockToggle(other) },
         onSecondaryActionClick = { onCancelRequest(other) },
+        onAvatarClick = { onAvatarClick(other) },
     )
   }
 }
@@ -1019,6 +1055,7 @@ private fun SentRequestsList(
 private fun BlockedUsersList(
     blockedUsers: List<Account>,
     onUnblock: (Account) -> Unit,
+    onAvatarClick: (Account) -> Unit,
     onClearFocus: () -> Unit = {},
 ) {
   FriendsListContainer(
@@ -1034,6 +1071,7 @@ private fun BlockedUsersList(
         onBlockClick = { onUnblock(other) },
         onSecondaryActionClick = {},
         showSecondaryAction = false,
+        onAvatarClick = { onAvatarClick(other) },
     )
   }
 }
@@ -1148,6 +1186,7 @@ private fun FriendsSearchResultsDropdown(
     onAddFriend: (Account) -> Unit,
     onRemoveFriend: (Account) -> Unit,
     onCancelRequest: (Account) -> Unit,
+    onAvatarClick: (Account) -> Unit,
     onClearFocus: () -> Unit = {},
 ) {
   val visibleResults =
@@ -1208,6 +1247,7 @@ private fun FriendsSearchResultsDropdown(
               }
             },
             showSecondaryAction = secondaryAction != null,
+            onAvatarClick = { onAvatarClick(other) },
         )
       }
     }

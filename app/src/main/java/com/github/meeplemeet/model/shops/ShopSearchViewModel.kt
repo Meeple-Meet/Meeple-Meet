@@ -2,14 +2,20 @@
 
 package com.github.meeplemeet.model.shops
 
+import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.SearchViewModel
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 private const val PERMISSION_DENIED_MESSAGE = "Only the shop's owner can edit his own shop"
 
@@ -21,9 +27,44 @@ private const val PERMISSION_DENIED_MESSAGE = "Only the shop's owner can edit hi
  * game/location-related data.
  */
 open class ShopSearchViewModel(
-    gameRepository: GameRepository = RepositoryProvider.games,
+    private val gameRepository: GameRepository = RepositoryProvider.games,
     locationRepository: LocationRepository = RepositoryProvider.locations
 ) : SearchViewModel(gameRepository, locationRepository) {
+
+  // Map of game IDs to fetched Game objects
+  private val _fetchedGames = MutableStateFlow<Map<String, Game>>(emptyMap())
+  val fetchedGames: StateFlow<Map<String, Game>> = _fetchedGames.asStateFlow()
+
+  /**
+   * Fetches games by their IDs in the background and updates the fetchedGames state.
+   *
+   * @param gameIds List of game IDs to fetch (max 20 per call due to Firestore limitations).
+   * @throws IllegalArgumentException If more than 20 IDs are requested.
+   */
+  fun fetchGames(gameIds: List<String>) {
+    require(gameIds.size < 20)
+    if (gameIds.isEmpty()) return
+
+    // Filter out already fetched games
+    val toFetch = gameIds.filterNot { _fetchedGames.value.containsKey(it) }
+    if (toFetch.isEmpty()) return
+
+    viewModelScope.launch {
+      try {
+        val games = gameRepository.getGamesById(*toFetch.toTypedArray())
+        val newMap = _fetchedGames.value.toMutableMap()
+        games.forEach { game -> newMap[game.uid] = game }
+        _fetchedGames.value = newMap
+      } catch (_: Exception) {
+        // Silent failure - games will show placeholder/name only
+      }
+    }
+  }
+
+  /** Clears all fetched games from cache. */
+  fun clearFetchedGames() {
+    _fetchedGames.value = emptyMap()
+  }
 
   /**
    * Sets the selected game for a shop with permission validation.
@@ -33,13 +74,13 @@ open class ShopSearchViewModel(
    *
    * @param shop The shop to add the game to.
    * @param requester The account requesting the game selection.
-   * @param game The game to select.
+   * @param searchResult The game to select.
    * @throws PermissionDeniedException if the requester is not the shop owner.
    */
-  fun setGame(shop: Shop, requester: Account, game: Game) {
+  fun setGame(shop: Shop, requester: Account, searchResult: GameSearchResult) {
     if (shop.owner.uid != requester.uid) throw PermissionDeniedException(PERMISSION_DENIED_MESSAGE)
 
-    setGame(game)
+    setGame(searchResult)
   }
 
   /**

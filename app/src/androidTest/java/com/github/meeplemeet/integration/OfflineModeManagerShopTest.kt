@@ -4,6 +4,7 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.TimeSlot
@@ -32,7 +33,7 @@ class OfflineModeManagerShopTest {
           description = "Test Description",
           imageURL = "",
           recommendedPlayers = 2)
-  private val testGameCollection = listOf(testGame to 1)
+  private val testGameCollection = listOf(GameItem(testGame.uid, testGame.name, 1))
 
   private lateinit var testShop: Shop
 

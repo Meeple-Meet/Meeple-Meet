@@ -734,17 +734,19 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
     // Send a message to delete
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Message to not delete")
     discussionRepository.sendMessageToDiscussion(discussion, account1, "Message to delete")
 
     // Get the message and count before deletion
-    val messageToDelete = discussionRepository.getLastMessage(discussion.uid)!!
+    var messages = discussionRepository.getMessages(discussion.uid)
+    val messageToDelete = messages.last()
     val initialCount = discussionRepository.getMessages(discussion.uid).size
 
     // Delete the message
-    discussionRepository.deleteMessage(discussion.uid, messageToDelete.uid)
+    discussionRepository.deleteMessage(discussion, messageToDelete.uid, messages.first())
 
     // Verify message is deleted
-    val messages = discussionRepository.getMessages(discussion.uid)
+    messages = discussionRepository.getMessages(discussion.uid)
     assertEquals(initialCount - 1, messages.size)
     assertTrue("Message should be deleted", messages.none { it.uid == messageToDelete.uid })
   }
@@ -805,19 +807,21 @@ class FirestoreDiscussionTests : FirestoreTests() {
     val discussion = discussionRepository.createDiscussion("Test", "", account1.uid)
 
     // Send message to delete
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "To keep")
     discussionRepository.sendMessageToDiscussion(discussion, account1, "To delete")
 
     // Get the message and count before deletion
-    val message = discussionRepository.getLastMessage(discussion.uid)!!
-    val initialCount = discussionRepository.getMessages(discussion.uid).size
+    var messages = discussionRepository.getMessages(discussion.uid)
+    val toDelete = messages.last()
+    val initialCount = messages.size
 
     // Delete via viewModel
-    discussionViewModel.deleteMessage(discussion, message, account1)
+    discussionViewModel.deleteMessage(discussion, toDelete, account1, messages.first())
 
     // Verify message deleted
-    val messages = discussionRepository.getMessages(discussion.uid)
+    messages = discussionRepository.getMessages(discussion.uid)
     assertEquals(initialCount - 1, messages.size)
-    assertTrue("Message should be deleted", messages.none { it.uid == message.uid })
+    assertTrue("Message should be deleted", messages.none { it.uid == toDelete.uid })
   }
 
   @Test(expected = IllegalArgumentException::class)
@@ -826,12 +830,13 @@ class FirestoreDiscussionTests : FirestoreTests() {
         discussionRepository.createDiscussion("Test", "", account1.uid, listOf(account2.uid))
 
     // Send message from account1
-    discussionRepository.sendMessageToDiscussion(discussion, account1, "Account1 message")
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Account1 message 1")
+    discussionRepository.sendMessageToDiscussion(discussion, account1, "Account1 message 2")
 
     // Get the last message
-    val message = discussionRepository.getLastMessage(discussion.uid)!!
+    val messages = discussionRepository.getMessages(discussion.uid)
 
     // Try to delete as account2 - should throw
-    discussionViewModel.deleteMessage(discussion, message, account2)
+    discussionViewModel.deleteMessage(discussion, messages.last(), account2, messages.first())
   }
 }

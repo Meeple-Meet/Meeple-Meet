@@ -1,6 +1,6 @@
 package com.github.meeplemeet.integration
 
-import com.github.meeplemeet.model.GameNotFoundException
+import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameNoUid
@@ -76,7 +76,7 @@ class FirestoreGameTests : FirestoreTests() {
     }
   }
 
-  @Test(expected = GameNotFoundException::class)
+  @Test(expected = GameFetchException::class)
   fun getGameById_throws_when_missing() = runTest { gameRepository.getGameById("non-existent-id") }
 
   @Test(expected = IllegalArgumentException::class)
@@ -86,79 +86,43 @@ class FirestoreGameTests : FirestoreTests() {
   }
 
   @Test
-  fun smoke_searchGamesByNameContains() = runTest {
-    checkpoint("searchGamesByNameContains returns matching games ignoreCase true") {
+  fun smoke_searchGamesByName() = runTest {
+    checkpoint("searchGamesByName returns matching games ignoreCase true") {
       runBlocking {
-        val results =
-            gameRepository.searchGamesByNameContains(
-                query = "cat", maxResults = 10, ignoreCase = true)
+        val results = gameRepository.searchGamesByName(query = "cat", maxResults = 10)
         val resultNames = results.map { it.name.lowercase() }
         assertTrue(resultNames.any { it.contains("cat") })
         assertTrue(resultNames.contains("catan"))
       }
     }
 
-    checkpoint("searchGamesByNameContains respects maxResults and ranking") {
+    checkpoint("searchGamesByName respects maxResults and ranking") {
       runBlocking {
         addGameDoc("g_catan_jr", "Catan Junior")
         addGameDoc("g_concatenate", "Concatenate")
-        val results =
-            gameRepository.searchGamesByNameContains(
-                query = "cat", maxResults = 2, ignoreCase = true)
+        val results = gameRepository.searchGamesByName(query = "cat", maxResults = 2)
         assertTrue(results.size <= 2)
         assertTrue(results.any { it.name == "Catan" } || results.any { it.name == "Catan Junior" })
       }
     }
 
-    checkpoint("searchGamesByNameContains is empty for blank query") {
+    checkpoint("searchGamesByName is empty for blank query") {
       runBlocking {
-        val results =
-            gameRepository.searchGamesByNameContains(query = "", maxResults = 10, ignoreCase = true)
+        val results = gameRepository.searchGamesByName(query = "", maxResults = 10)
         assertTrue(results.isEmpty())
       }
     }
 
-    checkpoint("searchGamesByNameContains caseSensitive no match when case differs") {
-      runBlocking {
-        val resultsCaseSensitive =
-            gameRepository.searchGamesByNameContains(
-                query = "cat", maxResults = 10, ignoreCase = false)
-        assertTrue(resultsCaseSensitive.none { it.name == "Catan" })
-      }
-    }
-
-    checkpoint("searchGamesByNameContains prioritizes prefix and respects maxResults") {
+    checkpoint("searchGamesByName prioritizes prefix and respects maxResults") {
       runBlocking {
         addGameDoc("g_catan_jr2", "Catan Junior", genres = emptyList())
         addGameDoc("g_concatenate2", "Concatenate", genres = emptyList())
         addGameDoc("g_catapult", "catapult", genres = emptyList())
-        val results =
-            gameRepository.searchGamesByNameContains(
-                query = "cat", maxResults = 2, ignoreCase = true)
+        val results = gameRepository.searchGamesByName(query = "cat", maxResults = 2)
         assertTrue(results.size <= 2)
         val first = results.firstOrNull()
         assertNotNull(first)
         assertTrue(first!!.name.startsWith("cat", ignoreCase = true))
-      }
-    }
-
-    checkpoint("searchGamesByNameContains ignoreCase variants") {
-      runBlocking {
-        addGameDoc("g_MyGameAllLower", "mygame", genres = emptyList())
-        addGameDoc("g_MyGameCapital", "MyGame", genres = emptyList())
-        val resIgnoreTrue =
-            gameRepository.searchGamesByNameContains(
-                query = "myg", maxResults = 10, ignoreCase = true)
-        assertTrue(
-            resIgnoreTrue.any {
-              it.name.equals("mygame", ignoreCase = true) ||
-                  it.name.equals("MyGame", ignoreCase = true)
-            })
-        val resIgnoreFalse =
-            gameRepository.searchGamesByNameContains(
-                query = "myg", maxResults = 10, ignoreCase = false)
-        assertTrue(resIgnoreFalse.any { it.name == "mygame" })
-        assertTrue(resIgnoreFalse.none { it.name == "MyGame" })
       }
     }
   }

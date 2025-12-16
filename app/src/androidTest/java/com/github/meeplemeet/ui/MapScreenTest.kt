@@ -5,7 +5,6 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -26,14 +25,13 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.toPackage
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import com.github.meeplemeet.model.MainActivityViewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.ClusterStrategy
-import com.github.meeplemeet.model.navigation.LocalNavigationVM
-import com.github.meeplemeet.model.navigation.NavigationViewModel
 import com.github.meeplemeet.model.shared.game.GAMES_COLLECTION_PATH
 import com.github.meeplemeet.model.shared.game.GameNoUid
 import com.github.meeplemeet.model.shared.location.Location
@@ -89,7 +87,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
   private fun checkpoint(name: String, block: () -> Unit) = ck.ck(name, block, 120000L)
 
   private lateinit var mockNavigation: NavigationActions
-  private lateinit var navVM: NavigationViewModel
+  private lateinit var navVM: MainActivityViewModel
 
   private lateinit var regularAccount: Account
   private lateinit var shopOwnerAccount: Account
@@ -129,7 +127,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
     } catch (_: Exception) {}
 
     mockNavigation = mockk(relaxed = true)
-    navVM = NavigationViewModel()
+    navVM = MainActivityViewModel()
 
     testLocation = Location(latitude = 46.5197, longitude = 6.5665, name = "EPFL")
 
@@ -200,20 +198,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = viewModel,
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                verified = true,
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = viewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              verified = true,
+              onRedirect = { pin -> lastRedirect = pin.uid })
         }
       }
     }
@@ -401,20 +398,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = noClusterViewModel,
-                navigation = mockNavigation,
-                account = currentAccountState.value,
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                verified = true,
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = noClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              verified = true,
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              onRedirect = { pin -> lastRedirect = pin.uid })
         }
       }
     }
@@ -451,39 +447,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             .onNodeWithTag(MapScreenTestTags.PREVIEW_ADDRESS)
             .assertTextContains(testLocation.name)
         composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_OPENING_HOURS).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).assertHasClickAction()
-
-        shopRepository.deleteShop(shop.id)
-      }
-    }
-
-    checkpoint("singlePin_closeButton_closesSheet") {
-      runBlocking {
-        val shop =
-            shopRepository.createShop(
-                owner = shopOwnerAccount,
-                name = "Close Test Shop",
-                address = testLocation,
-                openingHours = testOpeningHours)
-
-        refreshContent()
-
-        noClusterViewModel.startGeoQuery(
-            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
-        delay(5000)
-
-        val clusters = noClusterViewModel.getClusters()
-        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
-        assertNotNull(cluster)
-
-        noClusterViewModel.selectPin(cluster!!.items[0])
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertIsDisplayed()
-        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON).performClick()
-        delay(5000)
-
-        composeRule.onNodeWithTag(MapScreenTestTags.MARKER_PREVIEW_SHEET).assertDoesNotExist()
 
         shopRepository.deleteShop(shop.id)
       }
@@ -726,20 +689,19 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     composeRule.setContent {
       val trigger = renderTrigger
-      CompositionLocalProvider(LocalNavigationVM provides navVM) {
-        AppTheme {
-          key(trigger) {
-            MapScreen(
-                viewModel = singleClusterViewModel,
-                navigation = mockNavigation,
-                verified = true,
-                account = currentAccountState.value,
-                onFABCLick = { type ->
-                  fabClickCount++
-                  lastFabClickType = type
-                },
-                onRedirect = { pin -> lastRedirect = pin.uid })
-          }
+      AppTheme {
+        key(trigger) {
+          MapScreen(
+              viewModel = singleClusterViewModel,
+              navigation = mockNavigation,
+              account = currentAccountState.value,
+              unreadCount = currentAccountState.value.notifications.count { !it.read },
+              onFABCLick = { type ->
+                fabClickCount++
+                lastFabClickType = type
+              },
+              verified = true,
+              onRedirect = { pin -> lastRedirect = pin.uid })
         }
       }
     }

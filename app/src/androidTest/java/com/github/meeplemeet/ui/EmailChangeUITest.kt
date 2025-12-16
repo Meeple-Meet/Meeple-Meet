@@ -41,10 +41,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           online = true)
     }
@@ -83,10 +81,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           online = true)
     }
@@ -107,10 +103,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           online = true)
     }
@@ -134,10 +128,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           online = true)
     }
@@ -163,10 +155,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           online = true)
     }
@@ -203,10 +193,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           errorMsg = errorMsg.value,
           online = true)
@@ -233,10 +221,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           successMsg = successMsg.value,
           online = true)
@@ -259,10 +245,8 @@ class EmailChangeUITest : FirestoreTests() {
     compose.setContent {
       EmailSection(
           email = "test@example.com",
-          isVerified = true,
           onEmailChange = {},
           onFocusChanged = {},
-          onSendVerification = {},
           onChangeEmail = { _, _ -> },
           isLoading = isLoading.value,
           online = true)

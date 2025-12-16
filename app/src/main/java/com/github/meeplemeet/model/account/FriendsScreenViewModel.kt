@@ -27,7 +27,7 @@ class FriendsScreenViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     handlesRepository: HandlesRepository = RepositoryProvider.handles,
     private val imageRepository: ImageRepository = RepositoryProvider.images,
-) : CreateAccountViewModel(handlesRepository) {
+) : CreateAccountViewModel(handlesRepository), UserProfilePopupActions {
 
   private fun executeNotification(account: Account, notification: Notification) {
     if (notification.receiverId != account.uid) return
@@ -102,6 +102,10 @@ class FriendsScreenViewModel(
    * @param account The account sending the friend request
    * @param other The account receiving the friend request
    */
+  override fun onSendFriendRequest(curr: Account, other: Account) {
+    sendFriendRequest(curr, other)
+  }
+
   fun sendFriendRequest(account: Account, other: Account) {
     scope.launch {
       val otherLoaded = accountRepository.getAccountWithRelationships(other.uid)
@@ -128,6 +132,10 @@ class FriendsScreenViewModel(
    * @param account The account performing the block action
    * @param other The account being blocked
    */
+  override fun onBlock(curr: Account, other: Account) {
+    blockUser(curr, other)
+  }
+
   fun blockUser(account: Account, other: Account) {
     if (account.uid == other.uid || account.relationships[other.uid] == RelationshipStatus.BLOCKED)
         return
@@ -148,6 +156,10 @@ class FriendsScreenViewModel(
    * @param account The account canceling the sent friend request
    * @param other The account to whom the friend request was sent
    */
+  override fun onCancel(curr: Account, other: Account) {
+    rejectFriendRequest(curr, other)
+  }
+
   fun rejectFriendRequest(account: Account, other: Account) {
     if (sameOrBlocked(account, other)) return
 
@@ -167,6 +179,10 @@ class FriendsScreenViewModel(
    * @param account The account removing the friendship
    * @param friend The friend to be removed
    */
+  override fun onRemoveFriend(curr: Account, other: Account) {
+    removeFriend(curr, other)
+  }
+
   fun removeFriend(account: Account, friend: Account) {
     if (sameOrBlocked(account, friend)) return
 

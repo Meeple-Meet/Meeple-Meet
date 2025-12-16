@@ -2,6 +2,7 @@
 package com.github.meeplemeet.ui.discussions
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -9,7 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
 import com.github.meeplemeet.ui.theme.AppColors
@@ -30,24 +33,35 @@ object DiscussionCommons {
  * @param profilePictureUrl Optional URL to the profile picture
  * @param size Size of the circular profile picture
  * @param backgroundColor Background color when no image is provided
+ * @param onClick Callback when the profile picture is clicked
  * @param modifier Optional modifier
+ * @param testTag Optional test tag for UI testing
  */
 @Composable
 fun ProfilePicture(
     profilePictureUrl: String?,
     size: Dp,
-    backgroundColor: androidx.compose.ui.graphics.Color = AppColors.neutral,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = AppColors.neutral,
+    onClick: () -> Unit,
+    testTag: String = ""
 ) {
-  Box(modifier = modifier.size(size).clip(CircleShape).background(backgroundColor, CircleShape)) {
-    if (profilePictureUrl != null) {
-      AsyncImage(
-          model = profilePictureUrl,
-          contentDescription = "Profile Picture",
-          modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Crop)
-    }
-  }
+  Box(
+      modifier =
+          modifier
+              .size(size)
+              .clip(CircleShape)
+              .background(backgroundColor, CircleShape)
+              .clickable { onClick() }
+              .let { if (testTag.isNotEmpty()) it.testTag(testTag) else it }) {
+        if (profilePictureUrl != null) {
+          AsyncImage(
+              model = profilePictureUrl,
+              contentDescription = "Profile Picture",
+              modifier = Modifier.fillMaxSize(),
+              contentScale = ContentScale.Crop)
+        }
+      }
 }
 
 /** Formats a date as "Today", "Yesterday" or "MMM dd, yyyy". */

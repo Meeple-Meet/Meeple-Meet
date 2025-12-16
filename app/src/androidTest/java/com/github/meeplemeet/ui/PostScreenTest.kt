@@ -4,8 +4,10 @@ package com.github.meeplemeet.ui
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -17,6 +19,7 @@ import com.github.meeplemeet.model.account.RelationshipStatus
 import com.github.meeplemeet.model.posts.Comment
 import com.github.meeplemeet.model.posts.Post
 import com.github.meeplemeet.model.posts.PostViewModel
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.posts.COMMENT_TEXT_ZONE_PLACEHOLDER
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostTags
@@ -66,11 +69,18 @@ class PostScreenTest : FirestoreTests() {
   @Before
   fun setup() = runBlocking {
     // Use postRepository from FirestoreTests parent class
+    com.github.meeplemeet.model.offline.OfflineModeManager.clearOfflineMode()
     postVM = PostViewModel(postRepository)
 
     // Create accounts in Firestore
+    val longDescription =
+        "Start " +
+            "A very long description that should definitely overflow because it repeats many times. "
+                .repeat(10) +
+            " End"
     marco = accountRepository.createAccount("u_marco", "Marco", "marco@meeple.ch", null)
     alex = accountRepository.createAccount("u_alex", "Alex", "alex@meeple.ch", null)
+    accountRepository.setAccountDescription(alex.uid, longDescription)
     dany = accountRepository.createAccount("u_dany", "Dany", "dany@meeple.ch", null)
 
     val c1_1_1 = testComment("c1_1_1", "Deep reply about Spirit Island combos", dany)
@@ -115,8 +125,8 @@ class PostScreenTest : FirestoreTests() {
             account = marco,
             postId = postIdState.value,
             verified = true,
-            postViewModel = postVM,
-            accountViewModel = postVM,
+            viewModel = postVM,
+            online = true,
             onBack = { backCount++ })
       }
     }
@@ -232,8 +242,8 @@ class PostScreenTest : FirestoreTests() {
         PostScreen(
             account = marcoWithBlockedDany,
             postId = postId,
-            postViewModel = postVM,
-            accountViewModel = postVM,
+            viewModel = postVM,
+            online = true,
             verified = true,
             onBack = {})
       }
@@ -265,10 +275,158 @@ class PostScreenTest : FirestoreTests() {
 
     checkpoint("normal_user_shows_real_content") {
       // Should show actual username and comment for non-blocked user
+      compose.waitUntil(5_000) {
+        compose
+            .onAllNodesWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+
       compose
           .onNodeWithTag(PostTags.commentAuthor(id), useUnmergedTree = true)
           .assertTextEquals(alex.name)
+
       compose.onNodeWithText("This should be visible").assertExists()
+    }
+  }
+
+  @Test
+  fun verify_user_profile_popup_integration() = runBlocking {
+    // Setup: Marco viewing Alex's post
+    val currentUserState = mutableStateOf(marco)
+    val author = alex
+    // Create the post in Firestore so the ViewModel can find it
+    val post =
+        postRepository.createPost(
+            postByAlex.title, postByAlex.body, postByAlex.authorId, postByAlex.tags)
+
+    compose.setContent {
+      AppTheme {
+        PostScreen(
+            account = currentUserState.value,
+            postId = post.id,
+            viewModel = postVM,
+            online = true,
+            verified = true,
+            onBack = {})
+      }
+    }
+
+    // Wait for content to load
+    compose.waitUntil(timeoutMillis = 5000) {
+      compose
+          .onAllNodesWithTag(PostTags.POST_HEADER, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
+
+    checkpoint("Trigger UserProfilePopup") {
+      // Click on the author's profile picture
+      compose
+          .onNodeWithTag(PostTags.POST_AVATAR, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+
+      // Assert popup is visible
+      compose.waitForIdle()
+
+      // Assert username is displayed
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_USERNAME, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert handle is displayed
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.USER_PROFILE_POPUP_HANDLE, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert avatar is displayed
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.USER_PROFILE_POPUP_AVATAR, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert description is displayed
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_DESCRIPTION, useUnmergedTree = true)
+          .assertExists()
+
+      // Assert overflow "Show more" is displayed
+      compose.onNodeWithText("Show more").assertExists()
+
+      // Assert expansion works
+      compose.onNodeWithText("Show more").performClick()
+      compose.onNodeWithText("Show less").assertExists()
+
+      // Collapse again
+      compose.onNodeWithText("Show less").performClick()
+      compose.onNodeWithText("Show more").assertExists()
+    }
+
+    checkpoint("Assert UserProfilePopup buttons are clickable") {
+      // Assert block button exists and can be clicked
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
+
+      // Assert send friend request button exists and can be clicked
+      // (since author is not currently a friend)
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .assertExists()
+          .assertHasClickAction()
+    }
+
+    checkpoint("Verify UserProfilePopup Actions") {
+      // 1. Send Friend Request
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .performClick()
+
+      // Verify Snackbar
+      compose.onNodeWithText("Friend request sent to ${author.name}.").assertExists()
+
+      // Verify relationship status updates to SENT
+      compose.waitUntil(5_000) {
+        val account = runBlocking { accountRepository.getAccount(currentUserState.value.uid) }
+        account.relationships[author.uid] == RelationshipStatus.SENT
+      }
+
+      // Assert button changes to "Request Sent" (blue and disabled)
+      // Manually update the LOCAL state to reflect the change, triggering recomposition
+      val sentRelationships = currentUserState.value.relationships.toMutableMap()
+      sentRelationships[author.uid] = RelationshipStatus.SENT
+      currentUserState.value = currentUserState.value.copy(relationships = sentRelationships)
+      compose.waitForIdle()
+
+      compose.onNodeWithText("Cancel request").assertExists()
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_SEND_REQUEST_BUTTON,
+              useUnmergedTree = true)
+          .assertIsEnabled()
+
+      // 2. Block User
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.USER_PROFILE_POPUP_BLOCK_BUTTON, useUnmergedTree = true)
+          .performClick()
+
+      // Verify Snackbar
+      compose.onNodeWithText("Blocked ${author.name} successfully.").assertExists()
+
+      // Verify Backend State
+      compose.waitUntil(5_000) {
+        val account = runBlocking { accountRepository.getAccount(currentUserState.value.uid) }
+        account.relationships[author.uid] == RelationshipStatus.BLOCKED
+      }
     }
   }
 }

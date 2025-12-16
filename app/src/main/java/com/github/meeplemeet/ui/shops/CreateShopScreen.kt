@@ -15,9 +15,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
-import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.CreateShopViewModel
+import com.github.meeplemeet.model.shops.GameItem
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopSearchViewModel
 import com.github.meeplemeet.ui.LocalFocusableFieldObserver
@@ -166,7 +167,7 @@ fun AddShopContent(
     gameUi: GameUIState,
     locationUi: LocationUIState,
     online: Boolean,
-    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialStock: List<GameItem> = emptyList(),
     viewModel: CreateShopViewModel,
     owner: Account
 ) {
@@ -269,7 +270,7 @@ fun AddShopContent(
 @Composable
 fun ShopFormContent(
     state: CreateShopFormState,
-    viewModel: com.github.meeplemeet.model.shops.ShopSearchViewModel,
+    viewModel: ShopSearchViewModel,
     owner: Account,
     online: Boolean,
     locationUi: LocationUIState,
@@ -405,6 +406,8 @@ internal fun ShopGamesSection(
     online: Boolean,
     viewModel: ShopSearchViewModel
 ) {
+  val fetchedGames by viewModel.fetchedGames.collectAsState()
+
   CollapsibleSection(
       title = AddShopUi.Strings.SECTION_GAMES,
       initiallyExpanded = state.stock.isEmpty(),
@@ -420,6 +423,8 @@ internal fun ShopGamesSection(
           AddButton(
               onClick = {
                 state.onSetGameQuery("")
+                state.overwriteStock = false
+                state.editingGame = null
                 state.showGameDialog = true
               },
               buttonText = AddShopUi.Strings.BTN_ADD_GAME,
@@ -437,11 +442,22 @@ internal fun ShopGamesSection(
             editable = true,
             online = online,
             title = "",
+            fetchedGames = fetchedGames,
+            onPageChanged = { pageIndex ->
+              val start = pageIndex * ShopScreenDefaults.Pager.GAMES_PER_PAGE
+              val end = minOf(start + ShopScreenDefaults.Pager.GAMES_PER_PAGE, state.stock.size)
+              if (start < state.stock.size) {
+                val gameIds = state.stock.subList(start, end).map { it.gameId }
+                viewModel.fetchGames(gameIds)
+              }
+            },
+            periodicFetch = true,
             onDelete = { state.removeFromStock(it) },
             onEdit = { game ->
-              viewModel.setGame(game)
-              state.editingGame = game
-              state.qty = state.stock.find { it.first.uid == game.uid }?.second ?: 1
+              viewModel.setGame(GameSearchResult(game.gameId, game.gameName))
+              state.editingGame = GameSearchResult(game.gameId, game.gameName)
+              state.qty = state.stock.find { it.gameId == game.gameId }?.quantity ?: 1
+              state.overwriteStock = true
               state.showGameDialog = true
             })
       },
@@ -466,10 +482,10 @@ internal fun ShopGamesSection(
  */
 @Composable
 fun rememberCreateShopFormState(
-    initialStock: List<Pair<Game, Int>> = emptyList(),
+    initialStock: List<GameItem> = emptyList(),
     initialShop: Shop? = null,
     onSetGameQuery: (String) -> Unit,
-    onSetGame: (Game) -> Unit
+    onSetGame: (GameSearchResult) -> Unit
 ): CreateShopFormState {
   return remember {
     CreateShopFormState(

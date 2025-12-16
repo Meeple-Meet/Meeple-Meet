@@ -3,7 +3,6 @@ package com.github.meeplemeet.model.shops
 // Claude Code generated the documentation
 
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.serialization.Serializable
 
@@ -11,8 +10,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class OpeningHours(val day: Int = 0, val hours: List<TimeSlot> = emptyList())
 
-@Serializable data class GameItem(val gameId: String = "", val quantity: Int = 0)
-
+/**
+ * Represents a game item in a shop's collection.
+ *
+ * @property gameId The unique identifier of the game.
+ * @property gameName The name of the game (for display while loading).
+ * @property quantity The number of copies available.
+ */
+@Serializable
+data class GameItem(val gameId: String = "", val gameName: String = "", val quantity: Int = 0)
 /**
  * Represents a board game shop or game cafe.
  *
@@ -24,7 +30,7 @@ import kotlinx.serialization.Serializable
  * @property address The physical location of the shop.
  * @property openingHours The shop's opening hours as a list of time pairs (start time, end time).
  * @property gameCollection The collection of games available at the shop with their quantities.
- *   Each pair contains a Game and its count.
+ *   Each GameItem contains a game ID, name, and count.
  */
 data class Shop(
     val id: String,
@@ -35,7 +41,7 @@ data class Shop(
     val website: String,
     val address: Location,
     val openingHours: List<OpeningHours>,
-    val gameCollection: List<Pair<Game, Int>>,
+    val gameCollection: List<GameItem>,
     val photoCollectionUrl: List<String> = emptyList()
 )
 
@@ -82,7 +88,7 @@ fun toNoUid(shop: Shop): ShopNoUid =
         shop.website,
         shop.address,
         shop.openingHours,
-        shop.gameCollection.map { (game, count) -> GameItem(game.uid, count) },
+        shop.gameCollection,
         shop.photoCollectionUrl)
 
 /**
@@ -91,15 +97,9 @@ fun toNoUid(shop: Shop): ShopNoUid =
  *
  * @param id The unique identifier for the shop.
  * @param shopNoUid The shop data without ID.
- * @param collection The collection of games with their quantities as Game objects.
  * @return A Shop with the provided ID and data.
  */
-fun fromNoUid(
-    id: String,
-    shopNoUid: ShopNoUid,
-    owner: Account,
-    collection: List<Pair<Game, Int>>
-): Shop =
+fun fromNoUid(id: String, shopNoUid: ShopNoUid, owner: Account): Shop =
     Shop(
         id,
         owner,
@@ -109,5 +109,5 @@ fun fromNoUid(
         shopNoUid.website,
         shopNoUid.address,
         shopNoUid.openingHours,
-        collection,
+        shopNoUid.gameCollection,
         shopNoUid.photoCollectionUrl)

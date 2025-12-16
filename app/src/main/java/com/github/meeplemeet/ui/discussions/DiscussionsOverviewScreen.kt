@@ -106,6 +106,7 @@ fun DiscussionsOverviewScreen(
     verified: Boolean,
     navigation: NavigationActions,
     viewModel: DiscussionsOverviewViewModel = viewModel(),
+    unreadCount: Int,
     onClickAddDiscussion: () -> Unit = {},
     onSelectDiscussion: (Discussion) -> Unit = {},
 ) {
@@ -160,6 +161,7 @@ fun DiscussionsOverviewScreen(
         BottomBarWithVerification(
             currentScreen = MeepleMeetScreen.DiscussionsOverview,
             verified = verified,
+            unreadCount = unreadCount,
             onTabSelected = { screen -> navigation.navigateTo(screen) },
             onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
       }) { innerPadding ->
@@ -292,6 +294,7 @@ fun DiscussionCard(
           ProfilePicture(
               profilePictureUrl = profilePictureUrl,
               size = Dimensions.AvatarSize.extraLarge,
+              onClick = {},
               backgroundColor = AppColors.neutral)
 
           Spacer(modifier = Modifier.width(Dimensions.Spacing.large))

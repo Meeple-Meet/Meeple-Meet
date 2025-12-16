@@ -3,8 +3,10 @@ package com.github.meeplemeet.model.shared
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.GameFetchException
 import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import kotlinx.coroutines.FlowPreview
@@ -20,24 +22,25 @@ import kotlinx.coroutines.launch
  * UI state for the session game picker.
  *
  * @property gameQuery Current text in the game search text field (what the user typed).
- * @property gameSuggestions List of candidate [com.github.meeplemeet.model.shared.game.Game]
- *   objects returned by the repository for the current query.
- * @property selectedGameUid If a game has been selected, holds its UID (Firestore document id).
- *   Empty string when nothing is selected.
+ * @property gameSuggestions List of candidate [GameSearchResult] objects returned by the repository
+ *   for the current query.
+ * @property selectedGameSearchResult If a game has been selected, holds its UID and name. Null when
+ *   nothing is selected.
  * @property gameSearchError If a search error occurred, holds the error message. Null otherwise.
- * @property fetchedGame The last fetched [com.github.meeplemeet.model.shared.game.Game] by ID, or
- *   null if none fetched or an error occurred.
+ * @property isSearching Flag to inform UI of the state of the search.
+ * @property fetchedGame The last fetched [Game] by ID, or null if none fetched or an error
+ *   occurred.
  * @property gameFetchError If an error occurred during fetching a game by ID, holds the error
  *   message.
  */
 data class GameUIState(
     val gameQuery: String = "",
-    val gameSuggestions: List<Game> = emptyList(),
-    val selectedGameUid: String = "",
+    val gameSuggestions: List<GameSearchResult> = emptyList(),
+    val selectedGameSearchResult: GameSearchResult? = null,
     val gameSearchError: String? = null,
+    val isSearching: Boolean = false,
     val fetchedGame: Game? = null,
-    val gameFetchError: String? = null,
-    val isSearching: Boolean = false
+    val gameFetchError: String? = null
 )
 
 /**
@@ -86,7 +89,7 @@ open class SearchViewModel(
     viewModelScope.launch {
       gameQueryFlow.debounce(DEBOUNCE_TIME_MS).collectLatest { query ->
         try {
-          val results = gameRepository.searchGamesByNameContains(query)
+          val results = gameRepository.searchGamesByName(query)
           _gameUIState.value = _gameUIState.value.copy(gameSuggestions = results)
         } catch (_: Exception) {
           _gameUIState.value =
@@ -122,19 +125,37 @@ open class SearchViewModel(
   }
 
   /**
-   * Sets the selected game for the session.
+   * Sets the selected game infos, and trigger a background fetch if required.
    *
    * Updates the game UI state with the selected game's UID and name (requires admin privileges).
+   * Trigger a background fetch if required, and update fetchedGame if the fetch succeed.
    *
    * Note: This method does **not** update the session itself with the selected game. It only
    * updates the [GameUIState] to reflect the user's current selection in the UI.
    *
-   * @param game The [Game] object to select
+   * @param result The [GameSearchResult] object to select
+   * @param fetchFullGame Flag to ask for a background fetch
    */
-  fun setGame(game: Game) {
+  fun setGame(result: GameSearchResult, fetchFullGame: Boolean = false) {
+    // Instant update of main data
     _gameUIState.value =
         _gameUIState.value.copy(
-            selectedGameUid = game.uid, gameQuery = game.name, fetchedGame = game)
+            selectedGameSearchResult = result, gameQuery = result.name, fetchedGame = null)
+
+    // Background fetch if required
+    if (fetchFullGame) {
+      viewModelScope.launch {
+        try {
+          val fullGame = gameRepository.getGameById(result.id)
+          _gameUIState.value =
+              _gameUIState.value.copy(fetchedGame = fullGame, gameFetchError = null)
+        } catch (_: GameFetchException) {
+          _gameUIState.value =
+              _gameUIState.value.copy(
+                  fetchedGame = null, gameFetchError = "Failed to fetch game details")
+        }
+      }
+    }
   }
 
   /**
@@ -163,7 +184,7 @@ open class SearchViewModel(
     } else {
       _gameUIState.value =
           _gameUIState.value.copy(
-              gameSuggestions = emptyList(), fetchedGame = null, selectedGameUid = "")
+              gameSuggestions = emptyList(), fetchedGame = null, selectedGameSearchResult = null)
     }
   }
 
