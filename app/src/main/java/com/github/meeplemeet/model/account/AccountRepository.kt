@@ -439,6 +439,16 @@ class AccountRepository :
   }
 
   /**
+   * Updates the FCM token for an account.
+   *
+   * @param id The account ID to update
+   * @param token The new FCM token
+   */
+  suspend fun updateFcmToken(id: String, token: String) {
+    collection.document(id).update(mapOf("fcmToken" to token)).await()
+  }
+
+  /**
    * Adds a shop ID to the account's owned shops list.
    *
    * @param accountId The account ID to add the shop to

@@ -66,6 +66,10 @@ class OnBoardingScreenTest {
                 title = "Explore Nearby",
                 description = "Find board game shops and rental spaces near you"),
             OnBoardPage(
+                image = R.drawable.logo_clear,
+                title = "Stay Notified",
+                description = "Enable notifications so you never miss replies."),
+            OnBoardPage(
                 image = R.drawable.logo_dark, title = "Let's Go!", description = "Ready to start?"))
   }
 
@@ -233,15 +237,37 @@ class OnBoardingScreenTest {
       compose.onNodeWithText("You").assertExists()
     }
 
-    /* NAVIGATION TO LET'S GO PAGE (PAGE 5) - FINAL PAGE --------------------- */
-    checkpoint("LetsGo Page: Navigate to final page") {
+    /* NOTIFICATION PAGE (PAGE 5) --------------------------------------------- */
+    checkpoint("Notifications Page: Navigate to notifications") {
       compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
       compose.waitForIdle()
       compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5").assertExists()
     }
 
+    checkpoint("Notifications Page: Title correct") {
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5")
+          .assertTextEquals("Enable notifications")
+    }
+
+    checkpoint("Notifications Page: CTA visible when not granted") {
+      val allowNodes = compose.onAllNodesWithText("Allow notifications").fetchSemanticsNodes()
+      if (allowNodes.isNotEmpty()) {
+        compose.onNodeWithText("Allow notifications").assertExists()
+      } else {
+        compose.onNodeWithText("Notifications are enabled").assertExists()
+      }
+    }
+
+    /* NAVIGATION TO LET'S GO PAGE (PAGE 6) - FINAL PAGE --------------------- */
+    checkpoint("LetsGo Page: Navigate to final page") {
+      compose.onNodeWithTag(OnBoardingTestTags.PAGER).performTouchInput { swipeLeft() }
+      compose.waitForIdle()
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_6").assertExists()
+    }
+
     checkpoint("LetsGo Page: Title correct") {
-      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5").assertTextEquals("Let's Go!")
+      compose.onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_6").assertTextEquals("Let's Go!")
     }
 
     checkpoint("LetsGo Page: Description visible") {
@@ -259,6 +285,14 @@ class OnBoardingScreenTest {
     }
 
     /* BACK NAVIGATION THROUGH ALL PAGES -------------------------------------- */
+    checkpoint("Back Nav: Back to notification page") {
+      backButton().performClick()
+      compose.waitForIdle()
+      compose
+          .onNodeWithTag("${OnBoardingTestTags.PAGE_TITLE}_5")
+          .assertTextEquals("Enable notifications")
+    }
+
     checkpoint("Back Nav: Back to map page") {
       backButton().performClick()
       compose.waitForIdle()
