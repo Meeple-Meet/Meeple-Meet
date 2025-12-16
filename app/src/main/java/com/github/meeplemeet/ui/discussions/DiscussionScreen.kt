@@ -646,7 +646,12 @@ fun DiscussionScreen(
                             selectedMessageAnchor = null
                             scope.launch {
                               try {
-                                viewModel.deleteMessage(discussion, actionMessage, account)
+                                val lastMessage =
+                                    if (messages.last().uid != actionMessage.uid) messages.last()
+                                    else if (messages.size > 1) messages[messages.size - 2]
+                                    else null
+                                viewModel.deleteMessage(
+                                    discussion, actionMessage, account, lastMessage)
                               } catch (e: Exception) {
                                 snackbarHostState.showSnackbar(
                                     message =
