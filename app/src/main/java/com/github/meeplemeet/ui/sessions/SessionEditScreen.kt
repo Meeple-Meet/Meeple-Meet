@@ -685,6 +685,11 @@ private fun EditScheduleAndLocationSection(
         discussion = discussion,
         sessionViewModel = viewModel,
         rentalViewModel = rentalViewModel,
+        sessionDate = form.date,
+        sessionTime = form.time,
+        onDateTimeUpdate = { newDate, newTime ->
+          onFormChange(form.copy(date = newDate, time = newTime))
+        },
         onRentalSelected = onRentalSelected)
   }
 }

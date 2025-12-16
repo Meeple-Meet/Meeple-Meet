@@ -48,7 +48,6 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.rental.RentalViewModel
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
-import com.github.meeplemeet.ui.components.DateAndTimePicker
 import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.sessions.toTimestamp
@@ -118,8 +117,36 @@ fun SpaceRentalScreen(
         }
       }
 
-  val isValid =
-      startDate != null && startTime != null && endDate != null && endTime != null && totalCost > 0
+  /** Check if all validations pass */
+  val hasValidationErrors =
+      remember(startDate, startTime, endDate, endTime) {
+        if (startDate == null || startTime == null || endDate == null || endTime == null) {
+          true
+        } else {
+          // Check for any validation errors
+          val startError =
+              validateRentalDateTime(
+                  date = startDate,
+                  time = startTime,
+                  openingHours = spaceRenter.openingHours,
+                  otherDate = endDate,
+                  otherTime = endTime,
+                  isStartDateTime = true)
+
+          val endError =
+              validateRentalDateTime(
+                  date = endDate,
+                  time = endTime,
+                  openingHours = spaceRenter.openingHours,
+                  otherDate = startDate,
+                  otherTime = startTime,
+                  isStartDateTime = false)
+
+          startError != null || endError != null
+        }
+      }
+
+  val isValid = !hasValidationErrors && totalCost > 0
 
   LaunchedEffect(errorMessage) {
     errorMessage?.let {
@@ -224,22 +251,28 @@ fun SpaceRentalScreen(
                     Spacer(Modifier.height(Dimensions.Spacing.small))
 
                     Text("Start", style = MaterialTheme.typography.titleMedium)
-                    DateAndTimePicker(
+                    RentalDateAndTimePicker(
                         date = startDate,
                         time = startTime,
                         onDateChange = { startDate = it },
                         onTimeChange = { startTime = it },
-                        onFocusChanged = {})
+                        openingHours = spaceRenter.openingHours,
+                        otherDate = endDate,
+                        otherTime = endTime,
+                        isStartDateTime = true)
 
                     Spacer(Modifier.height(Dimensions.Spacing.large))
 
                     Text("End", style = MaterialTheme.typography.titleMedium)
-                    DateAndTimePicker(
+                    RentalDateAndTimePicker(
                         date = endDate,
                         time = endTime,
                         onDateChange = { endDate = it },
                         onTimeChange = { endTime = it },
-                        onFocusChanged = {})
+                        openingHours = spaceRenter.openingHours,
+                        otherDate = startDate,
+                        otherTime = startTime,
+                        isStartDateTime = false)
                   }
 
               // Cost

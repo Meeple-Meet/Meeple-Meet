@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -15,6 +16,8 @@ import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.components.SessionLocationSearchButton
 import com.github.meeplemeet.ui.theme.Dimensions
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * A search bar for selecting a session location, with the option to choose from the user's active
@@ -31,6 +34,9 @@ import com.github.meeplemeet.ui.theme.Dimensions
  * @param rentalViewModel ViewModel for managing rentals (defaults to [RentalViewModel]).
  * @param onRentalSelected Callback invoked when a rental is selected, providing the rental ID and a
  *   constructed [Location].
+ * @param sessionDate Current session date (optional, used for validation).
+ * @param sessionTime Current session time (optional, used for validation).
+ * @param onDateTimeUpdate Callback to update date/time when rental is selected.
  */
 @Composable
 fun SessionLocationSearchWithRental(
@@ -38,10 +44,15 @@ fun SessionLocationSearchWithRental(
     discussion: Discussion,
     sessionViewModel: CreateSessionViewModel,
     rentalViewModel: RentalViewModel = viewModel(),
-    onRentalSelected: (String, Location) -> Unit = { _, _ -> }
+    onRentalSelected: (String, Location) -> Unit = { _, _ -> },
+    sessionDate: LocalDate? = null,
+    sessionTime: LocalTime? = null,
+    onDateTimeUpdate: ((LocalDate, LocalTime) -> Unit)? = null
 ) {
   var showRentalSelector by remember { mutableStateOf(false) }
   val activeRentals by rentalViewModel.activeSpaceRentals.collectAsStateWithLifecycle()
+  val snackbarHostState = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
 
   LaunchedEffect(account.uid) { rentalViewModel.loadActiveSpaceRentals(account.uid) }
 
@@ -55,40 +66,53 @@ fun SessionLocationSearchWithRental(
         }
 
         // Button to open the rental selector dialog
-        IconButton(
-            onClick = { showRentalSelector = true },
-            modifier = Modifier.size(Dimensions.ContainerSize.timeFieldHeight)) {
-              Badge(
-                  containerColor =
-                      if (activeRentals.isNotEmpty()) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.surfaceVariant) {
-                    if (activeRentals.isNotEmpty()) {
-                      Text(activeRentals.size.toString())
-                    }
-                  }
-              Icon(
-                  imageVector = Icons.Default.EventAvailable,
-                  contentDescription = "Select from rented spaces",
-                  tint =
-                      if (activeRentals.isNotEmpty()) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        Box(modifier = Modifier.size(Dimensions.ContainerSize.timeFieldHeight)) {
+          // Badge positioned correctly
+          if (activeRentals.isNotEmpty()) {
+            Badge(
+                containerColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.TopEnd).offset(x = Dimensions.Spacing.small)) {
+                  Text(activeRentals.size.toString(), style = MaterialTheme.typography.labelSmall)
+                }
+          }
+
+          IconButton(onClick = { showRentalSelector = true }, modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = Icons.Default.EventAvailable,
+                contentDescription = "Select from rented spaces",
+                tint =
+                    if (activeRentals.isNotEmpty()) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+        }
       }
 
   // Rental selector dialog
   if (showRentalSelector) {
     RentalSelectorDialog(
         rentals = activeRentals,
+        sessionDate = sessionDate,
+        sessionTime = sessionTime,
         onSelectRental = { rentalInfo ->
-          // Create a Location object based on the rental's address information
-          val location =
-              rentalInfo.resourceAddress.copy(
-                  name = "${rentalInfo.resourceName} - ${rentalInfo.detailInfo}")
+          // Create a Location object with the real address but enhanced name
+          val enhancedName = "${rentalInfo.detailInfo} - ${rentalInfo.resourceAddress.name}"
+          val location = rentalInfo.resourceAddress.copy(name = enhancedName)
+
+          // If no date/time set, use rental dates
+          if ((sessionDate == null || sessionTime == null) && onDateTimeUpdate != null) {
+            val rental = rentalInfo.rental
+            val startInstant = rental.startDate.toDate().toInstant()
+            val localDateTime =
+                java.time.LocalDateTime.ofInstant(startInstant, java.time.ZoneId.systemDefault())
+            onDateTimeUpdate(localDateTime.toLocalDate(), localDateTime.toLocalTime())
+          }
 
           onRentalSelected(rentalInfo.rental.uid, location)
-
           showRentalSelector = false
         },
         onDismiss = { showRentalSelector = false })
   }
+
+  // Snackbar for error messages
+  SnackbarHost(snackbarHostState)
 }

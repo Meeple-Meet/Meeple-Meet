@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +19,9 @@ import androidx.compose.ui.window.Dialog
 import com.github.meeplemeet.model.rental.RentalResourceInfo
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.*
 
 object RentalSelectorTestTags {
@@ -26,6 +30,7 @@ object RentalSelectorTestTags {
   const val ITEM_PREFIX = "rental_selector_item_"
   const val EMPTY_STATE = "rental_selector_empty"
   const val CLOSE_BUTTON = "rental_selector_close"
+  const val CONFLICT_WARNING = "rental_selector_conflict_warning"
 }
 
 /**
@@ -36,12 +41,16 @@ object RentalSelectorTestTags {
  * - A scrollable list of active rentals, each represented by a card.
  *
  * @param rentals List of available rentals to choose from.
+ * @param sessionDate Current session date (optional, used for validation).
+ * @param sessionTime Current session time (optional, used for validation).
  * @param onSelectRental Callback invoked when a rental is selected.
  * @param onDismiss Callback invoked when the dialog is closed.
  */
 @Composable
 fun RentalSelectorDialog(
     rentals: List<RentalResourceInfo>,
+    sessionDate: LocalDate? = null,
+    sessionTime: LocalTime? = null,
     onSelectRental: (RentalResourceInfo) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -69,6 +78,31 @@ fun RentalSelectorDialog(
                 }
 
             Spacer(Modifier.height(Dimensions.Spacing.medium))
+
+            // Warning if date/time are set and might conflict
+            if (sessionDate != null && sessionTime != null) {
+              Card(
+                  modifier =
+                      Modifier.fillMaxWidth().testTag(RentalSelectorTestTags.CONFLICT_WARNING),
+                  colors =
+                      CardDefaults.cardColors(
+                          containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                    Row(
+                        modifier = Modifier.padding(Dimensions.Padding.medium),
+                        verticalAlignment = Alignment.CenterVertically) {
+                          Icon(
+                              Icons.Default.Info,
+                              contentDescription = null,
+                              tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                          Spacer(Modifier.width(Dimensions.Spacing.small))
+                          Text(
+                              "Only rentals matching your session date/time are selectable",
+                              style = MaterialTheme.typography.bodySmall,
+                              color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+                  }
+              Spacer(Modifier.height(Dimensions.Spacing.medium))
+            }
 
             if (rentals.isEmpty()) {
               // Empty state when no rentals are available
@@ -99,9 +133,17 @@ fun RentalSelectorDialog(
                   modifier = Modifier.fillMaxSize().testTag(RentalSelectorTestTags.LIST),
                   verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.medium)) {
                     items(rentals, key = { it.rental.uid }) { rentalInfo ->
+                      val isCompatible =
+                          checkRentalCompatibility(rentalInfo, sessionDate, sessionTime)
+
                       RentalSelectorItem(
                           rentalInfo = rentalInfo,
-                          onClick = { onSelectRental(rentalInfo) },
+                          isCompatible = isCompatible,
+                          onClick = {
+                            if (isCompatible) {
+                              onSelectRental(rentalInfo)
+                            }
+                          },
                           modifier =
                               Modifier.testTag(
                                   "${RentalSelectorTestTags.ITEM_PREFIX}${rentalInfo.rental.uid}"))
@@ -111,6 +153,29 @@ fun RentalSelectorDialog(
           }
         }
   }
+}
+
+/**
+ * Checks if a rental is compatible with the given session date/time.
+ *
+ * @return true if compatible or if no date/time specified, false otherwise.
+ */
+private fun checkRentalCompatibility(
+    rentalInfo: RentalResourceInfo,
+    sessionDate: LocalDate?,
+    sessionTime: LocalTime?
+): Boolean {
+  if (sessionDate == null || sessionTime == null) return true
+
+  val rental = rentalInfo.rental
+  val sessionDateTime = sessionDate.atTime(sessionTime)
+
+  val startDateTime =
+      rental.startDate.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+  val endDateTime =
+      rental.endDate.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+  return !sessionDateTime.isBefore(startDateTime) && !sessionDateTime.isAfter(endDateTime)
 }
 
 /**
@@ -124,12 +189,14 @@ fun RentalSelectorDialog(
  * - Total cost of the rental.
  *
  * @param rentalInfo Information about the rental and its resource.
+ * @param isCompatible Whether this rental is compatible with the current session date/time.
  * @param onClick Callback invoked when the item is clicked.
  * @param modifier Optional modifier for styling and test tags.
  */
 @Composable
 private fun RentalSelectorItem(
     rentalInfo: RentalResourceInfo,
+    isCompatible: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -139,11 +206,37 @@ private fun RentalSelectorItem(
   val endDateStr = dateFormat.format(rentalInfo.rental.endDate.toDate())
 
   Card(
-      modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
-      elevation = CardDefaults.cardElevation(defaultElevation = Dimensions.Elevation.medium)) {
+      modifier = modifier.fillMaxWidth().clickable(enabled = isCompatible, onClick = onClick),
+      elevation =
+          CardDefaults.cardElevation(
+              defaultElevation = if (isCompatible) Dimensions.Elevation.medium else 0.dp),
+      colors =
+          CardDefaults.cardColors(
+              containerColor =
+                  if (isCompatible) MaterialTheme.colorScheme.surface
+                  else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(Dimensions.Padding.large),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
+              // Incompatibility warning
+              if (!isCompatible) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()) {
+                      Icon(
+                          Icons.Default.Warning,
+                          contentDescription = null,
+                          tint = MaterialTheme.colorScheme.error,
+                          modifier = Modifier.size(Dimensions.IconSize.small))
+                      Spacer(Modifier.width(Dimensions.Spacing.small))
+                      Text(
+                          "Session time outside rental period",
+                          style = MaterialTheme.typography.bodySmall,
+                          color = MaterialTheme.colorScheme.error)
+                    }
+                Spacer(Modifier.height(Dimensions.Spacing.small))
+              }
+
               // Resource name
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -186,7 +279,7 @@ private fun RentalSelectorItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
 
-              Divider(modifier = Modifier.padding(vertical = Dimensions.Spacing.small))
+              HorizontalDivider(modifier = Modifier.padding(vertical = Dimensions.Spacing.small))
 
               // Rental period
               Row(

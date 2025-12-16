@@ -500,13 +500,19 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
-        // Location search field with suggestions
+        // Location search field with rental support
         Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
           SessionLocationSearchWithRental(
               account = account,
               discussion = discussion,
               sessionViewModel = viewModel,
               rentalViewModel = rentalViewModel,
+              sessionDate = date,
+              sessionTime = time,
+              onDateTimeUpdate = { newDate, newTime ->
+                onDateChange(newDate)
+                onTimeChange(newTime)
+              },
               onRentalSelected = onRentalSelected)
         }
       }
