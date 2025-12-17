@@ -3,6 +3,7 @@ package com.github.meeplemeet.end2end
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -60,7 +61,7 @@ class E2E_M1 : FirestoreTests() {
 
   @Test
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
-    composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+    runBlocking { composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername) }
 
     // Step 6: Navigate through the main tabs to verify full access
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
