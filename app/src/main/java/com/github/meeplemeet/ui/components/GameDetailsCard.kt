@@ -1,5 +1,8 @@
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.github.meeplemeet.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +35,8 @@ private val CUSTOM_PADDING_START = 7.dp
 private val CUSTOM_PADDING_END = 13.dp
 private val CUSTOM_IMAGE_HEIGHT = 180.dp
 private val CUSTOM_COLLAPSED_HEIGHT = 300.dp
+private val COMPACT_LAYOUT_WIDTH_THRESHOLD = 360.dp
+private val MAX_IMG_HEIGHT_COMPACT = 150.dp
 
 /**
  * A detailed card displaying information about a [Game].
@@ -43,22 +48,20 @@ private val CUSTOM_COLLAPSED_HEIGHT = 300.dp
  * @param modifier Optional [Modifier] for the card container.
  * @param onClose Lambda invoked when the close button is pressed.
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Unit = {}) {
-
   Box(
       modifier =
           modifier
-              .fillMaxWidth() // optional width limitation
+              .fillMaxWidth()
               .border(
                   width = Dimensions.Padding.tiny,
-                  color = AppColors.secondary, // border color
+                  color = AppColors.secondary,
                   shape = RoundedCornerShape(Dimensions.CornerRadius.large))
-              .clip(
-                  RoundedCornerShape(
-                      Dimensions.CornerRadius.large)) // rounded corners for the whole card
-              .background(AppColors.primary), // card background
+              .clip(RoundedCornerShape(Dimensions.CornerRadius.large))
+              .background(AppColors.primary),
       contentAlignment = Alignment.Center) {
         Column(
             modifier =
@@ -79,15 +82,22 @@ fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Un
               }
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+
               // IMAGE
-              Image(
-                  painter = rememberAsyncImagePainter(game.imageURL),
-                  contentDescription = game.name,
-                  contentScale = ContentScale.Fit, // preserves natural aspect ratio
-                  modifier =
-                      Modifier.fillMaxWidth() // expand to available width
-                          .heightIn(max = CUSTOM_IMAGE_HEIGHT) // limit height
-                          .clip(RoundedCornerShape(Dimensions.CornerRadius.large)))
+              BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compactWidth = maxWidth < COMPACT_LAYOUT_WIDTH_THRESHOLD
+                val imageMaxHeight =
+                    if (compactWidth) MAX_IMG_HEIGHT_COMPACT else CUSTOM_IMAGE_HEIGHT
+
+                Image(
+                    painter = rememberAsyncImagePainter(game.imageURL),
+                    contentDescription = game.name,
+                    contentScale = ContentScale.Fit,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .heightIn(max = imageMaxHeight)
+                            .clip(RoundedCornerShape(Dimensions.CornerRadius.large)))
+              }
 
               Spacer(modifier = Modifier.height(Dimensions.Padding.extraLarge))
 
@@ -100,15 +110,37 @@ fun GameDetailsCard(game: Game, modifier: Modifier = Modifier, onClose: () -> Un
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
-              // INFO CHIPS
-              Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceEvenly,
-                  verticalAlignment = Alignment.CenterVertically) {
-                    InfoChip("${game.minPlayers}-${game.maxPlayers} Players", Icons.Default.People)
-                    game.averagePlayTime?.let { InfoChip("$it min", Icons.Default.AccessTime) }
-                    game.minAge?.let { InfoChip("Age: $it+") }
+              BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val compactWidth = maxWidth < COMPACT_LAYOUT_WIDTH_THRESHOLD
+
+                if (compactWidth) {
+                  FlowRow(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+                      verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small),
+                  ) {
+                    InfoChip(
+                        text = "${game.minPlayers}-${game.maxPlayers} Players",
+                        iconVector = Icons.Default.People,
+                        compact = true)
+                    game.averagePlayTime?.let {
+                      InfoChip(
+                          text = "$it min", iconVector = Icons.Default.AccessTime, compact = true)
+                    }
+                    game.minAge?.let { InfoChip(text = "Age: $it+", compact = true) }
                   }
+                } else {
+                  Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceEvenly,
+                      verticalAlignment = Alignment.CenterVertically) {
+                        InfoChip(
+                            "${game.minPlayers}-${game.maxPlayers} Players", Icons.Default.People)
+                        game.averagePlayTime?.let { InfoChip("$it min", Icons.Default.AccessTime) }
+                        game.minAge?.let { InfoChip("Age: $it+") }
+                      }
+                }
+              }
 
               Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
@@ -157,18 +189,16 @@ fun GameDescription(description: String) {
     Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
     if (!expanded) {
-      // COLLAPSED VERSION (ellipsis)
       Text(
           text = description,
           style = MaterialTheme.typography.bodyMedium,
           maxLines = 3,
           overflow = TextOverflow.Ellipsis)
     } else {
-      // EXPANDED VERSION (scrollable)
       Box(
           modifier =
               Modifier.fillMaxWidth()
-                  .heightIn(max = CUSTOM_COLLAPSED_HEIGHT) // You can adjust height
+                  .heightIn(max = CUSTOM_COLLAPSED_HEIGHT)
                   .verticalScroll(rememberScrollState())) {
             Text(
                 text = description,
@@ -191,9 +221,36 @@ fun GameDescription(description: String) {
  *
  * @param text The text to display inside the chip.
  * @param iconVector Optional leading icon to show before the text.
+ * @param compact When true, reduces padding and allows wrapping to avoid clipping on narrow widths.
  */
 @Composable
-fun InfoChip(text: String, iconVector: ImageVector? = null) {
+fun InfoChip(text: String, iconVector: ImageVector? = null, compact: Boolean = false) {
+  val typography = MaterialTheme.typography
+
+  val (vPad, startPad, endPad) =
+      if (compact) {
+        Triple(
+            Dimensions.Padding.mediumSmall,
+            Dimensions.Padding.small,
+            Dimensions.Padding.mediumSmall)
+      } else {
+        Triple(Dimensions.Padding.large, CUSTOM_PADDING_START, CUSTOM_PADDING_END)
+      }
+
+  val (fontSize, maxLines, overflow) =
+      if (compact) {
+        Triple(typography.labelLarge.fontSize, second = 2, TextOverflow.Clip)
+      } else {
+        Triple(typography.titleMedium.fontSize, second = 1, TextOverflow.Ellipsis)
+      }
+
+  val textPadding =
+      if (iconVector != null) {
+        PaddingValues(start = startPad, end = endPad, top = vPad, bottom = vPad)
+      } else {
+        PaddingValues(horizontal = endPad, vertical = vPad)
+      }
+
   Surface(
       shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
       shadowElevation = Dimensions.Elevation.low,
@@ -201,24 +258,20 @@ fun InfoChip(text: String, iconVector: ImageVector? = null) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center) {
-              if (iconVector != null)
-                  Icon(
-                      imageVector = iconVector,
-                      contentDescription = null,
-                      modifier = Modifier.padding(start = Dimensions.Padding.mediumSmall))
+              iconVector?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = Dimensions.Padding.mediumSmall))
+              }
 
               Text(
                   text = text,
-                  modifier =
-                      if (iconVector != null)
-                          Modifier.padding(vertical = Dimensions.Padding.large)
-                              .padding(start = CUSTOM_PADDING_START, end = CUSTOM_PADDING_END)
-                      else
-                          Modifier.padding(
-                              vertical = Dimensions.Padding.large, horizontal = CUSTOM_PADDING_END),
-                  style = MaterialTheme.typography.labelLarge,
-                  fontSize = MaterialTheme.typography.titleMedium.fontSize,
-              )
+                  modifier = Modifier.padding(textPadding),
+                  style = typography.labelLarge,
+                  fontSize = fontSize,
+                  maxLines = maxLines,
+                  overflow = overflow)
             }
       }
 }

@@ -504,14 +504,13 @@ class SessionComponentsTest : FirestoreTests() {
             label = "Game date",
             displayFormatter = fmt,
             zoneId = zone,
-            editable = true,
             testTagDate = SessionComponentsTestTags.DATE_FIELD + "0")
         // Non-editable date field
         DatePickerDockedField(
             value = LocalDate.of(2024, 12, 1),
             onValueChange = {},
             label = "Read-only date",
-            editable = false)
+        )
       }
     })
 
@@ -576,7 +575,7 @@ class SessionComponentsTest : FirestoreTests() {
           onValueChange = { date = it },
           label = "Pick date",
           zoneId = zone,
-          editable = true)
+      )
     }
 
     // Open picker

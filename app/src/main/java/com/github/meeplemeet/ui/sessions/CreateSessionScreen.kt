@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
@@ -369,16 +370,28 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
       onClick = onDiscard,
       modifier = modifier.testTag(SessionCreationTestTags.DISCARD_BUTTON),
       shape = CircleShape,
+      contentPadding =
+          PaddingValues(
+              horizontal = Dimensions.Padding.medium, vertical = Dimensions.Padding.small),
       border = BorderStroke(Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
-      colors =
-          ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-        Icon(
-            Icons.Default.Delete,
-            contentDescription = null,
-            modifier = Modifier.testTag(SessionCreationTestTags.DISCARD_ICON))
-        Spacer(Modifier.width(Dimensions.Spacing.medium))
-        Text(LABEL_DISCARD, style = MaterialTheme.typography.bodyMedium)
-      }
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+  ) {
+    Icon(
+        imageVector = Icons.Default.Delete,
+        contentDescription = null,
+        modifier = Modifier.testTag(SessionCreationTestTags.DISCARD_ICON),
+    )
+
+    Spacer(Modifier.width(Dimensions.Spacing.small))
+
+    Text(
+        text = LABEL_DISCARD,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+    )
+  }
 }
 
 /**

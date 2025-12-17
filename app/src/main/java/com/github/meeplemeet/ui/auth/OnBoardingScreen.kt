@@ -47,6 +47,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,10 +58,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -119,14 +122,36 @@ object OnBoardingStrings {
 
 /** Numeric constants for onboarding screen layout and styling. */
 object OnBoardingNumbers {
+
+  val BASE_HEIGHT: Dp = 840.dp
+  const val SHRINK_STRENGTH: Float = 0.8f
+  const val MIN_DP_SCALE: Float = 0.90f
+  const val MAX_DP_SCALE: Float = 1.0f
+  const val TEXT_SCALE: Float = 1.0f
+
+  const val PAGE_INTRO: Int = 0
+  const val PAGE_SESSION_CREATION: Int = 1
+  const val PAGE_SESSIONS: Int = 2
+  const val PAGE_POSTS: Int = 3
+  const val PAGE_MAP: Int = 4
+  const val PAGE_LETS_GO: Int = 6
+  const val PAGE_NOTIFICATION: Int = 5
+
   val DATE_AND_TIME_PREVIEW_HEIGHT: Dp = 10.dp
   const val DATE_PREVIEW_WIDTH_FACTOR = 0.55f
   val DISCUSSION_CARD_BORDER_STROKE_WIDTH = 1.5.dp
   const val DISCUSSION_CARD_BORDER_STROKE_COLOR_ALPHA = 0.20f
-  val DISCUSSION_CARD_ELEVATION = 12.dp
+  val DISCUSSION_CARD_ELEVATION = 10.dp
   const val PARTICIPANTS_AND_SCHEDULE_CARD_ALPHA = 0.1f
   val PARTICIPANTS_AND_SCHEDULE_CARD_WIDTH = 1.dp
   val SESSION_CREATION_IMAGE_HEIGHT = 230.dp
+
+  const val LETS_GO_TOP_WEIGHT: Float = 0.3f
+  const val LETS_GO_BOTTOM_WEIGHT: Float = 0.7f
+
+  const val YOUR_LOCATION_COLOR_HEX: Long = 0xFF3B82F6
+
+  const val VOTE_PLACEHOLDER: Int = 0
 }
 
 /**
@@ -151,53 +176,76 @@ fun OnBoardingScreen(pages: List<OnBoardPage>, onSkip: () -> Unit, onFinished: (
   val hasInteractedWithDiscussion = remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
-  Box(
-      modifier =
-          Modifier.fillMaxSize().background(AppColors.primary).pointerInput(
-              pagerState.currentPage) {
-                // Block swipe gestures on page 1 if user hasn't interacted
-                if (pagerState.currentPage == 1 && !hasInteractedWithDiscussion.value) {
-                  detectHorizontalDragGestures { _, _ -> }
-                }
-              }) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize().padding(Dimensions.CornerRadius.round)) {
-              Box(modifier = Modifier.fillMaxWidth().weight(Dimensions.Weight.full)) {
-                OnBoardingPager(
-                    pagerState = pagerState,
-                    pages = pages,
-                    hasInteractedWithDiscussion = hasInteractedWithDiscussion,
-                    modifier = Modifier.fillMaxSize())
-              }
+  BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    val rawScale = maxHeight.value / OnBoardingNumbers.BASE_HEIGHT.value
+    val shrinkStrength = OnBoardingNumbers.SHRINK_STRENGTH
 
-              NavigationControls(
-                  pagerState = pagerState,
-                  pages = pages,
-                  hasInteractedWithDiscussion = hasInteractedWithDiscussion.value,
-                  onNavigate = { page -> scope.launch { pagerState.animateScrollToPage(page) } })
+    val dpScale =
+        ((Dimensions.Weight.full - shrinkStrength) + shrinkStrength * rawScale).coerceIn(
+            OnBoardingNumbers.MIN_DP_SCALE, OnBoardingNumbers.MAX_DP_SCALE)
 
-              if (pagerState.currentPage == pages.lastIndex) {
-                Button(
-                    onClick = onFinished,
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.focus),
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                horizontal = Dimensions.CornerRadius.round,
-                                vertical = Dimensions.Padding.extraLarge)
-                            .testTag("OnBoarding_EndButton")) {
-                      Text(text = "Get Started!")
+    val textScale = OnBoardingNumbers.TEXT_SCALE
+
+    val baseDensity = LocalDensity.current
+    val scaledDensity =
+        remember(dpScale, textScale, baseDensity) {
+          Density(
+              density = baseDensity.density * dpScale,
+              fontScale = baseDensity.fontScale * textScale)
+        }
+
+    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+      Box(
+          modifier =
+              Modifier.fillMaxSize().background(AppColors.primary).pointerInput(
+                  pagerState.currentPage) {
+                    if (pagerState.currentPage == OnBoardingNumbers.PAGE_SESSION_CREATION &&
+                        !hasInteractedWithDiscussion.value) {
+                      detectHorizontalDragGestures { _, _ -> }
                     }
-              }
-            }
+                  }) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxSize().padding(Dimensions.CornerRadius.round)) {
+                  Box(modifier = Modifier.fillMaxWidth().weight(Dimensions.Weight.full)) {
+                    OnBoardingPager(
+                        pagerState = pagerState,
+                        pages = pages,
+                        hasInteractedWithDiscussion = hasInteractedWithDiscussion,
+                        modifier = Modifier.fillMaxSize())
+                  }
 
-        SkipButton(
-            onSkip = onSkip,
-            modifier =
-                Modifier.align(Alignment.TopEnd)
-                    .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium))
-      }
+                  NavigationControls(
+                      pagerState = pagerState,
+                      pages = pages,
+                      hasInteractedWithDiscussion = hasInteractedWithDiscussion.value,
+                      onNavigate = { page ->
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                      })
+
+                  if (pagerState.currentPage == pages.lastIndex) {
+                    Button(
+                        onClick = onFinished,
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.focus),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(
+                                    horizontal = Dimensions.CornerRadius.round,
+                                    vertical = Dimensions.Padding.extraLarge)
+                                .testTag("OnBoarding_EndButton")) {
+                          Text(text = "Get Started!")
+                        }
+                  }
+                }
+
+            SkipButton(
+                onSkip = onSkip,
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(top = Dimensions.Padding.medium, end = Dimensions.Padding.medium))
+          }
+    }
+  }
 }
 
 /**
@@ -255,19 +303,21 @@ private fun OnBoardingPager(
   HorizontalPager(
       state = pagerState,
       modifier = modifier.fillMaxWidth().testTag(OnBoardingTestTags.PAGER),
-      userScrollEnabled = pagerState.currentPage != 1 || hasInteractedWithDiscussion.value) { page
-        ->
+      userScrollEnabled =
+          pagerState.currentPage != OnBoardingNumbers.PAGE_SESSION_CREATION ||
+              hasInteractedWithDiscussion.value) { page ->
         when (page) {
-          0 -> MeepleMeetIntroPage()
-          1 -> SessionCreationPreviewPage(hasInteractedWithDiscussion = hasInteractedWithDiscussion)
-          2 -> SessionsPage()
-          3 -> PostsPage()
-          4 -> MapExplorationPage()
-          5 ->
+          OnBoardingNumbers.PAGE_INTRO -> MeepleMeetIntroPage()
+          OnBoardingNumbers.PAGE_SESSION_CREATION ->
+              SessionCreationPreviewPage(hasInteractedWithDiscussion = hasInteractedWithDiscussion)
+          OnBoardingNumbers.PAGE_SESSIONS -> SessionsPage()
+          OnBoardingNumbers.PAGE_POSTS -> PostsPage()
+          OnBoardingNumbers.PAGE_MAP -> MapExplorationPage()
+          OnBoardingNumbers.PAGE_LETS_GO -> LetsGoPage()
+          OnBoardingNumbers.PAGE_NOTIFICATION ->
               NotificationPermissionPage(
                   permissionGranted = notificationGranted,
                   onRequestPermission = requestNotificationPermission)
-          6 -> LetsGoPage()
           else -> StandardOnBoardingPage(pageData = pages[page], pageIndex = page)
         }
       }
@@ -305,6 +355,12 @@ fun StandardOnBoardingPage(pageData: OnBoardPage, pageIndex: Int) {
       }
 }
 
+/**
+ * Composable for the notification permission onboarding page.
+ *
+ * @param permissionGranted Whether notification permission is granted
+ * @param onRequestPermission Callback to request notification permission
+ */
 @Composable
 private fun NotificationPermissionPage(
     permissionGranted: Boolean,
@@ -367,7 +423,6 @@ private fun NotificationPermissionPage(
 /**
  * Composable for the session creation preview onboarding page.
  *
- * @param pageData Data for the page
  * @param hasInteractedWithDiscussion Mutable state tracking user interaction
  */
 @Composable
@@ -389,7 +444,9 @@ fun SessionCreationPreviewPage(hasInteractedWithDiscussion: MutableState<Boolean
               .padding(top = Dimensions.Padding.medium)
               .verticalScroll(rememberScrollState())
               .testTag(OnBoardingTestTags.SESSION_CREATION_PAGE)) {
-        PageTitle(title = OnBoardingStrings.SESSION_CREATION_TITLE, pageIndex = 1)
+        PageTitle(
+            title = OnBoardingStrings.SESSION_CREATION_TITLE,
+            pageIndex = OnBoardingNumbers.PAGE_SESSION_CREATION)
 
         Image(
             painter = painterResource(id = R.drawable.onboarding_session_discussion),
@@ -528,8 +585,9 @@ fun NavigationControls(
       horizontalArrangement = Arrangement.SpaceBetween) {
         BackButton(
             canGoBack =
-                pagerState.currentPage > 0 &&
-                    (pagerState.currentPage != 1 || hasInteractedWithDiscussion),
+                pagerState.currentPage > OnBoardingNumbers.PAGE_INTRO &&
+                    (pagerState.currentPage != OnBoardingNumbers.PAGE_SESSION_CREATION ||
+                        hasInteractedWithDiscussion),
             onClick = { onNavigate(pagerState.currentPage - 1) })
 
         PageIndicators(pageCount = pages.size, currentPage = pagerState.currentPage)
@@ -615,7 +673,8 @@ fun NextButton(
     onClick: () -> Unit
 ) {
   if (currentPage < lastIndex) {
-    val isEnabled = currentPage != 1 || hasInteractedWithDiscussion
+    val isEnabled =
+        currentPage != OnBoardingNumbers.PAGE_SESSION_CREATION || hasInteractedWithDiscussion
 
     Box(
         modifier =
@@ -638,7 +697,8 @@ fun NextButton(
   }
 }
 
-val votes: Map<String, List<Int>> = mapOf("1" to listOf(0), "2" to emptyList())
+val votes: Map<String, List<Int>> =
+    mapOf("1" to listOf(OnBoardingNumbers.VOTE_PLACEHOLDER), "2" to emptyList())
 
 /** Composable for the Meeple Meet introduction onboarding page. */
 @Composable
@@ -654,7 +714,7 @@ fun MeepleMeetIntroPage() {
                 .verticalScroll(rememberScrollState())
                 .padding(Dimensions.Spacing.medium)) {
           PageImage(imageRes = logoRes)
-          PageTitle(title = "Meeple Meet", pageIndex = 0)
+          PageTitle(title = "Meeple Meet", pageIndex = OnBoardingNumbers.PAGE_INTRO)
           Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
           Column(
               horizontalAlignment = Alignment.Start,
@@ -717,7 +777,7 @@ fun MapExplorationPage() {
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
               .padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Explore Nearby", pageIndex = 4)
+        PageTitle(title = "Explore Nearby", pageIndex = OnBoardingNumbers.PAGE_MAP)
 
         Text(
             text = OnBoardingStrings.MAP_EXPLORATION_SUBTITLE,
@@ -788,7 +848,7 @@ fun MapExplorationPage() {
                           .size(Dimensions.Spacing.xxxLarge)) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                       drawCircle(
-                          color = Color(0xFF3B82F6),
+                          color = Color(OnBoardingNumbers.YOUR_LOCATION_COLOR_HEX),
                           radius = Dimensions.Padding.medium.toPx(),
                       )
                       drawCircle(
@@ -939,7 +999,7 @@ fun SessionsPage() {
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
               .padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Game Sessions", pageIndex = 2)
+        PageTitle(title = "Game Sessions", pageIndex = OnBoardingNumbers.PAGE_SESSIONS)
 
         Text(
             text = OnBoardingStrings.SESSION_PAGE_SUBTITLE,
@@ -1034,7 +1094,7 @@ fun PostsPage() {
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
               .padding(top = Dimensions.Padding.medium)) {
-        PageTitle(title = "Community Posts", pageIndex = 3)
+        PageTitle(title = "Community Posts", pageIndex = OnBoardingNumbers.PAGE_POSTS)
 
         Text(
             text = OnBoardingStrings.POST_PAGE_SUBTITLE,
@@ -1124,11 +1184,11 @@ fun LetsGoPage() {
           Modifier.fillMaxSize()
               .verticalScroll(rememberScrollState())
               .padding(Dimensions.Spacing.xxxLarge)) {
-        Spacer(modifier = Modifier.weight(0.3f))
+        Spacer(modifier = Modifier.weight(OnBoardingNumbers.LETS_GO_TOP_WEIGHT))
 
         PageImage(imageRes = logoRes)
 
-        PageTitle(title = "Let's Go!", pageIndex = 6)
+        PageTitle(title = "Let's Go!", pageIndex = OnBoardingNumbers.PAGE_LETS_GO)
 
         Text(
             text =
@@ -1138,7 +1198,7 @@ fun LetsGoPage() {
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = Dimensions.CornerRadius.round))
 
-        Spacer(modifier = Modifier.weight(0.7f))
+        Spacer(modifier = Modifier.weight(OnBoardingNumbers.LETS_GO_BOTTOM_WEIGHT))
       }
 }
 
