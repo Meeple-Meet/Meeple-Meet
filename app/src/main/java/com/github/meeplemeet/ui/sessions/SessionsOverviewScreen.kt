@@ -99,6 +99,7 @@ const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
 const val NO_SESSIONS_HISTORY_TEXT = "No past sessions yet"
 const val AMOUNT_OF_PICTURES_PER_ROW = 3
 const val TITLE_MAX_LINES = 1
+val TAB_BOTTOM_BAR_HEIGHT = 3.dp
 
 object SessionsOverviewScreenTestTags {
   const val TEST_TAG_ARCHIVE_BUTTON = "archiveButton"
@@ -613,7 +614,7 @@ private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory
       indicator = { tabPositions ->
         TabRowDefaults.PrimaryIndicator(
             modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-            height = 3.dp,
+            height = TAB_BOTTOM_BAR_HEIGHT,
             color = AppColors.neutral,
         )
       },
