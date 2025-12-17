@@ -87,15 +87,17 @@ object AuthUtils {
     // --- Wait for Create Account screen
     //
     // onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON).fetchSemanticsNodes().isNotEmpty()
-    waitUntil(timeoutMillis = 15_000) {
-      try {
-        onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          try {
+            onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+          } catch (_: Throwable) {
+            false
+          }
+        })
 
     // --- Fill Create Account fields ---
     waitUntilWithCatch({
@@ -117,9 +119,11 @@ object AuthUtils {
 
     waitUntilAuthReady()
     // --- Wait for Onboarding ---
-    waitUntil(timeoutMillis = 10_000) {
-      onAllNodesWithTag(OnBoardingTestTags.SKIP_BUTTON).fetchSemanticsNodes().isNotEmpty()
-    }
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          onAllNodesWithTag(OnBoardingTestTags.SKIP_BUTTON).fetchSemanticsNodes().isNotEmpty()
+        })
 
     // --- Skip onboarding ---
     waitUntilWithCatch({
@@ -130,11 +134,13 @@ object AuthUtils {
     waitForIdle()
 
     // --- Wait for main app ---
-    waitUntil(timeoutMillis = 10_000) {
-      onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     waitUntilWithCatch({
       onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists().assertIsDisplayed()

@@ -802,8 +802,9 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
       byTag || byTextUnmerged || byTextMerged
     }
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil(10_000) {
+    composeTestRule.waitUntil(50_000) {
       try {
+        composeTestRule.closeKeyboardSafely()
         composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
         true
       } catch (_: Throwable) {
