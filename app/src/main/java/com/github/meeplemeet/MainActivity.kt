@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -285,7 +286,7 @@ fun MeepleMeetApp(
 
   var rentalSpaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
   var rentalSpace by remember { mutableStateOf<Space?>(null) }
-  var rentalSpaceIndex by remember { mutableStateOf(0) }
+  var rentalSpaceIndex by remember { mutableIntStateOf(0) }
 
   var userLocation by remember { mutableStateOf<Location?>(null) }
 

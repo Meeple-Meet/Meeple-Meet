@@ -65,9 +65,7 @@ class RentalViewModel(
             startDate = startDate,
             endDate = endDate)
 
-    if (!isAvailable) {
-      throw IllegalStateException("This space is not available for the selected period")
-    }
+      check(!isAvailable) { "This space is not available for the selected period" }
 
     val rental =
         rentalRepository.createRental(
