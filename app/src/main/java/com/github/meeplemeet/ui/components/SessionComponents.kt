@@ -876,31 +876,32 @@ fun DateAndTimePicker(
     onFocusChanged: (Boolean) -> Unit = {},
     onTimeChange: (LocalTime?) -> Unit
 ) {
-  Row(
+  Column(
       modifier =
           Modifier.fillMaxWidth()
               .background(
                   color = AppColors.secondary,
-                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium))) {
-        Box(Modifier.fillMaxWidth(0.55f).onFocusChanged { onFocusChanged(it.isFocused) }) {
-          DatePickerDockedField(
-              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
-        }
+                  shape = RoundedCornerShape(Dimensions.CornerRadius.medium))
+              .padding(bottom = Dimensions.Spacing.small)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+          Box(modifier = Modifier.weight(0.55f).onFocusChanged { onFocusChanged(it.isFocused) }) {
+            DatePickerDockedField(
+                value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+          }
 
-        Column {
-          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
+          Box(modifier = Modifier.weight(0.45f).onFocusChanged { onFocusChanged(it.isFocused) }) {
             TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
           }
+        }
 
-          // Show error if date/time is in the past
-          if (isDateTimeInPast(date, time)) {
-            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-            Text(
-                text = "Cannot create a session in the past",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = Dimensions.Padding.medium))
-          }
+        if (isDateTimeInPast(date, time)) {
+          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+          Text(
+              text = "Cannot create a session in the past",
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+              modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.medium),
+              textAlign = TextAlign.Center)
         }
       }
 }
