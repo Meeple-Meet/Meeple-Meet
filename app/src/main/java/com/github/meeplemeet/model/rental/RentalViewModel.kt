@@ -65,7 +65,7 @@ class RentalViewModel(
           startDate = startDate,
           endDate = endDate)
     }
-    check(!isAvailable) { "This space is not available for the selected period" }
+    check(isAvailable) { "This space is not available for the selected period" }
 
     viewModelScope.launch {
       rentalRepository.createRental(
