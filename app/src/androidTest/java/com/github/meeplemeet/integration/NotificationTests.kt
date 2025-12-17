@@ -304,7 +304,14 @@ class NotificationTests : FirestoreTests() {
     val testLocation = com.github.meeplemeet.model.shared.location.Location(46.5197, 6.5665, "EPFL")
     val testTimestamp = com.google.firebase.Timestamp.now()
     sessionRepository.createSession(
-        discussion.uid, "Game Night", "game123", "Game 123", testTimestamp, testLocation, alice.uid)
+        discussion.uid,
+        "Game Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null,
+        alice.uid)
 
     accountRepository.sendJoinSessionNotification(alice.uid, bob.uid, discussion)
 
