@@ -140,7 +140,7 @@ open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatc
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveAccountProfilePicture(
+  open suspend fun saveAccountProfilePicture(
       accountId: String,
       context: Context,
       inputPath: String
@@ -154,8 +154,10 @@ open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatc
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteAccountProfilePicture(accountId: String, context: Context) =
+  open suspend fun deleteAccountProfilePicture(accountId: String, context: Context) =
       deleteImages(context, accountPath(accountId))
+
+
 
   /**
    * Deletes the account profile picture from local cache only (does not delete from Firebase

@@ -53,8 +53,8 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertTrue("User registration should succeed", result.isSuccess)
     testUserId = result.getOrNull()?.uid
 
-    // Create ViewModel
-    viewModel = ProfileScreenViewModel()
+    // Create ViewModel with FakeImageRepository
+    viewModel = ProfileScreenViewModel(imageRepository = FakeImageRepository())
   }
 
   @After
@@ -208,7 +208,6 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Should have a result", capturedSuccessMsg ?: capturedErrorMsg)
   }
 
-  @Ignore
   @Test
   fun test_setAccountPhoto_updates_repository() = runBlocking {
     authenticationRepository.loginWithEmail(testEmail, testPassword)
@@ -244,7 +243,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     val bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
     FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out) }
 
-    // Upload photo first so it exists in storage
+    // Upload photo first so it exists in storage (via logic)
     viewModel.setAccountPhoto(account, context, file.absolutePath)
 
     // Wait for upload and update
@@ -266,6 +265,7 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertNotNull("Account should be retrieved", updatedAccount)
     assertTrue("Photo URL should be empty", updatedAccount?.photoUrl.isNullOrEmpty())
   }
+
 
   @Test
   fun test_sendVerificationEmail_enforces_cooldown() = runBlocking {
@@ -325,4 +325,5 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     }
     return null
   }
+
 }
