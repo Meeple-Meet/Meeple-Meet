@@ -694,7 +694,8 @@ class CreateShopScreenTest : FirestoreTests() {
     compose.onTag(CommonComponentsTestTags.CAROUSEL_ADD_BUTTON).assertDoesNotExist()
 
     bringGamesHeaderIntoView()
-    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    ensureSectionExpanded(CreateShopScreenTestTags.SECTION_GAMES)
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).performScrollTo().assertIsDisplayed()
 
     compose.onTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).assertDoesNotExist()
   }

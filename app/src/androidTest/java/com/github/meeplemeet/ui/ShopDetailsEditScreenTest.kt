@@ -414,7 +414,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
         EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
     ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
-    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).performScrollTo().assertIsDisplayed()
     compose
         .onNodeWithTag(
             "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)
