@@ -19,6 +19,7 @@ import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
 import com.github.meeplemeet.utils.noretry
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -191,7 +192,7 @@ class AuthenticatedNavigationTest : FirestoreTests() {
     val testHandle = "navtest${UUID.randomUUID().toString().take(6)}"
     val testUsername = "Nav Test User"
 
-    composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+    runBlocking { composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername) }
 
     // Wait for navigation to complete and UI to be ready after sign up
     composeTestRule.waitForIdle()
