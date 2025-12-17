@@ -1,4 +1,4 @@
-package com.github.meeplemeet.model.map
+package com.github.meeplemeet.model.map.previews
 
 /**
  * Lightweight UI model displayed when a user taps on a map marker.

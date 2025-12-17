@@ -113,9 +113,9 @@ import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.GeoPinWithLocation
 import com.github.meeplemeet.model.map.MapViewModel
-import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
+import com.github.meeplemeet.model.map.previews.MarkerPreview
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen

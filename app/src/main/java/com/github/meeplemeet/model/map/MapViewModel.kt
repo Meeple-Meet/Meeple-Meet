@@ -10,6 +10,8 @@ import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterItem
 import com.github.meeplemeet.model.map.cluster.ClusterManager
 import com.github.meeplemeet.model.map.cluster.DistanceBasedClusterStrategy
+import com.github.meeplemeet.model.map.previews.MarkerPreview
+import com.github.meeplemeet.model.map.previews.MarkerPreviewRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.location.Location
 import com.google.firebase.firestore.GeoPoint
