@@ -14,6 +14,7 @@ import com.github.meeplemeet.ui.components.TimePickerField
 import com.github.meeplemeet.ui.theme.Dimensions
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.Locale
 
 object RentalDateTimePickerTestTags {
   const val DATE_FIELD = "rental_date_field"
@@ -44,11 +45,11 @@ fun RentalDateAndTimePicker(
     time: LocalTime?,
     onDateChange: (LocalDate?) -> Unit,
     onTimeChange: (LocalTime?) -> Unit,
+    modifier: Modifier = Modifier,
     openingHours: List<OpeningHours>? = null,
     otherDate: LocalDate? = null,
     otherTime: LocalTime? = null,
-    isStartDateTime: Boolean = true,
-    modifier: Modifier = Modifier
+    isStartDateTime: Boolean = true
 ) {
   Column(modifier = modifier) {
     Row(
@@ -149,7 +150,7 @@ fun validateRentalDateTime(
     }
 
     // Check if time falls within any of the opening hour slots
-    val timeString = String.format("%02d:%02d", time.hour, time.minute)
+    val timeString = String.format(Locale.getDefault(), "%02d:%02d", time.hour, time.minute)
     val isWithinHours =
         dayHours.hours.any { slot ->
           val slotStart = slot.open ?: "00:00"
