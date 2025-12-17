@@ -22,7 +22,7 @@ class FakeImageRepository : ImageRepository() {
       vararg inputPaths: String
   ): List<String> {
     return inputPaths.mapIndexed { index, _ ->
-        "https://example.com/spacerenter/$shopId/photo_$index.webp"
+      "https://example.com/spacerenter/$shopId/photo_$index.webp"
     }
   }
 

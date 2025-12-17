@@ -467,10 +467,14 @@ class FirestoreHandlesTests : FirestoreTests() {
       delay(100)
     }
 
-    assertEquals("Error parsing handle creation: ${handlesVM.errorMessage.value}", "", handlesVM.errorMessage.value)
+    assertEquals(
+        "Error parsing handle creation: ${handlesVM.errorMessage.value}",
+        "",
+        handlesVM.errorMessage.value)
     // Handle should be taken (not available)
     assertFalse(
-        "Handle $handle1 should be taken after creation", handlesRepository.checkHandleAvailable(handle1))
+        "Handle $handle1 should be taken after creation",
+        handlesRepository.checkHandleAvailable(handle1))
 
     // Update handle
     val accountWithHandle1 = testAccount.copy(handle = handle1)
@@ -485,33 +489,40 @@ class FirestoreHandlesTests : FirestoreTests() {
         System.currentTimeMillis() - startUpdate < 5000) {
       delay(100)
     }
-    
+
     // Also wait for handle1 to be FREED (checkHandleAvailable returns true)
     // This handles the case where updates might be observed slightly differently or cached
     val startFree = System.currentTimeMillis()
     while (!handlesRepository.checkHandleAvailable(handle1) &&
-         System.currentTimeMillis() - startFree < 5000) {
-         delay(100)
+        System.currentTimeMillis() - startFree < 5000) {
+      delay(100)
     }
 
-    assertEquals("Error updating handle: ${handlesVM.errorMessage.value}", "", handlesVM.errorMessage.value)
+    assertEquals(
+        "Error updating handle: ${handlesVM.errorMessage.value}", "", handlesVM.errorMessage.value)
     // Old handle freed
-    assertTrue("Old handle $handle1 should be freed after update", handlesRepository.checkHandleAvailable(handle1))
+    assertTrue(
+        "Old handle $handle1 should be freed after update",
+        handlesRepository.checkHandleAvailable(handle1))
     // New handle taken
-    assertFalse("New handle $handle2 should be taken after update", handlesRepository.checkHandleAvailable(handle2))
+    assertFalse(
+        "New handle $handle2 should be taken after update",
+        handlesRepository.checkHandleAvailable(handle2))
 
     // Delete handle
     val accountWithHandle2 = testAccount.copy(handle = handle2)
     handlesVM.deleteAccountHandle(accountWithHandle2)
-    
+
     // Wait for deletion
     val startDel = System.currentTimeMillis()
     while (!handlesRepository.checkHandleAvailable(handle2) &&
         System.currentTimeMillis() - startDel < 5000) {
       delay(100)
     }
-    
-    assertTrue("Handle $handle2 should be available after deletion", handlesRepository.checkHandleAvailable(handle2))
+
+    assertTrue(
+        "Handle $handle2 should be available after deletion",
+        handlesRepository.checkHandleAvailable(handle2))
   }
 
   @Test
