@@ -15,4 +15,22 @@ class FakeImageRepository : ImageRepository() {
   override suspend fun deleteAccountProfilePicture(accountId: String, context: Context) {
     // No-op
   }
+
+  override suspend fun saveSpaceRenterPhotos(
+      context: Context,
+      shopId: String,
+      vararg inputPaths: String
+  ): List<String> {
+    return inputPaths.mapIndexed { index, _ ->
+        "https://example.com/spacerenter/$shopId/photo_$index.webp"
+    }
+  }
+
+  override suspend fun deleteSpaceRenterPhotos(
+      context: Context,
+      shopId: String,
+      vararg storagePaths: String
+  ) {
+    // No-op
+  }
 }

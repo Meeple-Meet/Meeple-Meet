@@ -549,7 +549,7 @@ open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatc
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveSpaceRenterPhotos(
+  open suspend fun saveSpaceRenterPhotos(
       context: Context,
       shopId: String,
       vararg inputPaths: String
@@ -582,7 +582,7 @@ open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatc
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteSpaceRenterPhotos(
+  open suspend fun deleteSpaceRenterPhotos(
       context: Context,
       shopId: String,
       vararg storagePaths: String

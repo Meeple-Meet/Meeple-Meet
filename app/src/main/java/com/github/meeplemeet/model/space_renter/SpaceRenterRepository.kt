@@ -23,7 +23,7 @@ import kotlinx.coroutines.tasks.await
  *
  * @property db The Firestore database instance to use for operations.
  */
-class SpaceRenterRepository(
+open class SpaceRenterRepository(
     val accountRepository: AccountRepository = RepositoryProvider.accounts,
     val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
 ) : FirestoreRepository("space_renters") {
@@ -115,7 +115,7 @@ class SpaceRenterRepository(
    * @throws IllegalArgumentException if the space renter does not exist or if the data cannot be
    *   parsed.
    */
-  suspend fun getSpaceRenter(id: String): SpaceRenter {
+  open suspend fun getSpaceRenter(id: String): SpaceRenter {
     val snapshot = collection.document(id).get().await()
     if (!snapshot.exists())
         throw IllegalArgumentException("SpaceRenter with the given ID does not exist")
@@ -146,7 +146,7 @@ class SpaceRenterRepository(
    * @param spaces The new collection of rentable spaces (optional).
    * @throws IllegalArgumentException if no fields are provided for update.
    */
-  suspend fun updateSpaceRenter(
+  open suspend fun updateSpaceRenter(
       id: String,
       ownerId: String? = null,
       name: String? = null,
@@ -187,7 +187,7 @@ class SpaceRenterRepository(
    *
    * @param id The unique identifier of the space renter to delete.
    */
-  suspend fun deleteSpaceRenter(id: String) {
+  open suspend fun deleteSpaceRenter(id: String) {
     // Get the space renter to retrieve the owner ID before deletion
     val spaceRenter = getSpaceRenter(id)
 
@@ -242,7 +242,7 @@ class SpaceRenterRepository(
     }
   }
 
-  suspend fun getSpaceRenterSafe(renterId: String): SpaceRenter? {
+  open suspend fun getSpaceRenterSafe(renterId: String): SpaceRenter? {
     return try {
       getSpaceRenter(renterId)
     } catch (e: Exception) {
