@@ -44,11 +44,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
@@ -96,9 +99,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -116,6 +121,9 @@ import com.github.meeplemeet.model.map.MapViewModel
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
 import com.github.meeplemeet.model.map.previews.MarkerPreview
+import com.github.meeplemeet.model.map.routes.DefaultTravelSpeeds
+import com.github.meeplemeet.model.map.routes.TransportMode
+import com.github.meeplemeet.model.map.routes.TravelInfo
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
@@ -147,6 +155,7 @@ import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.log10
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
@@ -247,6 +256,12 @@ private object MapScaleBarDefaults {
   val TICK_WIDTH = 2.dp
   val LABEL_SPACING = 2.dp
 }
+
+private data class TravelEstimates(
+    val driving: TravelInfo,
+    val bicycling: TravelInfo,
+    val walking: TravelInfo
+)
 
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
@@ -969,6 +984,36 @@ private fun GeoPinWithLocation.distanceToString(location: Location): String {
   else String.format(Locale.getDefault(), "%.1f km", km)
 }
 
+private fun GeoPinWithLocation.approxTravelEstimates(userLocation: Location): TravelEstimates {
+  val distanceMeters = distanceTo(userLocation) * 1000 // km -> m
+  return TravelEstimates(
+      driving =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.DRIVING,
+              true,
+              TransportMode.DRIVING),
+      bicycling =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.BICYCLING,
+              true,
+              TransportMode.BICYCLING),
+      walking =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.WALKING,
+              true,
+              TransportMode.WALKING))
+}
+
+private fun TravelInfo.toTimeString(): String {
+  val mins = max(durationSeconds / 60, 1.0).toInt()
+  val hours = mins / 60
+  val minsOnly = mins % 60
+  return if (hours > 0) "${hours}h ${minsOnly}m" else "${minsOnly}m"
+}
+
 /**
  * Displays a simple loading sheet while fetching marker preview data.
  *
@@ -1025,6 +1070,7 @@ private fun MarkerPreviewSheet(
     onRedirect: (StorableGeoPin) -> Unit
 ) {
   val context = LocalContext.current
+  val estimates = userLocation?.let { pin.approxTravelEstimates(it) }
 
   Column(
       modifier =
@@ -1032,9 +1078,13 @@ private fun MarkerPreviewSheet(
               .padding(Dimensions.Padding.extraLarge)
               .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
         Box(modifier = Modifier.fillMaxWidth()) {
-          val title =
-              if (userLocation != null) "${preview.name} — ${pin.distanceToString(userLocation)}"
-              else preview.name
+          val title = buildAnnotatedString {
+            append(preview.name)
+            estimates?.let {
+              append(
+                  " — ${it.driving.distanceMeters.let { d -> if (d < 1000) "${d.toInt()} m" else String.format("%.1f km", d / 1000) }}")
+            }
+          }
           Text(
               text = title,
               style = MaterialTheme.typography.titleLarge,
@@ -1044,61 +1094,83 @@ private fun MarkerPreviewSheet(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
-        when (preview) {
-          is MarkerPreview.ShopMarkerPreview,
-          is MarkerPreview.SpaceMarkerPreview -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-              Text(
-                  text = preview.address,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // --- Travel time row ---
+          estimates?.let { est ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xLarge),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()) {
+                  IconText(icon = Icons.Default.DirectionsCar, text = est.driving.toTimeString())
+                  IconText(
+                      icon = Icons.AutoMirrored.Filled.DirectionsBike,
+                      text = est.bicycling.toTimeString())
+                  IconText(
+                      icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                      text = est.walking.toTimeString())
+                }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-              val isOpen =
-                  when (preview) {
-                    is MarkerPreview.ShopMarkerPreview -> preview.open
-                    is MarkerPreview.SpaceMarkerPreview -> preview.open
-                    else -> false
-                  }
-              Text(
-                  text = if (isOpen) "Open" else "Closed",
-                  color =
-                      if (isOpen) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.error,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
-            }
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
           }
-          is MarkerPreview.SessionMarkerPreview -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(
-                  text = "Playing: ${preview.game}",
-                  modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+
+          when (preview) {
+            is MarkerPreview.ShopMarkerPreview,
+            is MarkerPreview.SpaceMarkerPreview -> {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                Text(
+                    text = preview.address,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+              }
+
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                val isOpen =
+                    when (preview) {
+                      is MarkerPreview.ShopMarkerPreview -> preview.open
+                      is MarkerPreview.SpaceMarkerPreview -> preview.open
+                      else -> false
+                    }
+                Text(
+                    text = if (isOpen) "Open" else "Closed",
+                    color =
+                        if (isOpen) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
+              }
             }
+            is MarkerPreview.SessionMarkerPreview -> {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = "Playing: ${preview.game}",
+                    modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+              }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(
-                  text = preview.address,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
-            }
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = preview.address,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+              }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(text = preview.date, modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = preview.date,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+              }
             }
           }
         }
@@ -1123,6 +1195,15 @@ private fun MarkerPreviewSheet(
               }
         }
       }
+}
+
+@Composable
+private fun IconText(icon: ImageVector, text: String) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Icon(icon, contentDescription = null)
+    Spacer(Modifier.width(Dimensions.Spacing.small))
+    Text(text, style = MaterialTheme.typography.bodySmall)
+  }
 }
 
 /**
