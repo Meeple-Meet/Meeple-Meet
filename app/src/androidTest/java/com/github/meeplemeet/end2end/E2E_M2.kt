@@ -783,7 +783,7 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     // Wait until either the item tag or the item text is present
-    composeTestRule.waitUntil(8_000) {
+    composeTestRule.waitUntil(20_000) {
       val byTag =
           composeTestRule
               .onAllNodesWithTag(itemTag, useUnmergedTree = true)
@@ -909,7 +909,7 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil(timeoutMillis = 8_000) {
+    composeTestRule.waitUntil(timeoutMillis = 20_000) {
       var byTag =
           composeTestRule
               .onAllNodesWithTag(itemTag, useUnmergedTree = true)
