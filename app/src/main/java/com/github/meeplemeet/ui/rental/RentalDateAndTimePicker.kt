@@ -64,7 +64,8 @@ fun RentalDateAndTimePicker(
                 onValueChange = onDateChange,
                 label = if (isStartDateTime) "Start Date" else "End Date",
                 editable = true,
-                testTagPick = RentalDateTimePickerTestTags.DATE_FIELD,
+                testTagPick =
+                    "${RentalDateTimePickerTestTags.DATE_FIELD}_pick_${if (isStartDateTime) "start" else "end"}",
                 testTagDate = RentalDateTimePickerTestTags.DATE_FIELD)
           }
 
@@ -100,7 +101,7 @@ fun RentalDateAndTimePicker(
 }
 
 /**
- * Validates rental date/time selection. Made public for reuse in SpaceRentalScreen.
+ * Validates rental date/time selection.
  *
  * @return Error message if validation fails, null otherwise.
  */
@@ -126,12 +127,15 @@ fun validateRentalDateTime(
   if (otherDate != null && otherTime != null) {
     val otherDateTime = otherDate.atTime(otherTime)
 
-    if (isStartDateTime && selectedDateTime.isAfter(otherDateTime)) {
-      return "Start time must be before end time"
-    }
+    // Only validate end time relationship if both dates are valid (not in past)
+    if (!otherDateTime.isBefore(now)) {
+      if (isStartDateTime && selectedDateTime.isAfter(otherDateTime)) {
+        return "Start time must be before end time"
+      }
 
-    if (!isStartDateTime && selectedDateTime.isBefore(otherDateTime)) {
-      return "End time must be after start time"
+      if (!isStartDateTime && selectedDateTime.isBefore(otherDateTime)) {
+        return "End time must be after start time"
+      }
     }
 
     // Check if spanning multiple days
