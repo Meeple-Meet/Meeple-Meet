@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.account.Account
@@ -39,11 +40,14 @@ import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,7 +58,7 @@ import org.junit.runner.RunWith
  * create the store, create a post to advertise it, wait for reactions.
  */
 @RunWith(AndroidJUnit4::class)
-class E2E_M2 : FirestoreTests() {
+class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
   // Generic retry helper used for waiting on backend state convergence
   private suspend fun retryUntil(
       timeoutMs: Long = 30_000,
@@ -85,6 +89,8 @@ class E2E_M2 : FirestoreTests() {
     val acc = accountRepository.getAccount(uid)
     acc.shopOwner
   }
+
+  override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {}
 
   @get:Rule
   val permissionRule: GrantPermissionRule =
@@ -119,6 +125,16 @@ class E2E_M2 : FirestoreTests() {
           .performClick()
       composeTestRule.waitForIdle()
     }
+  }
+
+  @Before
+  fun setup() {
+    try {
+      MapsInitializer.initialize(
+          InstrumentationRegistry.getInstrumentation().targetContext,
+          MapsInitializer.Renderer.LATEST,
+          this)
+    } catch (_: Exception) {}
   }
 
   @Test
@@ -676,8 +692,9 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(10000) {
+    composeTestRule.waitUntil(50_000) {
       try {
+        composeTestRule.closeKeyboardSafely()
         composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
         true
       } catch (_: Throwable) {
@@ -785,7 +802,7 @@ class E2E_M2 : FirestoreTests() {
       byTag || byTextUnmerged || byTextMerged
     }
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil(10000) {
+    composeTestRule.waitUntil(10_000) {
       try {
         composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
         true

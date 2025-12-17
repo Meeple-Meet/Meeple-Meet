@@ -49,25 +49,40 @@ object AuthUtils {
     waitForIdle()
     waitUntil(5000) { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }
     // --- Navigate to sign-up screen ---
-    onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
+      true
+    })
 
     // --- Fill out email and password ---
-    onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+      true
+    })
 
-    onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+      true
+    })
 
-    onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .assertExists()
-        .performTextInput(password)
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(password)
+      true
+    })
 
     // --- Close keyboard (Compose-only!) ---
     closeKeyboardSafely()
 
     // --- Submit ---
-    onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
     // --- Wait for Create Account screen
     //
@@ -107,7 +122,10 @@ object AuthUtils {
     }
 
     // --- Skip onboarding ---
-    onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).performClick()
+      true
+    })
 
     waitForIdle()
 
@@ -118,7 +136,10 @@ object AuthUtils {
           .isNotEmpty()
     }
 
-    onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists().assertIsDisplayed()
+    waitUntilWithCatch({
+      onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists().assertIsDisplayed()
+      true
+    })
   }
 
   fun ComposeTestRule.closeKeyboardSafely() {
