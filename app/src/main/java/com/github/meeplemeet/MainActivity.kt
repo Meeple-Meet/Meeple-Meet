@@ -698,8 +698,7 @@ fun MeepleMeetApp(
                 verified = uiState.isEmailVerified,
                 navigationActions = navigationActions,
                 onBack = { navigationActions.goBack() },
-                unreadCount = unreadCount,
-                onNavigate = { navigationActions.navigateTo(it) })
+                unreadCount = unreadCount)
           } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
         }
 

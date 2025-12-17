@@ -3,14 +3,12 @@
 package com.github.meeplemeet.ui.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -32,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Schedule
@@ -44,6 +43,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -131,7 +134,7 @@ object FriendsManagementDefaults {
 
   object Layout {
     val FRIENDS_TABS_HEIGHT = 48.dp
-    val BETWEEN_SEARCH_AND_TABS = Dimensions.Spacing.xxLarge
+    val BETWEEN_SEARCH_AND_TABS = Dimensions.Spacing.extraSmall
 
     val ITEM_VERTICAL_PADDING = Dimensions.Padding.small
     val ITEM_HORIZONTAL_PADDING = Dimensions.Padding.extraMedium
@@ -141,6 +144,7 @@ object FriendsManagementDefaults {
 
     val ROW_MIN_HEIGHT = 72.dp
     const val MAX_VISIBLE_SEARCH_ROWS = 6
+    val TAB_BOTTOM_BAR_HEIGHT = 3.dp
   }
 
   object Avatar {
@@ -324,7 +328,6 @@ fun FriendsScreen(
     verified: Boolean,
     navigationActions: NavigationActions,
     onBack: () -> Unit,
-    onNavigate: (MeepleMeetScreen) -> Unit = {},
     unreadCount: Int,
     viewModel: FriendsScreenViewModel = viewModel(),
 ) {
@@ -336,7 +339,6 @@ fun FriendsScreen(
   var selectedTab by rememberSaveable { mutableStateOf(FriendsTab.FRIENDS) }
 
   val trimmedQuery = remember(searchQuery) { searchQuery.trim() }
-  val isSearching = trimmedQuery.isNotBlank()
 
   var friends by remember { mutableStateOf<List<Account>>(emptyList()) }
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -394,20 +396,18 @@ fun FriendsScreen(
                     .padding(innerPadding)
                     .testTag(FriendsManagementTestTags.SCREEN_ROOT),
         ) {
+          FriendsTabSwitcher(
+              selectedTab = selectedTab,
+              onTabSelected = { selectedTab = it },
+          )
+          Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
+
           FriendsSearchBar(
               query = searchQuery,
               onQueryChange = { searchQuery = it },
               onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
               onFocusChanged = { isInputFocused = it },
           )
-
-          if (!isSearching) {
-            Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
-            FriendsTabSwitcher(
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-            )
-          }
 
           FriendsManagementContent(
               account = account,
@@ -578,108 +578,69 @@ private fun FriendsSearchBar(
     onClearQuery: () -> Unit,
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
-  FocusableInputField(
-      value = query,
-      onValueChange = onQueryChange,
-      modifier =
-          Modifier.fillMaxWidth()
-              .height(Dimensions.ContainerSize.timeFieldHeight)
-              .testTag(FriendsManagementTestTags.SEARCH_TEXT_FIELD)
-              .shadow(
-                  elevation = Dimensions.Elevation.high,
-                  shape = RectangleShape,
-                  clip = false,
+  Column(modifier = Modifier.fillMaxWidth()) {
+    FocusableInputField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(Dimensions.ContainerSize.timeFieldHeight)
+                .testTag(FriendsManagementTestTags.SEARCH_TEXT_FIELD)
+                .shadow(
+                    elevation = Dimensions.Elevation.high,
+                    shape = RectangleShape,
+                    clip = false,
+                )
+                .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium),
+        placeholder = {
+          Text(
+              FriendsManagementDefaults.SEARCH_PLACEHOLDER,
+              style = MaterialTheme.typography.bodyMedium,
+          )
+        },
+        singleLine = true,
+        leadingIcon = {
+          Icon(
+              imageVector = Icons.Default.Search,
+              contentDescription = "Search",
+          )
+        },
+        trailingIcon = {
+          if (query.isNotEmpty()) {
+            IconButton(
+                onClick = onClearQuery,
+                modifier = Modifier.testTag(FriendsManagementTestTags.SEARCH_CLEAR),
+            ) {
+              Icon(
+                  imageVector = Icons.Default.Close,
+                  contentDescription = "Clear search",
               )
-              .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium),
-      placeholder = {
-        Text(
-            FriendsManagementDefaults.SEARCH_PLACEHOLDER,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-      },
-      singleLine = true,
-      leadingIcon = {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search",
-        )
-      },
-      trailingIcon = {
-        if (query.isNotEmpty()) {
-          IconButton(
-              onClick = onClearQuery,
-              modifier = Modifier.testTag(FriendsManagementTestTags.SEARCH_CLEAR),
-          ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Clear search",
-            )
+            }
           }
-        }
-      },
-      textStyle = MaterialTheme.typography.bodyMedium,
-      shape = RectangleShape,
-      colors =
-          TextFieldDefaults.colors(
-              focusedContainerColor = MaterialTheme.colorScheme.surface,
-              unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-              disabledContainerColor = MaterialTheme.colorScheme.surface,
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              disabledIndicatorColor = Color.Transparent,
-          ),
-      onFocusChanged = onFocusChanged,
-  )
+        },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        shape = RectangleShape,
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+        onFocusChanged = onFocusChanged,
+    )
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.onBackground,
+        thickness = Dimensions.DividerThickness.standard,
+    )
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Friends tabs
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Composable function to display a single tab item in the friends management tab switcher.
- *
- * @param label The label of the tab.
- * @param isSelected Boolean indicating whether the tab is currently selected.
- * @param testTag The test tag for the tab item.
- * @param onClick Callback function to handle tab selection.
- */
-@Composable
-private fun RowScope.FriendsTabItem(
-    label: String,
-    isSelected: Boolean,
-    testTag: String,
-    onClick: () -> Unit,
-) {
-  val bgColor =
-      if (isSelected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.background
-
-  val textColor =
-      if (isSelected) MaterialTheme.colorScheme.onBackground
-      else MaterialTheme.colorScheme.onSurfaceVariant
-
-  Box(
-      modifier =
-          Modifier.weight(1f)
-              .fillMaxHeight()
-              .background(bgColor)
-              .border(
-                  width = 0.dp,
-                  color = MaterialTheme.colorScheme.outline,
-                  shape = RectangleShape,
-              )
-              .clickable(onClick = onClick)
-              .testTag(testTag),
-      contentAlignment = Alignment.Center,
-  ) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-        color = textColor,
-    )
-  }
-}
 
 /**
  * Composable function to display the tab switcher for friends management.
@@ -692,22 +653,53 @@ private fun FriendsTabSwitcher(
     selectedTab: FriendsTab,
     onTabSelected: (FriendsTab) -> Unit,
 ) {
-  Row(
+  val tabs = FriendsTab.entries
+  val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(minimumValue = 0)
+
+  TabRow(
+      selectedTabIndex = selectedIndex,
       modifier =
           Modifier.fillMaxWidth()
-              .height(FriendsManagementDefaults.Layout.FRIENDS_TABS_HEIGHT)
-              .background(MaterialTheme.colorScheme.background)
+              .heightIn(min = FriendsManagementDefaults.Layout.ROW_MIN_HEIGHT)
               .testTag(FriendsManagementTestTags.TABS),
+      containerColor = MaterialTheme.colorScheme.background,
+      contentColor = MaterialTheme.colorScheme.onBackground,
+      indicator = { tabPositions ->
+        TabRowDefaults.PrimaryIndicator(
+            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+            height = FriendsManagementDefaults.Layout.TAB_BOTTOM_BAR_HEIGHT,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+      },
+      divider = {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.background,
+            thickness = Dimensions.DividerThickness.standard,
+        )
+      },
   ) {
-    FriendsTab.entries.forEach { tab ->
-      val isSelected = tab == selectedTab
+    tabs.forEachIndexed { index, tab ->
       val ui = tab.toUiData()
+      val icon =
+          when (tab) {
+            FriendsTab.FRIENDS -> Icons.Default.Person
+            FriendsTab.REQUESTS -> Icons.Default.Schedule
+            FriendsTab.BLOCKED -> Icons.Default.Block
+          }
 
-      FriendsTabItem(
-          label = ui.label,
-          isSelected = isSelected,
-          testTag = ui.testTag,
+      Tab(
+          selected = index == selectedIndex,
           onClick = { onTabSelected(tab) },
+          modifier = Modifier.testTag(ui.testTag),
+          selectedContentColor = MaterialTheme.colorScheme.tertiary,
+          unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+          icon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = ui.label,
+                modifier = Modifier.size(Dimensions.IconSize.xxLarge),
+            )
+          },
       )
     }
   }
