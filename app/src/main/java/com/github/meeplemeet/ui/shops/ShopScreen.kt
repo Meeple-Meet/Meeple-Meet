@@ -3,6 +3,7 @@
 
 package com.github.meeplemeet.ui.shops
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -38,7 +39,6 @@ object ShopTestTags {
   const val SHOP_EDIT_BUTTON = "EDIT_SHOP_BUTTON"
 
   // Game list tags
-  const val SHOP_GAME_PREFIX = "SHOP_GAME_"
   const val SHOP_GAME_PAGER = "SHOP_GAME_PAGER"
   const val SHOP_GAME_PAGER_INDICATOR_PREFIX = "SHOP_GAME_PAGER_INDICATOR_"
 
@@ -87,6 +87,7 @@ object ShopScreenDefaults {
  * @param onBack Callback invoked when the back button is pressed.
  * @param onEdit Callback invoked when the edit button is pressed.
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun ShopScreen(
     shopId: String,
@@ -169,11 +170,14 @@ fun ShopScreen(
     // CENTERED POPUP WITH BORDER
     // ────────────────────────────────────────────
     popupGame?.let { game ->
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         GameDetailsCard(
             game = game,
             onClose = { popupGame = null },
-            modifier = Modifier.wrapContentSize().padding(Dimensions.Padding.extraLarge))
+            modifier =
+                Modifier.widthIn(max = maxWidth)
+                    .heightIn(max = maxHeight)
+                    .padding(Dimensions.Padding.medium))
       }
     }
   }

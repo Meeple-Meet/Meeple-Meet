@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -827,17 +828,28 @@ private fun DeleteSessionButton(
       onClick = onDelete,
       modifier = modifier.testTag(SessionEditTestTags.DELETE_BUTTON),
       shape = CircleShape,
+      contentPadding =
+          PaddingValues(
+              horizontal = Dimensions.Padding.medium, vertical = Dimensions.Padding.small),
       border = BorderStroke(Dimensions.DividerThickness.medium, MaterialTheme.colorScheme.error),
-      colors =
-          ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-        Icon(
-            imageVector = Icons.Default.Delete,
-            contentDescription = null,
-            modifier = Modifier.testTag(SessionEditTestTags.DELETE_ICON))
-        Spacer(Modifier.height(Dimensions.Spacing.none))
-        Spacer(Modifier.padding(horizontal = Dimensions.Spacing.medium))
-        Text(SessionEditStrings.LABEL_DELETE, style = MaterialTheme.typography.bodyMedium)
-      }
+      colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+  ) {
+    Icon(
+        imageVector = Icons.Default.Delete,
+        contentDescription = null,
+        modifier = Modifier.testTag(SessionEditTestTags.DELETE_ICON),
+    )
+
+    Spacer(Modifier.width(Dimensions.Spacing.small))
+
+    Text(
+        text = SessionEditStrings.LABEL_DELETE,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+    )
+  }
 }
 
 /**

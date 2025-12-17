@@ -66,7 +66,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
@@ -176,6 +175,7 @@ private const val LABEL_GAME = "Game"
 private const val OUTLINE_DEFAULT_ALPHA = 0.5f
 const val MAX_TITLE_LENGTH: Int = 100
 private const val MAX_LINES = 3
+private const val DATE_PICKER_WIDTH_PERCENTAGE = 0.55f
 
 /** Action for participant chip: add or remove. */
 enum class ParticipantAction {
@@ -350,9 +350,7 @@ fun IconTextField(
  * A text field with optional leading and trailing icons.
  *
  * @param value The current value of the text field.
- * @param onValueChange Callback function to be invoked when the text field value changes.
  * @param placeholder Placeholder text to be displayed when the text field is empty.
- * @param editable Whether the text field is editable or read-only.
  * @param leadingIcon Optional composable for the leading icon.
  * @param trailingIcon Optional composable for the trailing icon.
  * @param modifier Modifier to be applied to the OutlinedTextField.
@@ -360,54 +358,40 @@ fun IconTextField(
 @Composable
 fun IconTextFieldNew(
     value: String,
-    onValueChange: (String) -> Unit,
     placeholder: String,
-    editable: Boolean = true,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit),
+    trailingIcon: @Composable (() -> Unit),
     modifier: Modifier
 ) {
-  TextField(
-      value = value,
-      onValueChange = { if (editable) onValueChange(it) },
+  val isPlaceholder = value.isBlank() || value == placeholder
+  val displayedText = if (isPlaceholder) placeholder else value
+
+  Surface(
       modifier = modifier,
-      enabled = false,
-      readOnly = !editable,
-      singleLine = true,
-      textStyle = TextStyle(fontSize = Dimensions.TextSize.body),
       shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
-      leadingIcon = leadingIcon,
-      trailingIcon = trailingIcon,
-      placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-      colors =
-          TextFieldDefaults.colors(
-              // text
-              focusedTextColor = MaterialTheme.colorScheme.onBackground,
-              unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-              disabledTextColor = MaterialTheme.colorScheme.onBackground,
+      color = Color.Transparent,
+  ) {
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(min = Dimensions.ContainerSize.timeFieldHeight)
+                .padding(start = Dimensions.Padding.extraMedium, end = Dimensions.Padding.small),
+        contentAlignment = Alignment.Center) {
+          Text(
+              text = displayedText,
+              style = TextStyle(fontSize = Dimensions.TextSize.body),
+              color =
+                  if (isPlaceholder) MaterialTheme.colorScheme.onSurfaceVariant
+                  else MaterialTheme.colorScheme.onBackground,
+              maxLines = 1,
+              overflow = TextOverflow.Clip,
+              textAlign = TextAlign.Center,
+          )
 
-              // icons
-              focusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
-              unfocusedLeadingIconColor = MaterialTheme.colorScheme.onBackground,
-              disabledLeadingIconColor = MaterialTheme.colorScheme.onBackground,
-              focusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
-              unfocusedTrailingIconColor = MaterialTheme.colorScheme.onBackground,
-              disabledTrailingIconColor = MaterialTheme.colorScheme.onBackground,
-
-              // indicator
-              focusedIndicatorColor = Color.Transparent,
-              unfocusedIndicatorColor = Color.Transparent,
-              disabledIndicatorColor = Color.Transparent,
-
-              // background
-              focusedContainerColor = Color.Transparent,
-              unfocusedContainerColor = Color.Transparent,
-              disabledContainerColor = Color.Transparent,
-
-              // cursor
-              cursorColor = MaterialTheme.colorScheme.onBackground,
-          ),
-  )
+          Box(Modifier.align(Alignment.CenterStart)) { leadingIcon() }
+          Box(Modifier.align(Alignment.CenterEnd)) { trailingIcon() }
+        }
+  }
 }
 
 /**
@@ -617,7 +601,6 @@ fun <T> TwoPerRowGrid(
  * @param value The currently selected date.
  * @param onValueChange Callback function to be invoked when a new date is selected.
  * @param label The label text for the date field.
- * @param editable Whether the date field is editable or read-only.
  * @param displayFormatter The formatter to display the selected date.
  * @param zoneId The time zone to be used for date selection.
  */
@@ -627,7 +610,6 @@ fun DatePickerDockedField(
     value: LocalDate?,
     onValueChange: (LocalDate?) -> Unit,
     label: String = LABEL_DATE,
-    editable: Boolean = true,
     displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"),
     zoneId: ZoneId = ZoneId.systemDefault(),
     testTagPick: String = SessionComponentsTestTags.DATE_PICK_BUTTON,
@@ -639,9 +621,7 @@ fun DatePickerDockedField(
   Box(modifier = Modifier.testTag(testTagDate)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = {},
         placeholder = label,
-        editable = editable,
         leadingIcon = {
           Icon(
               Icons.Default.CalendarToday,
@@ -766,9 +746,7 @@ fun TimePickerField(
   Box(modifier = Modifier.testTag(SessionComponentsTestTags.TIME_FIELD)) {
     IconTextFieldNew(
         value = text,
-        onValueChange = {},
         placeholder = label,
-        editable = false,
         leadingIcon = {
           Icon(Icons.Default.Timer, contentDescription = LABEL_TIME, tint = AppColors.neutral)
         },
@@ -876,31 +854,36 @@ fun DateAndTimePicker(
     onFocusChanged: (Boolean) -> Unit = {},
     onTimeChange: (LocalTime?) -> Unit
 ) {
-  Row(
+  Column(
       modifier =
           Modifier.fillMaxWidth()
               .background(
                   color = AppColors.secondary,
                   shape = RoundedCornerShape(Dimensions.CornerRadius.medium))) {
-        Box(Modifier.fillMaxWidth(0.55f).onFocusChanged { onFocusChanged(it.isFocused) }) {
-          DatePickerDockedField(
-              value = date, onValueChange = onDateChange, label = LABEL_DATE, editable = true)
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          Box(
+              Modifier.weight(weight = DATE_PICKER_WIDTH_PERCENTAGE).onFocusChanged {
+                onFocusChanged(it.isFocused)
+              }) {
+                DatePickerDockedField(
+                    value = date, onValueChange = onDateChange, label = LABEL_DATE)
+              }
+
+          Box(
+              Modifier.weight(weight = 1f - DATE_PICKER_WIDTH_PERCENTAGE).onFocusChanged {
+                onFocusChanged(it.isFocused)
+              }) {
+                TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
+              }
         }
 
-        Column {
-          Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-            TimePickerField(value = time, onValueChange = onTimeChange, label = LABEL_TIME)
-          }
-
-          // Show error if date/time is in the past
-          if (isDateTimeInPast(date, time)) {
-            Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
-            Text(
-                text = "Cannot create a session in the past",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = Dimensions.Padding.medium))
-          }
+        if (isDateTimeInPast(date, time)) {
+          Spacer(Modifier.height(Dimensions.Spacing.extraSmall))
+          Text(
+              text = "Cannot create a session in the past",
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+              modifier = Modifier.padding(start = Dimensions.Padding.medium))
         }
       }
 }
@@ -1253,8 +1236,8 @@ fun ShopGameSearchBar(
 /**
  * A search bar for selecting a space renter game.
  *
- * @param account The user's account.
- * @param spaceRenter The space renter for which the game is being searched (optional).
+ * @param setGame Callback function to set the selected game.
+ * @param setGameQuery Callback function to set the game query.
  * @param viewModel The SpaceRenterSearchViewModel for managing space renter search state.
  * @param initial The initial game to display in the search bar.
  * @param existing Set of existing game UIDs to exclude from suggestions.
