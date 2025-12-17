@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.location.LocationRepository
+
 /**
  * ViewModel for editing and deleting existing shops.
  *
@@ -31,8 +34,10 @@ import kotlinx.coroutines.withContext
  */
 class EditShopViewModel(
     private val shopRepository: ShopRepository = RepositoryProvider.shops,
-    private val imageRepository: ImageRepository = RepositoryProvider.images
-) : ShopSearchViewModel() {
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
+    gameRepository: GameRepository = RepositoryProvider.games,
+    locationRepository: LocationRepository = RepositoryProvider.locations
+) : ShopSearchViewModel(gameRepository, locationRepository) {
 
   private val _currentShop = MutableStateFlow<Shop?>(null)
   val currentShop: StateFlow<Shop?> = _currentShop.asStateFlow()
