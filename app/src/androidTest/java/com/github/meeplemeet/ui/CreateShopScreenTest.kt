@@ -375,6 +375,7 @@ class CreateShopScreenTest : FirestoreTests() {
           1 ->
               AddShopContent(
                   onBack = {},
+                  onCreated = {},
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
@@ -386,6 +387,7 @@ class CreateShopScreenTest : FirestoreTests() {
           2 ->
               AddShopContent(
                   onBack = {},
+                  onCreated = {},
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
@@ -397,6 +399,7 @@ class CreateShopScreenTest : FirestoreTests() {
           3 ->
               AddShopContent(
                   onBack = {},
+                  onCreated = {},
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
@@ -408,6 +411,7 @@ class CreateShopScreenTest : FirestoreTests() {
           4 ->
               AddShopContent(
                   onBack = {},
+                  onCreated = {},
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
@@ -419,6 +423,7 @@ class CreateShopScreenTest : FirestoreTests() {
           5 ->
               AddShopContent(
                   onBack = { backCalled = true },
+                  onCreated = {},
                   initialStock = emptyList(),
                   viewModel = viewModel,
                   owner = owner,
@@ -676,6 +681,7 @@ class CreateShopScreenTest : FirestoreTests() {
 
         AddShopContent(
             onBack = {},
+            onCreated = {},
             initialStock = emptyList(),
             viewModel = viewModel,
             owner = owner,

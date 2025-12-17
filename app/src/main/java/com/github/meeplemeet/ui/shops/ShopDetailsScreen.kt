@@ -4,18 +4,17 @@ package com.github.meeplemeet.ui.shops
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.LocationUIState
@@ -26,15 +25,11 @@ import com.github.meeplemeet.ui.LocalFocusableFieldObserver
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.ActionBar
 import com.github.meeplemeet.ui.components.ConfirmationDialog
-import com.github.meeplemeet.ui.components.EditableImageCarousel
-import com.github.meeplemeet.ui.components.EditableGameItem
 import com.github.meeplemeet.ui.components.GameStockPicker
-import com.github.meeplemeet.ui.components.ImageCarousel
 import com.github.meeplemeet.ui.components.OpeningHoursEditor
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.components.ShopFormUi
 import com.github.meeplemeet.ui.components.ShopUiDefaults
-import com.github.meeplemeet.ui.theme.Dimensions
 
 /* ================================================================================================
  * Test tags
@@ -97,6 +92,10 @@ private object EditShopUi {
         "Are you sure you want to delete this shop? This action cannot be undone."
     const val DELETE_CONFIRM = "Delete"
     const val DELETE_CANCEL = "Cancel"
+
+    const val ERROR_VALIDATION = "Validation error"
+    const val ERROR_SAVE = "Failed to save shop"
+    const val ERROR_UPDATE = "Failed to update shop"
   }
 }
 
@@ -141,38 +140,6 @@ fun ShopDetailsScreen(
       shop = shop,
       onBack = onBack,
       onSaved = onSaved,
-      onSave = {
-          loadedShop,
-          requester,
-          name,
-          email,
-          phone,
-          website,
-          address,
-          week,
-          stock,
-          photoCollectionUrl ->
-        try {
-          viewModel.updateShop(
-              context = context,
-              shop = loadedShop,
-              requester = requester,
-              owner = owner,
-              name = name,
-              phone = phone,
-              email = email,
-              website = website,
-              address = address,
-              openingHours = week,
-              gameCollection = stock,
-              photoCollectionUrl = photoCollectionUrl)
-          null
-        } catch (e: IllegalArgumentException) {
-          e.message ?: EditShopUi.Strings.ERROR_VALIDATION
-        } catch (_: Exception) {
-          EditShopUi.Strings.ERROR_SAVE
-        }
-      },
       gameUi = gameUi,
       locationUi = locationUi,
       viewModel = viewModel,
@@ -191,7 +158,6 @@ fun ShopDetailsScreen(
  * @param shop The shop to edit, or null if still loading.
  * @param onBack Callback function to be invoked when the back navigation is triggered.
  * @param onSaved Callback function to be invoked when the shop is successfully saved.
- * @param onSave Callback function to handle the saving of a shop with provided details.
  * @param gameQuery The current query string for searching games.
  * @param gameSuggestions List of game suggestions based on the current query.
  * @param isSearching Boolean indicating if a search operation is in progress.
@@ -211,6 +177,7 @@ fun EditShopContent(
     viewModel: EditShopViewModel,
     owner: Account
 ) {
+  val context = LocalContext.current
   val snackbarHostState = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
 
@@ -221,11 +188,6 @@ fun EditShopContent(
           onSetGameQuery = viewModel::setGameQuery,
           onSetGame = viewModel::setGame)
   // Initialize state with loaded shop data or default values
-  var photoCollectionUrl by rememberSaveable(shop) { mutableStateOf(shop.photoCollectionUrl) }
-
-  LaunchedEffect(shop.photoCollectionUrl) {
-    photoCollectionUrl = shop.photoCollectionUrl ?: emptyList()
-  }
   var showDeleteDialog by remember { mutableStateOf(false) }
 
   LaunchedEffect(locationUi.locationQuery) {
@@ -268,7 +230,12 @@ fun EditShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        Scaffold(
+        ShopFormContent(
+            state = state,
+            viewModel = viewModel,
+            owner = owner,
+            online = online,
+            locationUi = locationUi,
             topBar = {
               CenterAlignedTopAppBar(
                   title = {
@@ -303,71 +270,48 @@ fun EditShopContent(
                   ActionBar(
                       onDiscard = onBack,
                       onPrimary = {
-                        viewModel.updateShop(
-                            shop = shop,
-                            requester = owner,
-                            owner = owner,
-                            name = state.shopName,
-                            phone = state.phone,
-                            email = state.email,
-                            website = state.website,
-                            address = locationUi.selectedLocation ?: Location(),
-                            openingHours = state.week,
-                            gameCollection = state.stock,
-                            photoCollectionUrl = state.photoCollectionUrl)
-                        onSaved()
+                        isSaving = true
+                        scope.launch {
+                          try {
+                            viewModel.updateShop(
+                                context = context,
+                                shop = shop,
+                                requester = owner,
+                                owner = owner,
+                                name = state.shopName,
+                                phone = state.phone,
+                                email = state.email,
+                                website = state.website,
+                                address = locationUi.selectedLocation ?: Location(),
+                                openingHours = state.week,
+                                gameCollection = state.stock,
+                                photoCollectionUrl = state.photoCollectionUrl)
+                            onSaved()
+                          } catch (e: Exception) {
+                            snackbarHostState.showSnackbar(
+                                e.message ?: EditShopUi.Strings.ERROR_UPDATE)
+                          } finally {
+                            isSaving = false
+                          }
+                        }
                       },
                       enabled = isValid,
                       primaryButtonText = ShopUiDefaults.StringsMagicNumbers.BTN_SAVE)
             },
-            modifier = Modifier.testTag(EditShopScreenTestTags.SCAFFOLD)) { padding ->
-              LazyColumn(
-                  modifier = Modifier.padding(padding).testTag(EditShopScreenTestTags.LIST),
-                  contentPadding =
-                      PaddingValues(
-                          horizontal = EditShopUi.Dimensions.contentHPadding,
-                          vertical = EditShopUi.Dimensions.contentVPadding)) {
-                    item {
-                      if (online) {
-                        EditableImageCarousel(
-                            photoCollectionUrl = state.photoCollectionUrl,
-                            spacesCount = IMAGE_COUNT,
-                            setPhotoCollectionUrl = { state.photoCollectionUrl = it })
-                      } else
-                          ImageCarousel(
-                              photoCollectionUrl = state.photoCollectionUrl,
-                              maxNumberOfImages = IMAGE_COUNT,
-                              editable = false)
-                    }
-                    item {
-                      ShopInfoSection(
-                          state = state,
-                          viewModel = viewModel,
-                          owner = owner,
-                          online = online,
-                          locationUi = locationUi)
-                    }
-                    item { ShopAvailabilitySection(state) }
-                    item { ShopGamesSection(state, online, viewModel) }
-                    item {
-                      Spacer(
-                          Modifier.height(EditShopUi.Dimensions.bottomSpacer)
-                              .testTag(EditShopScreenTestTags.BOTTOM_SPACER))
-                    }
-                  }
-            }
+            scaffoldTestTag = EditShopScreenTestTags.SCAFFOLD,
+            listTestTag = EditShopScreenTestTags.LIST)
+
+        if (isSaving) {
+          Box(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                      .clickable(enabled = true, onClick = {}),
+              contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+              }
+        }
       }
-      if (isSaving) {
-        Box(
-            modifier =
-                Modifier.fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-                    .clickable(enabled = true, onClick = {}),
-            contentAlignment = Alignment.Center) {
-              CircularProgressIndicator()
-            }
-      }
-    }
 
   OpeningHoursEditor(
       show = state.showHoursDialog,

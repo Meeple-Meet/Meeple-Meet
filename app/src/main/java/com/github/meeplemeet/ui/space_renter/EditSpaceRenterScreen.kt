@@ -407,7 +407,8 @@ internal fun EditSpaceRenterContent(
                                   onDelete = { idx ->
                                     spaces = spaces.filterIndexed { i, _ -> i != idx }
                                   },
-                              )AddButton(
+                              )
+                              AddButton(
                                 onClick = { addSpace() },
                                 buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
                                 buttonTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,

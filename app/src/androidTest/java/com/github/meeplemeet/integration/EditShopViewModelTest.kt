@@ -5,12 +5,12 @@ import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
-import io.mockk.coEvery
-import io.mockk.coVerify
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.utils.FirestoreTests
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -31,7 +31,7 @@ class EditShopViewModelTest : FirestoreTests() {
 
   private val testDispatcher = StandardTestDispatcher()
   private lateinit var viewModel: EditShopViewModel
-  lateinit var imageRepository: ImageRepository
+
   private lateinit var repository: ShopRepository
 
   @Before

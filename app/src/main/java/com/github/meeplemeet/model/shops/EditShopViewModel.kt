@@ -10,7 +10,6 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shared.game.Game
 import com.github.meeplemeet.model.shared.location.Location
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow

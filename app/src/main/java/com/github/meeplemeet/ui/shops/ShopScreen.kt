@@ -105,19 +105,6 @@ fun ShopScreen(
   // Collect the current shop state from the ViewModel
   val shopState by viewModel.shop.collectAsStateWithLifecycle()
   val fetchedGames by viewModel.fetchedGames.collectAsStateWithLifecycle()
-
-
-  val context = LocalContext.current
-  val lifecycleOwner = LocalLifecycleOwner.current
-  DisposableEffect(lifecycleOwner, shopId) {
-    val observer = LifecycleEventObserver { _, event ->
-      if (event == Lifecycle.Event.ON_RESUME) {
-        viewModel.getShop(shopId, context)
-      }
-    }
-    lifecycleOwner.lifecycle.addObserver(observer)
-    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-  }
   val images by viewModel.photos.collectAsStateWithLifecycle()
 
   val context = LocalContext.current
@@ -178,7 +165,7 @@ fun ShopScreen(
                     Modifier.padding(innerPadding)
                         .padding(Dimensions.Padding.extraLarge)
                         .fillMaxSize(),
-                photoCollectionUrl = cachedImagePathsState.value)
+                photoCollectionUrl = cachedImagePathsState.value,
                 onGameClick = { gameItem -> popupGame = fetchedGames[gameItem.gameId] },
                 fetchedGames = fetchedGames,
                 onPageChanged = { pageIndex ->
