@@ -323,7 +323,7 @@ jobs:
           fi
 
       - name: Run instrumentation tests
-        timeout-minutes: 60
+        timeout-minutes: 45
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -333,7 +333,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 1080x2400
           disable-animations: true
-          script: ./gradlew connectedAndroidTest --no-parallel --build-cache -Pandroid.testInstrumentationRunnerArguments.failFast=true
+          script: ./gradlew connectedAndroidTest --no-parallel --build-cache
 
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
