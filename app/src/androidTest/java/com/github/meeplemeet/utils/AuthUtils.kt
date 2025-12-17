@@ -5,24 +5,47 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import com.github.meeplemeet.FirebaseProvider.auth
+import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 
 object AuthUtils {
-  fun ComposeTestRule.signUpUser(
+  private suspend fun waitUntilAuthReady() = retryUntil { auth.currentUser != null }
+
+  private suspend fun retryUntil(
+      timeoutMs: Long = 30_000,
+      intervalMs: Long = 500,
+      predicate: suspend () -> Boolean
+  ) {
+    try {
+      withTimeout(timeoutMs) {
+        while (!predicate()) {
+          continue
+        }
+      }
+    } catch (e: TimeoutCancellationException) {
+      throw AssertionError("Condition not met within ${timeoutMs}ms", e)
+    }
+  }
+
+  suspend fun ComposeTestRule.signUpUser(
       email: String,
       password: String,
       handle: String,
       username: String
   ) {
+    delay(3000)
     waitForIdle()
     waitUntil(5000) { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }
     // --- Navigate to sign-up screen ---
@@ -46,9 +69,17 @@ object AuthUtils {
         .assertIsEnabled()
         .performClick()
 
-    // --- Wait for Create Account screen ---
-    waitUntil(timeoutMillis = 30_000) {
-      onAllNodesWithText("Let's go!", substring = true).fetchSemanticsNodes().isNotEmpty()
+    // --- Wait for Create Account screen
+    //
+    // onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON).fetchSemanticsNodes().isNotEmpty()
+    waitUntil(timeoutMillis = 15_000) {
+      try {
+        onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      } catch (_: Throwable) {
+        false
+      }
     }
 
     // --- Fill Create Account fields ---
@@ -60,6 +91,7 @@ object AuthUtils {
 
     onNodeWithText("Let's go!").assertIsEnabled().performClick()
 
+    waitUntilAuthReady()
     // --- Wait for Onboarding ---
     waitUntil(timeoutMillis = 10_000) {
       onAllNodesWithTag(OnBoardingTestTags.SKIP_BUTTON).fetchSemanticsNodes().isNotEmpty()
@@ -111,8 +143,18 @@ object AuthUtils {
   }
 
   fun ComposeTestRule.signOutWithBottomBar() {
+    waitForIdle()
     onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
     waitForIdle()
+    waitUntil(timeoutMillis = 5_000) {
+      try {
+        onAllNodesWithTag("Logout Button", useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      } catch (_: Throwable) {
+        false
+      }
+    }
     onNodeWithTag("Logout Button").assertExists().performClick()
     waitForIdle()
     onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()

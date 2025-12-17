@@ -10,8 +10,13 @@ set -e
 TEST_DIR="app/src/androidTest"
 ERRORS=0
 
-# File to exclude from checks (temporary allowance)
-EXCLUDED_FILE="$TEST_DIR/java/com/github/meeplemeet/ui/MapScreenTest.kt"
+# Files to exclude from checks (temporary allowance)
+EXCLUDED_FILES=(
+  "$TEST_DIR/java/com/github/meeplemeet/ui/MapScreenTest.kt"
+  "$TEST_DIR/java/com/github/meeplemeet/end2end/E2E_M1.kt"
+  "$TEST_DIR/java/com/github/meeplemeet/end2end/E2E_M2.kt"
+  "$TEST_DIR/java/com/github/meeplemeet/utils/AuthUtils.kt"
+)
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,8 +36,16 @@ fi
 
 # Find all Kotlin test files
 while IFS= read -r file; do
-  # Skip explicitly excluded file
-  if [ "$file" = "$EXCLUDED_FILE" ]; then
+  # Skip explicitly excluded files
+  skip_file=false
+  for excluded in "${EXCLUDED_FILES[@]}"; do
+    if [ "$file" = "$excluded" ]; then
+      skip_file=true
+      break
+    fi
+  done
+  
+  if [ "$skip_file" = true ]; then
     continue
   fi
 

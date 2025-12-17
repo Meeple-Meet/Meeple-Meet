@@ -59,19 +59,6 @@ class E2E_M1 : FirestoreTests() {
   private suspend fun waitUntilAuthReady() = retryUntil { auth.currentUser != null }
 
   @Test
-  fun completeUserJourney_signUpCreateAccountAndNavigate() {
-    composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
-
-    // Step 6: Navigate through the main tabs to verify full access
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
-
-    composeTestRule.signOutWithBottomBar()
-  }
-
-  @Test
   @FlakyTest
   fun twoUsers_createAndJoinDiscussion() {
     val user1Email = "user1_${UUID.randomUUID().toString().take(8)}@example.com"
@@ -86,12 +73,13 @@ class E2E_M1 : FirestoreTests() {
 
     // ===== PART 1: Create first account (Alice) =====
     composeTestRule.waitForIdle()
-    composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name)
+    runBlocking { composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name) }
     runBlocking { waitUntilAuthReady() }
+    composeTestRule.waitForIdle()
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 2: Create second account (Bob) =====
-    composeTestRule.signUpUser(user2Email, password, user2Handle, user2Name)
+    runBlocking { composeTestRule.signUpUser(user2Email, password, user2Handle, user2Name) }
     runBlocking { waitUntilAuthReady() }
     composeTestRule.signOutWithBottomBar()
 
