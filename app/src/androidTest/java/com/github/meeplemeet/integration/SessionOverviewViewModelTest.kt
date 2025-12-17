@@ -227,7 +227,11 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     var foundSession: com.github.meeplemeet.model.sessions.Session? = null
     viewModel.getArchivedSessionByPhotoUrl(photoUrl) { foundSession = it }
 
-    delay(100) // Wait for callback to execute
+    // Wait for callback to execute
+    val start = System.currentTimeMillis()
+    while (foundSession == null && System.currentTimeMillis() - start < 5000) {
+        delay(100)
+    }
 
     assertNotNull(foundSession)
     assertEquals(photoUrl, foundSession?.photoUrl)
@@ -345,13 +349,18 @@ class SessionOverviewViewModelTest : FirestoreTests() {
     val context = InstrumentationRegistry.getInstrumentation().targetContext
     viewModel.archiveSession(context, discussion.uid)
 
-    delay(2000) // wait for archiving to complete
-
-    // Verify session is no longer in active sessions
-    val sessionAfter =
-        viewModel
+    // Wait for archiving to complete and flow to update
+    var sessionAfter: Map<String, com.github.meeplemeet.model.sessions.Session> = emptyMap()
+    val start = System.currentTimeMillis()
+    while (System.currentTimeMillis() - start < 5000) {
+        sessionAfter = viewModel
             .sessionMapFlow(account.uid, InstrumentationRegistry.getInstrumentation().targetContext)
             .first()
+        if (sessionAfter.isEmpty()) break
+        delay(200)
+    }
+
+    // Verify session is no longer in active sessions
     assertTrue(sessionAfter.isEmpty())
 
     // Verify session appears in archived sessions

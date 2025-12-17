@@ -376,6 +376,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
     // 3) Save Success
     checkpoint("Save Success") {
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+      
+      compose.waitUntil(timeoutMillis = 5000) { savedCalled }
       assertEquals(true, savedCalled)
 
       // Verify persistence in Firestore
