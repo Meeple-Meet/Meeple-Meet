@@ -606,13 +606,11 @@ fun ClosableToast(
     message: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    testTag: String = CommonComponentsTestTags.CLOSABLE_TOAST,
-    closeButtonTestTag: String = CommonComponentsTestTags.CLOSABLE_TOAST_CLOSE_BUTTON
 ) {
   Surface(
       modifier = modifier.fillMaxWidth(),
       color = AppColors.secondary,
-      shape = androidx.compose.foundation.shape.RoundedCornerShape(Dimensions.CornerRadius.medium),
+      shape = RoundedCornerShape(Dimensions.CornerRadius.medium),
       shadowElevation = Dimensions.Elevation.high) {
         Row(
             modifier =
@@ -626,7 +624,7 @@ fun ClosableToast(
                   text = message,
                   color = AppColors.textIcons,
                   style = MaterialTheme.typography.bodyMedium,
-                  modifier = Modifier.weight(1f).testTag(testTag))
+                  modifier = Modifier.weight(1f).testTag(CommonComponentsTestTags.CLOSABLE_TOAST))
               Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
               Icon(
                   imageVector = Icons.Filled.Close,
@@ -635,7 +633,7 @@ fun ClosableToast(
                   modifier =
                       Modifier.size(Dimensions.IconSize.extraLarge)
                           .clickable { onDismiss() }
-                          .testTag(closeButtonTestTag)
+                          .testTag(CommonComponentsTestTags.CLOSABLE_TOAST_CLOSE_BUTTON)
                           .padding(end = Dimensions.Padding.extraMedium))
             }
       }
