@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import kotlinx.serialization.Serializable
 
 /**
@@ -64,6 +66,12 @@ val darkColors =
 val highContrastColors = darkColorScheme()
 
 /**
+ * CompositionLocal to provide the current theme mode (Dark/Light) to the app. This allows
+ * components to check if the app is currently in dark mode, independent of the system setting.
+ */
+val LocalThemeIsDark = compositionLocalOf { false }
+
+/**
  * The theme entry point, the app should be wrapped in this composable.
  *
  * @param themeMode The theme mode to use, defaults to [ThemeMode.SYSTEM_DEFAULT]
@@ -85,6 +93,8 @@ fun AppTheme(themeMode: ThemeMode = ThemeMode.SYSTEM_DEFAULT, content: @Composab
         else -> lightColors
       }
 
-  MaterialTheme(
-      colorScheme = colors, typography = appTypography, shapes = appShapes, content = content)
+  CompositionLocalProvider(LocalThemeIsDark provides isDark) {
+    MaterialTheme(
+        colorScheme = colors, typography = appTypography, shapes = appShapes, content = content)
+  }
 }
