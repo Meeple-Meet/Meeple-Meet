@@ -18,10 +18,10 @@ class SignUpViewModel : AuthenticationViewModel() {
     // Prevent multiple simultaneous operations
     if (_uiState.value.isLoading) return
 
-    viewModelScope.launch {
-      // Set loading state and clear previous errors
-      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
+    // Set loading state and clear previous errors synchronously
+    _uiState.update { it.copy(isLoading = true, errorMsg = null) }
 
+    viewModelScope.launch {
       // Call repository to handle the actual registration
       repository.registerWithEmail(email, password).fold({ user ->
         // Success: Update UI with the new user

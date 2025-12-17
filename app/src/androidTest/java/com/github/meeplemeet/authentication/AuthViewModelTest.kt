@@ -46,7 +46,7 @@ class AuthViewModelTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    Dispatchers.setMain(Dispatchers.Unconfined)
+    // Dispatchers.setMain(Dispatchers.Unconfined) // Causing concurrency issues in instrumented tests
 
     signInViewModel = SignInViewModel()
     signUpViewModel = SignUpViewModel()
@@ -62,7 +62,7 @@ class AuthViewModelTest : FirestoreTests() {
 
   @After
   fun cleanup() {
-    Dispatchers.resetMain()
+    // Dispatchers.resetMain() 
     runBlocking {
       auth.signOut()
       clearTestData()
