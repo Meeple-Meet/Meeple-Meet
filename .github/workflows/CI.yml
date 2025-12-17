@@ -335,6 +335,15 @@ jobs:
           disable-animations: true
           script: ./gradlew connectedAndroidTest --no-parallel --build-cache
 
+      - name: Upload android test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-report-${{ matrix.run }}
+          path: |
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+
       - name: Upload android test coverage
         uses: actions/upload-artifact@v4
         with:
