@@ -576,27 +576,28 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun viewModel_canCreateSpaceRental() = runTest {
-    val rentalId =
-        rentalViewModel.createSpaceRental(
-            renterId = account1.uid,
-            spaceRenterId = "spaceRenterVM1",
-            spaceIndex = "0",
-            startDate = testStartDate,
-            endDate = testEndDate,
-            totalCost = 50.0,
-            notes = "Need projector")
+    rentalViewModel.createSpaceRental(
+        renterId = account1.uid,
+        spaceRenterId = "spaceRenterVM1",
+        spaceIndex = "0",
+        startDate = testStartDate,
+        endDate = testEndDate,
+        totalCost = 50.0,
+        notes = "Need projector")
 
     advanceUntilIdle()
+    Thread.sleep(500) // Wait for Firestore write
 
-    assertNotNull(rentalId)
-    assertTrue(rentalId.isNotEmpty())
+    val rentals = rentalRepository.getRentalsByUser(account1.uid)
 
-    val rental = rentalRepository.getRental(rentalId)
+    assertTrue(rentals.isNotEmpty())
+    val rental = rentals.first { it.resourceId == "spaceRenterVM1" }
+
     assertNotNull(rental)
-    assertEquals(account1.uid, rental?.renterId)
-    assertEquals(RentalType.SPACE, rental?.type)
-    assertEquals("spaceRenterVM1", rental?.resourceId)
-    assertEquals("0", rental?.resourceDetailId)
+    assertEquals(account1.uid, rental.renterId)
+    assertEquals(RentalType.SPACE, rental.type)
+    assertEquals("spaceRenterVM1", rental.resourceId)
+    assertEquals("0", rental.resourceDetailId)
   }
 
   @Test(expected = IllegalStateException::class)
@@ -611,6 +612,7 @@ class FirestoreRentalTest : FirestoreTests() {
         totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
 
     // Try to create overlapping rental - should throw
     rentalViewModel.createSpaceRental(
@@ -635,6 +637,7 @@ class FirestoreRentalTest : FirestoreTests() {
         totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
 
     rentalViewModel.loadUserRentals(account1.uid)
     advanceUntilIdle()
@@ -657,6 +660,7 @@ class FirestoreRentalTest : FirestoreTests() {
         totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
 
     rentalViewModel.loadActiveSpaceRentals(account1.uid)
     advanceUntilIdle()
@@ -667,66 +671,88 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun viewModel_cancelRental_updatesStatus() = runTest {
-    val rentalId =
-        rentalViewModel.createSpaceRental(
-            renterId = account1.uid,
-            spaceRenterId = "spaceRenterVM5",
-            spaceIndex = "0",
-            startDate = testStartDate,
-            endDate = testEndDate,
-            totalCost = 50.0)
+    rentalViewModel.createSpaceRental(
+        renterId = account1.uid,
+        spaceRenterId = "spaceRenterVM5",
+        spaceIndex = "0",
+        startDate = testStartDate,
+        endDate = testEndDate,
+        totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
 
-    rentalViewModel.cancelRental(rentalId)
+    // Get the created rental
+    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    assertTrue(rentals.isNotEmpty())
+    val rental = rentals.first()
+
+    rentalViewModel.cancelRental(rental.uid)
     advanceUntilIdle()
+    Thread.sleep(500)
 
-    val rental = rentalRepository.getRental(rentalId)
-    assertEquals(RentalStatus.CANCELLED, rental?.status)
+    val updated = rentalRepository.getRental(rental.uid)
+    assertEquals(RentalStatus.CANCELLED, updated?.status)
   }
 
   @Test
   fun viewModel_associateRentalWithSession_updatesRental() = runTest {
-    val rentalId =
-        rentalViewModel.createSpaceRental(
-            renterId = account1.uid,
-            spaceRenterId = "spaceRenterVM6",
-            spaceIndex = "0",
-            startDate = testStartDate,
-            endDate = testEndDate,
-            totalCost = 50.0)
+    rentalViewModel.createSpaceRental(
+        renterId = account1.uid,
+        spaceRenterId = "spaceRenterVM6",
+        spaceIndex = "0",
+        startDate = testStartDate,
+        endDate = testEndDate,
+        totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
+
+    // Get the created rental
+    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    assertTrue(rentals.isNotEmpty())
+    val rental = rentals.first()
 
     val sessionId = "session123"
-    rentalViewModel.associateRentalWithSession(rentalId, sessionId)
+    rentalViewModel.associateRentalWithSession(rental.uid, sessionId)
+    advanceUntilIdle()
+    Thread.sleep(500)
 
-    val rental = rentalRepository.getRental(rentalId)
-    assertEquals(sessionId, rental?.associatedSessionId)
+    val updated = rentalRepository.getRental(rental.uid)
+    assertEquals(sessionId, updated?.associatedSessionId)
   }
 
   @Test
   fun viewModel_dissociateRentalFromSession_removesAssociation() = runTest {
-    val rentalId =
-        rentalViewModel.createSpaceRental(
-            renterId = account1.uid,
-            spaceRenterId = "spaceRenterVM7",
-            spaceIndex = "0",
-            startDate = testStartDate,
-            endDate = testEndDate,
-            totalCost = 50.0)
+    rentalViewModel.createSpaceRental(
+        renterId = account1.uid,
+        spaceRenterId = "spaceRenterVM7",
+        spaceIndex = "0",
+        startDate = testStartDate,
+        endDate = testEndDate,
+        totalCost = 50.0)
 
     advanceUntilIdle()
+    Thread.sleep(500)
 
-    rentalViewModel.associateRentalWithSession(rentalId, "session123")
+    // Get the created rental
+    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    assertTrue(rentals.isNotEmpty())
+    val rental = rentals.first()
 
-    var rental = rentalRepository.getRental(rentalId)
-    assertEquals("session123", rental?.associatedSessionId)
+    rentalViewModel.associateRentalWithSession(rental.uid, "session123")
+    advanceUntilIdle()
+    Thread.sleep(500)
 
-    rentalViewModel.dissociateRentalFromSession(rentalId)
+    var updated = rentalRepository.getRental(rental.uid)
+    assertEquals("session123", updated?.associatedSessionId)
 
-    rental = rentalRepository.getRental(rentalId)
-    assertNull(rental?.associatedSessionId)
+    rentalViewModel.dissociateRentalFromSession(rental.uid)
+    advanceUntilIdle()
+    Thread.sleep(500)
+
+    updated = rentalRepository.getRental(rental.uid)
+    assertNull(updated?.associatedSessionId)
   }
 
   @Test

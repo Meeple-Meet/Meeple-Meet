@@ -91,7 +91,7 @@ fun SpaceRentalScreen(
     spaceIndex: Int,
     viewModel: RentalViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onSuccess: (String) -> Unit = {}
+    onSuccess: () -> Unit = {}
 ) {
   var startDate by remember { mutableStateOf<LocalDate?>(null) }
   var startTime by remember { mutableStateOf<LocalTime?>(null) }
@@ -183,16 +183,15 @@ fun SpaceRentalScreen(
                     scope.launch {
                       isLoading = true
                       try {
-                        val rentalId =
-                            viewModel.createSpaceRental(
-                                renterId = account.uid,
-                                spaceRenterId = spaceRenter.id,
-                                spaceIndex = spaceIndex.toString(),
-                                startDate = toTimestamp(startDate, startTime),
-                                endDate = toTimestamp(endDate, endTime),
-                                totalCost = totalCost,
-                                notes = notes)
-                        onSuccess(rentalId)
+                        viewModel.createSpaceRental(
+                            renterId = account.uid,
+                            spaceRenterId = spaceRenter.id,
+                            spaceIndex = spaceIndex.toString(),
+                            startDate = toTimestamp(startDate, startTime),
+                            endDate = toTimestamp(endDate, endTime),
+                            totalCost = totalCost,
+                            notes = notes)
+                        onSuccess()
                       } catch (e: Exception) {
                         errorMessage = e.message ?: "Failed to create rental"
                       } finally {

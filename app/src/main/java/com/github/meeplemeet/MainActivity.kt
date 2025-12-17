@@ -694,7 +694,7 @@ fun MeepleMeetApp(
                 space = rentalSpace!!,
                 spaceIndex = rentalSpaceIndex,
                 onBack = { navigationActions.goBack() },
-                onSuccess = { rentalId -> navigationActions.goBack() },
+                onSuccess = { navigationActions.goBack() },
             )
           } else {
             LoadingScreen()

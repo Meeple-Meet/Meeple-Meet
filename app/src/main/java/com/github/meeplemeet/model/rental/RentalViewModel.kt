@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for managing rentals.
@@ -45,10 +46,9 @@ class RentalViewModel(
    * @param endDate End date/time of the rental.
    * @param totalCost Total cost of the rental.
    * @param notes Optional notes (e.g. "Need projector").
-   * @return The unique ID of the created rental.
    * @throws IllegalStateException if the space is not available.
    */
-  suspend fun createSpaceRental(
+  fun createSpaceRental(
       renterId: String,
       spaceRenterId: String,
       spaceIndex: String,
@@ -56,29 +56,28 @@ class RentalViewModel(
       endDate: Timestamp,
       totalCost: Double,
       notes: String = ""
-  ): String {
+  ) {
     // Check availability
-    val isAvailable =
-        rentalRepository.isResourceAvailable(
-            resourceId = spaceRenterId,
-            resourceDetailId = spaceIndex,
-            startDate = startDate,
-            endDate = endDate)
+    val isAvailable = runBlocking {
+      rentalRepository.isResourceAvailable(
+          resourceId = spaceRenterId,
+          resourceDetailId = spaceIndex,
+          startDate = startDate,
+          endDate = endDate)
+    }
+    check(!isAvailable) { "This space is not available for the selected period" }
 
-      check(!isAvailable) { "This space is not available for the selected period" }
-
-    val rental =
-        rentalRepository.createRental(
-            renterId = renterId,
-            type = RentalType.SPACE,
-            resourceId = spaceRenterId,
-            resourceDetailId = spaceIndex,
-            startDate = startDate,
-            endDate = endDate,
-            totalCost = totalCost,
-            notes = notes)
-
-    return rental.uid
+    viewModelScope.launch {
+      rentalRepository.createRental(
+          renterId = renterId,
+          type = RentalType.SPACE,
+          resourceId = spaceRenterId,
+          resourceDetailId = spaceIndex,
+          startDate = startDate,
+          endDate = endDate,
+          totalCost = totalCost,
+          notes = notes)
+    }
   }
 
   /**
@@ -183,8 +182,8 @@ class RentalViewModel(
    * @param rentalId ID of the rental.
    * @param sessionId ID of the session to associate.
    */
-  suspend fun associateRentalWithSession(rentalId: String, sessionId: String) {
-    rentalRepository.associateWithSession(rentalId, sessionId)
+  fun associateRentalWithSession(rentalId: String, sessionId: String) {
+    viewModelScope.launch { rentalRepository.associateWithSession(rentalId, sessionId) }
   }
 
   /**
@@ -192,7 +191,7 @@ class RentalViewModel(
    *
    * @param rentalId ID of the rental.
    */
-  suspend fun dissociateRentalFromSession(rentalId: String) {
-    rentalRepository.dissociateFromSession(rentalId)
+  fun dissociateRentalFromSession(rentalId: String) {
+    viewModelScope.launch { rentalRepository.dissociateFromSession(rentalId) }
   }
 }
