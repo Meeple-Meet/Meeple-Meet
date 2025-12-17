@@ -18,6 +18,7 @@ import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
+import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
@@ -64,12 +65,29 @@ class E2E_M1 : FirestoreTests() {
     runBlocking { composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername) }
 
     // Step 6: Navigate through the main tabs to verify full access
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
-
-    composeTestRule.signOutWithBottomBar()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.signOutWithBottomBar()
+      true
+    })
   }
 
   @Test

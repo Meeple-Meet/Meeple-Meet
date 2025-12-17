@@ -37,6 +37,7 @@ import com.github.meeplemeet.ui.posts.CreatePostTestTags
 import com.github.meeplemeet.ui.posts.FeedsOverviewTestTags
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
 import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
+import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
@@ -262,10 +263,13 @@ class E2E_M2 : FirestoreTests() {
     }
 
     // Start the discussion
-    composeTestRule
-        .onNodeWithText(discussionTitle, useUnmergedTree = true)
-        .assertIsDisplayed()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithText(discussionTitle, useUnmergedTree = true)
+          .assertIsDisplayed()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     composeTestRule
@@ -1061,9 +1065,18 @@ class E2E_M2 : FirestoreTests() {
     }
 
     // Verify all reactions are displayed in THE POST
-    composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertIsDisplayed()
-    composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertIsDisplayed()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertIsDisplayed()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertIsDisplayed()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertIsDisplayed()
+      true
+    })
   }
 
   /** Helper function to create a user through repositories */

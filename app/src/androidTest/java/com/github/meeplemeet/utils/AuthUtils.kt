@@ -83,13 +83,22 @@ object AuthUtils {
     }
 
     // --- Fill Create Account fields ---
-    onNodeWithText("Handle", substring = true).assertExists().performTextInput(handle)
+    waitUntilWithCatch({
+      onNodeWithText("Handle", substring = true).assertExists().performTextInput(handle)
+      true
+    })
 
-    onNodeWithText("Username", substring = true).assertExists().performTextInput(username)
+    waitUntilWithCatch({
+      onNodeWithText("Username", substring = true).assertExists().performTextInput(username)
+      true
+    })
 
     closeKeyboardSafely()
 
-    onNodeWithText("Let's go!").assertIsEnabled().performClick()
+    waitUntilWithCatch({
+      onNodeWithText("Let's go!").assertIsEnabled().performClick()
+      true
+    })
 
     waitUntilAuthReady()
     // --- Wait for Onboarding ---
@@ -158,5 +167,15 @@ object AuthUtils {
     onNodeWithTag("Logout Button").assertExists().performClick()
     waitForIdle()
     onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()
+  }
+
+  fun ComposeTestRule.waitUntilWithCatch(predicate: () -> Boolean, timeoutMs: Long = 5000) {
+    waitUntil(timeoutMs) {
+      try {
+        predicate()
+      } catch (_: Throwable) {
+        false
+      }
+    }
   }
 }
