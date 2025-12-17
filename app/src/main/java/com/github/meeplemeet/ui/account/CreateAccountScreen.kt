@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -30,12 +31,14 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
+import com.github.meeplemeet.ui.components.ClosableToast
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -45,7 +48,7 @@ import com.github.meeplemeet.utils.KeyboardUtils
  * Finds the Activity from a Context by traversing the context hierarchy. Returns null if no
  * Activity is found.
  */
-private fun Context.findActivity(): Activity? {
+fun Context.findActivity(): Activity? {
   var context = this
   while (context is ContextWrapper) {
     if (context is Activity) return context
@@ -62,6 +65,7 @@ object CreateAccountTestTags {
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
   const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
   const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
+  const val HANDLE_INFO_ICON = "CreateAccountHandleInfoIcon"
 }
 
 object CreateAccountScreenUi {
@@ -70,8 +74,6 @@ object CreateAccountScreenUi {
   val extraLargePadding = Dimensions.Padding.extraLarge
   val smallPadding = Dimensions.Padding.small
   val mediumPadding = Dimensions.Padding.medium
-  val largePadding = Dimensions.Padding.large
-  val tinyPadding = Dimensions.Padding.tiny
   val extraLargeSpacing = Dimensions.Spacing.extraLarge
   val mediumSpacing = Dimensions.Spacing.medium
   val xxLargeSpacing = Dimensions.Spacing.xxLarge
@@ -107,6 +109,7 @@ fun CreateAccountScreen(
   var isShopChecked by remember { mutableStateOf(false) }
   var isSpaceRented by remember { mutableStateOf(false) }
   var isInputFocused by remember { mutableStateOf(false) }
+  var toast by remember { mutableStateOf<ToastData?>(null) }
   val focusManager = LocalFocusManager.current
   val scrollState = rememberScrollState()
   val activity = LocalContext.current.findActivity()
@@ -196,161 +199,192 @@ fun CreateAccountScreen(
               }
         }
       }) { padding ->
-        Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .imePadding()
-                    .verticalScroll(scrollState)
-                    .background(AppColors.primary)
-                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
-                    .padding(CreateAccountScreenUi.xxLargePadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top) {
+        Box(modifier = Modifier.fillMaxSize()) {
+          Column(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .imePadding()
+                      .verticalScroll(scrollState)
+                      .background(AppColors.primary)
+                      .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                      }
+                      .padding(CreateAccountScreenUi.xxLargePadding),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Top) {
 
-              // App logo displayed on top of text.
-              val isDarkTheme = isSystemInDarkTheme()
-              Box(
-                  modifier =
-                      Modifier.size(
-                          Dimensions.IconSize.massive
-                              .times(3)
-                              .plus(Dimensions.Padding.extraLarge))) {
-                    Image(
-                        painter =
-                            painterResource(
-                                id =
-                                    if (isDarkTheme) R.drawable.logo_dark
-                                    else R.drawable.logo_clear),
-                        contentDescription = "Meeple Meet Logo",
-                        modifier = Modifier.fillMaxSize())
-                  }
-              /** Title text shown below the image placeholder. */
-              Text(
-                  "You're almost there!",
-                  style =
-                      TextStyle(
-                          fontSize = Dimensions.TextSize.extraLarge, color = AppColors.neutral),
-                  modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
-
-              /** Input field for entering the user's unique handle. */
-              FocusableInputField(
-                  value = handle,
-                  onValueChange = {
-                    handle = it
-                    if (it.isNotBlank()) {
-                      showErrors = true
-                      viewModel.checkHandleAvailable(it)
-                    } else {
-                      showErrors = false
+                // App logo displayed on top of text.
+                val isDarkTheme = isSystemInDarkTheme()
+                Box(
+                    modifier =
+                        Modifier.size(
+                            Dimensions.IconSize.massive
+                                .times(3)
+                                .plus(Dimensions.Padding.extraLarge))) {
+                      Image(
+                          painter =
+                              painterResource(
+                                  id =
+                                      if (isDarkTheme) R.drawable.logo_dark
+                                      else R.drawable.logo_clear),
+                          contentDescription = "Meeple Meet Logo",
+                          modifier = Modifier.fillMaxSize())
                     }
-                  },
-                  label = { Text("Handle") },
-                  singleLine = true,
-                  textStyle = TextStyle(color = AppColors.textIcons),
-                  colors =
-                      TextFieldDefaults.colors(
-                          focusedIndicatorColor = AppColors.textIcons,
-                          unfocusedIndicatorColor = AppColors.textIconsFade,
-                          cursorColor = AppColors.textIcons,
-                          focusedLabelColor = AppColors.textIcons,
-                          unfocusedContainerColor = Color.Transparent,
-                          focusedContainerColor = Color.Transparent,
-                          errorContainerColor = Color.Transparent,
-                          disabledContainerColor = Color.Transparent,
-                          unfocusedLabelColor = AppColors.textIconsFade,
-                          focusedTextColor = AppColors.textIcons,
-                          unfocusedTextColor = AppColors.textIconsFade),
-                  isError = showErrors && errorMessage.isNotBlank(),
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .onFocusChanged { isInputFocused = it.isFocused }
-                          .testTag(CreateAccountTestTags.HANDLE_FIELD))
-
-              /** Error message displayed if handle validation fails. */
-              if (showErrors && errorMessage.isNotBlank()) {
+                /** Title text shown below the image placeholder. */
                 Text(
-                    text = errorMessage,
-                    color = AppColors.textIconsFade,
-                    style = MaterialTheme.typography.bodySmall,
+                    "You're almost there!",
+                    style =
+                        TextStyle(
+                            fontSize = Dimensions.TextSize.extraLarge, color = AppColors.neutral),
+                    modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
+
+                /** Input field for entering the user's unique handle. */
+                Box(modifier = Modifier.fillMaxWidth()) {
+                  FocusableInputField(
+                      value = handle,
+                      onValueChange = {
+                        handle = it
+                        if (it.isNotBlank()) {
+                          showErrors = true
+                          viewModel.checkHandleAvailable(it)
+                        } else {
+                          showErrors = false
+                        }
+                      },
+                      label = { Text("Handle") },
+                      singleLine = true,
+                      trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Handle information",
+                            modifier =
+                                Modifier.clickable {
+                                      toast =
+                                          if (toast == null)
+                                              ToastData(
+                                                  "A unique name others use to find and recognize you.")
+                                          else null
+                                    }
+                                    .testTag(CreateAccountTestTags.HANDLE_INFO_ICON))
+                      },
+                      textStyle = TextStyle(color = AppColors.textIcons),
+                      colors =
+                          TextFieldDefaults.colors(
+                              focusedIndicatorColor = AppColors.textIcons,
+                              unfocusedIndicatorColor = AppColors.textIconsFade,
+                              cursorColor = AppColors.textIcons,
+                              focusedLabelColor = AppColors.textIcons,
+                              unfocusedContainerColor = Color.Transparent,
+                              focusedContainerColor = Color.Transparent,
+                              errorContainerColor = Color.Transparent,
+                              disabledContainerColor = Color.Transparent,
+                              unfocusedLabelColor = AppColors.textIconsFade,
+                              focusedTextColor = AppColors.textIcons,
+                              unfocusedTextColor = AppColors.textIconsFade),
+                      isError = showErrors && errorMessage.isNotBlank(),
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .onFocusChanged { isInputFocused = it.isFocused }
+                              .testTag(CreateAccountTestTags.HANDLE_FIELD))
+
+                  if (toast != null) {
+                    ClosableToast(
+                        message = toast?.message ?: "",
+                        onDismiss = { toast = null },
+                        modifier =
+                            Modifier.align(Alignment.TopEnd)
+                                .zIndex(Dimensions.ZIndex.foregroundMax)
+                                .offset(y = -Dimensions.Spacing.xxxxLarge))
+                  }
+                }
+
+                /** Error message displayed if handle validation fails. */
+                if (showErrors && errorMessage.isNotBlank()) {
+                  Text(
+                      text = errorMessage,
+                      color = AppColors.textIconsFade,
+                      style = MaterialTheme.typography.bodySmall,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(
+                                  start = CreateAccountScreenUi.extraLargePadding,
+                                  top = CreateAccountScreenUi.smallPadding)
+                              .testTag(CreateAccountTestTags.HANDLE_ERROR))
+                }
+
+                Spacer(modifier = Modifier.height(CreateAccountScreenUi.extraLargeSpacing))
+
+                /** Input field for entering the user's display username. */
+                FocusableInputField(
+                    value = username,
+                    onValueChange = {
+                      username = it
+                      usernameError = validateUsername(username)
+                    },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedIndicatorColor = AppColors.textIcons,
+                            unfocusedIndicatorColor = AppColors.textIconsFade,
+                            cursorColor = AppColors.textIcons,
+                            focusedLabelColor = AppColors.textIcons,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            errorContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            unfocusedLabelColor = AppColors.textIconsFade,
+                            focusedTextColor = AppColors.textIcons,
+                            unfocusedTextColor = AppColors.textIconsFade),
+                    isError = usernameError != null,
+                    textStyle = TextStyle(color = AppColors.textIcons),
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(
-                                start = CreateAccountScreenUi.extraLargePadding,
-                                top = CreateAccountScreenUi.smallPadding)
-                            .testTag(CreateAccountTestTags.HANDLE_ERROR))
-              }
+                            .onFocusChanged { isInputFocused = it.isFocused }
+                            .testTag(CreateAccountTestTags.USERNAME_FIELD))
 
-              Spacer(modifier = Modifier.height(CreateAccountScreenUi.extraLargeSpacing))
+                /** Error message displayed if username validation fails. */
+                if (usernameError != null) {
+                  Text(
+                      text = usernameError!!,
+                      color = AppColors.textIconsFade,
+                      style = MaterialTheme.typography.bodySmall,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(
+                                  start = CreateAccountScreenUi.extraLargePadding,
+                                  top = CreateAccountScreenUi.smallPadding)
+                              .testTag(CreateAccountTestTags.USERNAME_ERROR))
+                }
 
-              /** Input field for entering the user's display username. */
-              FocusableInputField(
-                  value = username,
-                  onValueChange = {
-                    username = it
-                    usernameError = validateUsername(username)
-                  },
-                  label = { Text("Username") },
-                  singleLine = true,
-                  colors =
-                      TextFieldDefaults.colors(
-                          focusedIndicatorColor = AppColors.textIcons,
-                          unfocusedIndicatorColor = AppColors.textIconsFade,
-                          cursorColor = AppColors.textIcons,
-                          focusedLabelColor = AppColors.textIcons,
-                          unfocusedContainerColor = Color.Transparent,
-                          focusedContainerColor = Color.Transparent,
-                          errorContainerColor = Color.Transparent,
-                          disabledContainerColor = Color.Transparent,
-                          unfocusedLabelColor = AppColors.textIconsFade,
-                          focusedTextColor = AppColors.textIcons,
-                          unfocusedTextColor = AppColors.textIconsFade),
-                  isError = usernameError != null,
-                  textStyle = TextStyle(color = AppColors.textIcons),
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .onFocusChanged { isInputFocused = it.isFocused }
-                          .testTag(CreateAccountTestTags.USERNAME_FIELD))
+                // Spacing between input fields and text
+                Spacer(modifier = Modifier.height(CreateAccountScreenUi.xxLargeSpacing))
 
-              /** Error message displayed if username validation fails. */
-              if (usernameError != null) {
                 Text(
-                    text = usernameError!!,
-                    color = AppColors.textIconsFade,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "I also want to:",
+                    color = AppColors.textIcons,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier =
                         Modifier.fillMaxWidth()
-                            .padding(
-                                start = CreateAccountScreenUi.extraLargePadding,
-                                top = CreateAccountScreenUi.smallPadding)
-                            .testTag(CreateAccountTestTags.USERNAME_ERROR))
+                            .padding(bottom = CreateAccountScreenUi.mediumPadding))
+
+                RoleCheckBox(
+                    online = true,
+                    isChecked = isShopChecked,
+                    onCheckedChange = { checked: Boolean -> isShopChecked = checked },
+                    label = "Sell items",
+                    description = "List your shop and the games it offers.",
+                    testTag = CreateAccountTestTags.CHECKBOX_OWNER)
+
+                RoleCheckBox(
+                    online = true,
+                    isChecked = isSpaceRented,
+                    onCheckedChange = { checked: Boolean -> isSpaceRented = checked },
+                    label = "Rent out spaces",
+                    description = "Offer your play spaces for other players to book.",
+                    testTag = CreateAccountTestTags.CHECKBOX_RENTER)
               }
-
-              // Spacing between input fields and text
-              Spacer(modifier = Modifier.height(CreateAccountScreenUi.xxLargeSpacing))
-
-              Text(
-                  text = "I also want to:",
-                  color = AppColors.textIcons,
-                  style = MaterialTheme.typography.bodyMedium,
-                  modifier =
-                      Modifier.fillMaxWidth().padding(bottom = CreateAccountScreenUi.mediumPadding))
-
-              RoleCheckBox(
-                  online = true,
-                  isChecked = isShopChecked,
-                  onCheckedChange = { checked: Boolean -> isShopChecked = checked },
-                  label = "Sell items",
-                  description = "List your shop and the games it offers.",
-                  testTag = CreateAccountTestTags.CHECKBOX_OWNER)
-
-              RoleCheckBox(
-                  online = true,
-                  isChecked = isSpaceRented,
-                  onCheckedChange = { checked: Boolean -> isSpaceRented = checked },
-                  label = "Rent out spaces",
-                  description = "Offer your play spaces for other players to book.",
-                  testTag = CreateAccountTestTags.CHECKBOX_RENTER)
-            }
+        }
       }
 }
 
