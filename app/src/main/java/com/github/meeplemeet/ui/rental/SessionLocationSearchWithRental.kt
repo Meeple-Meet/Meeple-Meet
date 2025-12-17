@@ -65,6 +65,8 @@ fun SessionLocationSearchWithRental(
         if (!isStillCompatible) {
           // Clear the rental association
           onRentalSelected(null, Location())
+          // Clear the rental location
+          sessionViewModel.clearLocationSearch()
           scope.launch {
             snackbarHostState.showSnackbar(
                 "Session time moved outside rental period. Rental unlinked.")

@@ -919,9 +919,14 @@ fun SessionLocationSearchButton(
 
   // Update label when ViewModel's selected location changes
   LaunchedEffect(locationUi.selectedLocation) {
-    locationUi.selectedLocation?.let { location ->
-      if (location.name.isNotBlank()) {
-        selectedLocationLabel = location.name
+    if (locationUi.selectedLocation == null) {
+      // Location cleared => reset to default
+      selectedLocationLabel = TEXT_SELECT_LOCATION
+    } else {
+      locationUi.selectedLocation?.let { location ->
+        if (location.name.isNotBlank()) {
+          selectedLocationLabel = location.name
+        }
       }
     }
   }
