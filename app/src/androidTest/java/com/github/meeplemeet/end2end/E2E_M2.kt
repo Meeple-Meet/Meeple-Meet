@@ -666,9 +666,13 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil {
-      composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).isDisplayed()
+      try {
+        composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
+        true
+      } catch (_: Throwable) {
+        false
+      }
     }
-    composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
 
     // Wait for the Game Stock dialog to appear
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
@@ -771,14 +775,15 @@ class E2E_M2 : FirestoreTests() {
     }
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitUntil {
-      composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).isDisplayed()
+      try {
+        composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
+        true
+      } catch (_: Throwable) {
+        false
+      }
     }
 
     // Add Ticket to Ride stock
-    composeTestRule
-        .onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON)
-        .assertExists()
-        .performClick()
     composeTestRule.waitForIdle()
     composeTestRule.waitUntil(timeoutMillis = 5_000) {
       try {

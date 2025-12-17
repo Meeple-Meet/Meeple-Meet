@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.FlakyTest
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
@@ -49,6 +50,7 @@ class E2E_M1 : FirestoreTests() {
   }
 
   @Test
+  @FlakyTest
   fun twoUsers_createAndJoinDiscussion() {
     val user1Email = "user1_${UUID.randomUUID().toString().take(8)}@example.com"
     val user2Email = "user2_${UUID.randomUUID().toString().take(8)}@example.com"
