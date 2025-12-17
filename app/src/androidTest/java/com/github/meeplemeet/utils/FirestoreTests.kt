@@ -12,6 +12,7 @@ import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.map.previews.MarkerPreviewRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.rental.RentalRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.LocationRepository
@@ -48,6 +49,7 @@ open class FirestoreTests {
   lateinit var shopRepository: ShopRepository
   lateinit var spaceRenterRepository: SpaceRenterRepository
   lateinit var imageRepository: ImageRepository
+  lateinit var rentalsRepository: RentalRepository
 
   companion object {
     var firestoreEmulatorLaunched = false
@@ -161,6 +163,7 @@ open class FirestoreTests {
     shopRepository = RepositoryProvider.shops
     spaceRenterRepository = RepositoryProvider.spaceRenters
     imageRepository = RepositoryProvider.images
+    rentalsRepository = RepositoryProvider.rentals
 
     runBlocking {
       val db = FirebaseProvider.db

@@ -1,7 +1,6 @@
 package com.github.meeplemeet.integration
 
 import com.github.meeplemeet.model.account.Account
-import com.github.meeplemeet.model.rental.RentalRepository
 import com.github.meeplemeet.model.rental.RentalStatus
 import com.github.meeplemeet.model.rental.RentalType
 import com.github.meeplemeet.model.rental.RentalViewModel
@@ -32,8 +31,6 @@ class FirestoreRentalTest : FirestoreTests() {
   private lateinit var account3: Account
   private lateinit var testStartDate: Timestamp
   private lateinit var testEndDate: Timestamp
-
-  private val rentalRepository = RentalRepository()
   private lateinit var rentalViewModel: RentalViewModel
 
   @Before
@@ -70,8 +67,8 @@ class FirestoreRentalTest : FirestoreTests() {
   }
 
   private suspend fun cleanupAllRentals() {
-    val snapshot = rentalRepository.collection.get().await()
-    val batch = rentalRepository.db.batch()
+    val snapshot = rentalsRepository.collection.get().await()
+    val batch = rentalsRepository.db.batch()
     snapshot.documents.forEach { batch.delete(it.reference) }
     batch.commit().await()
   }
@@ -83,7 +80,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun canCreateSpaceRental() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceRenter123",
@@ -109,7 +106,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun canGetRentalById() = runBlocking {
     val created =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceRenter123",
@@ -118,7 +115,7 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    val fetched = rentalRepository.getRental(created.uid)
+    val fetched = rentalsRepository.getRental(created.uid)
 
     assertNotNull(fetched)
     assertEquals(created.uid, fetched?.uid)
@@ -128,14 +125,14 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun getRentalReturnsNullForNonExistentId() = runBlocking {
-    val fetched = rentalRepository.getRental("nonexistent-rental-id")
+    val fetched = rentalsRepository.getRental("nonexistent-rental-id")
 
     assertNull(fetched)
   }
 
   @Test
   fun canGetRentalsByUser() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceRenterA",
@@ -144,7 +141,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = testEndDate,
         totalCost = 50.0)
 
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceRenterB",
@@ -153,7 +150,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = testEndDate,
         totalCost = 75.0)
 
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account2.uid,
         type = RentalType.SPACE,
         resourceId = "spaceRenterC",
@@ -162,7 +159,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = testEndDate,
         totalCost = 100.0)
 
-    val account1Rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val account1Rentals = rentalsRepository.getRentalsByUser(account1.uid)
 
     assertEquals(2, account1Rentals.size)
     assertTrue(account1Rentals.all { it.renterId == account1.uid })
@@ -173,7 +170,7 @@ class FirestoreRentalTest : FirestoreTests() {
     val earlier = Timestamp(testStartDate.seconds - 3600, 0)
     val later = Timestamp(testStartDate.seconds + 3600, 0)
 
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceX",
@@ -182,7 +179,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = testEndDate,
         totalCost = 50.0)
 
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceY",
@@ -191,7 +188,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = Timestamp(later.seconds + 3600, 0),
         totalCost = 60.0)
 
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceZ",
@@ -200,7 +197,7 @@ class FirestoreRentalTest : FirestoreTests() {
         endDate = Timestamp(earlier.seconds + 3600, 0),
         totalCost = 40.0)
 
-    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid)
 
     assertEquals(3, rentals.size)
     assertEquals(later, rentals[0].startDate)
@@ -211,7 +208,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun getRentalsByUserExcludesCompletedByDefault() = runBlocking {
     val rental1 =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -221,7 +218,7 @@ class FirestoreRentalTest : FirestoreTests() {
             totalCost = 50.0)
 
     val rental2 =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space2",
@@ -230,9 +227,9 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 60.0)
 
-    rentalRepository.updateRentalStatus(rental2.uid, RentalStatus.COMPLETED)
+    rentalsRepository.updateRentalStatus(rental2.uid, RentalStatus.COMPLETED)
 
-    val rentals = rentalRepository.getRentalsByUser(account1.uid, includeCompleted = false)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid, includeCompleted = false)
 
     assertEquals(1, rentals.size)
     assertEquals(rental1.uid, rentals[0].uid)
@@ -240,7 +237,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun getRentalsByUserIncludesCompletedWhenRequested() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "space1",
@@ -250,7 +247,7 @@ class FirestoreRentalTest : FirestoreTests() {
         totalCost = 50.0)
 
     val rental2 =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space2",
@@ -259,9 +256,9 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 60.0)
 
-    rentalRepository.updateRentalStatus(rental2.uid, RentalStatus.COMPLETED)
+    rentalsRepository.updateRentalStatus(rental2.uid, RentalStatus.COMPLETED)
 
-    val rentals = rentalRepository.getRentalsByUser(account1.uid, includeCompleted = true)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid, includeCompleted = true)
 
     assertEquals(2, rentals.size)
   }
@@ -274,7 +271,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
     // Active rental (CONFIRMED, end date in future)
     val activeRental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceActive",
@@ -284,7 +281,7 @@ class FirestoreRentalTest : FirestoreTests() {
             totalCost = 50.0)
 
     // Expired rental (end date in past)
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceExpired",
@@ -295,7 +292,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
     // Cancelled rental
     val cancelledRental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceCancelled",
@@ -303,9 +300,9 @@ class FirestoreRentalTest : FirestoreTests() {
             startDate = now,
             endDate = future,
             totalCost = 70.0)
-    rentalRepository.updateRentalStatus(cancelledRental.uid, RentalStatus.CANCELLED)
+    rentalsRepository.updateRentalStatus(cancelledRental.uid, RentalStatus.CANCELLED)
 
-    val activeRentals = rentalRepository.getActiveRentalsByType(account1.uid, RentalType.SPACE)
+    val activeRentals = rentalsRepository.getActiveRentalsByType(account1.uid, RentalType.SPACE)
 
     assertEquals(1, activeRentals.size)
     assertEquals(activeRental.uid, activeRentals[0].uid)
@@ -315,7 +312,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun canUpdateRentalStatus() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -326,16 +323,16 @@ class FirestoreRentalTest : FirestoreTests() {
 
     assertEquals(RentalStatus.CONFIRMED, rental.status)
 
-    rentalRepository.updateRentalStatus(rental.uid, RentalStatus.COMPLETED)
+    rentalsRepository.updateRentalStatus(rental.uid, RentalStatus.COMPLETED)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(RentalStatus.COMPLETED, updated?.status)
   }
 
   @Test
   fun canAssociateRentalWithSession() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -347,16 +344,16 @@ class FirestoreRentalTest : FirestoreTests() {
     assertNull(rental.associatedSessionId)
 
     val sessionId = "session123"
-    rentalRepository.associateWithSession(rental.uid, sessionId)
+    rentalsRepository.associateWithSession(rental.uid, sessionId)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(sessionId, updated?.associatedSessionId)
   }
 
   @Test
   fun canDissociateRentalFromSession() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -365,21 +362,21 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    rentalRepository.associateWithSession(rental.uid, "session123")
+    rentalsRepository.associateWithSession(rental.uid, "session123")
 
-    var updated = rentalRepository.getRental(rental.uid)
+    var updated = rentalsRepository.getRental(rental.uid)
     assertEquals("session123", updated?.associatedSessionId)
 
-    rentalRepository.dissociateFromSession(rental.uid)
+    rentalsRepository.dissociateFromSession(rental.uid)
 
-    updated = rentalRepository.getRental(rental.uid)
+    updated = rentalsRepository.getRental(rental.uid)
     assertNull(updated?.associatedSessionId)
   }
 
   @Test
   fun canCancelRental() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -388,16 +385,16 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    rentalRepository.cancelRental(rental.uid)
+    rentalsRepository.cancelRental(rental.uid)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(RentalStatus.CANCELLED, updated?.status)
   }
 
   @Test
   fun canCompleteRental() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -406,16 +403,16 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    rentalRepository.completeRental(rental.uid)
+    rentalsRepository.completeRental(rental.uid)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(RentalStatus.COMPLETED, updated?.status)
   }
 
   @Test
   fun canDeleteRental() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "space1",
@@ -424,17 +421,17 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    assertNotNull(rentalRepository.getRental(rental.uid))
+    assertNotNull(rentalsRepository.getRental(rental.uid))
 
-    rentalRepository.deleteRental(rental.uid)
+    rentalsRepository.deleteRental(rental.uid)
 
-    assertNull(rentalRepository.getRental(rental.uid))
+    assertNull(rentalsRepository.getRental(rental.uid))
   }
 
   @Test
   fun isResourceAvailable_returnsTrue_whenNoConflicts() = runBlocking {
     val available =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "uniqueSpace1",
             resourceDetailId = "0",
             startDate = testStartDate,
@@ -445,7 +442,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun isResourceAvailable_returnsFalse_whenOverlappingRental() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceOverlap",
@@ -455,7 +452,7 @@ class FirestoreRentalTest : FirestoreTests() {
         totalCost = 50.0)
 
     val available =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spaceOverlap",
             resourceDetailId = "0",
             startDate = testStartDate,
@@ -466,7 +463,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun isResourceAvailable_returnsFalse_whenPartialOverlap() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spacePartial",
@@ -480,7 +477,7 @@ class FirestoreRentalTest : FirestoreTests() {
     val overlapEnd = Timestamp(testEndDate.seconds + 1800, 0)
 
     val available =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spacePartial",
             resourceDetailId = "0",
             startDate = overlapStart,
@@ -491,7 +488,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun isResourceAvailable_returnsTrue_whenNonOverlappingRental() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceNonOverlap",
@@ -505,7 +502,7 @@ class FirestoreRentalTest : FirestoreTests() {
     val laterEnd = Timestamp(testEndDate.seconds + 5400, 0)
 
     val available =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spaceNonOverlap",
             resourceDetailId = "0",
             startDate = laterStart,
@@ -517,7 +514,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun isResourceAvailable_ignoresCancelledRentals() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceCancelledCheck",
@@ -526,10 +523,10 @@ class FirestoreRentalTest : FirestoreTests() {
             endDate = testEndDate,
             totalCost = 50.0)
 
-    rentalRepository.updateRentalStatus(rental.uid, RentalStatus.CANCELLED)
+    rentalsRepository.updateRentalStatus(rental.uid, RentalStatus.CANCELLED)
 
     val available =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spaceCancelledCheck",
             resourceDetailId = "0",
             startDate = testStartDate,
@@ -540,7 +537,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
   @Test
   fun isResourceAvailable_returnsTrueForDifferentResources() = runBlocking {
-    rentalRepository.createRental(
+    rentalsRepository.createRental(
         renterId = account1.uid,
         type = RentalType.SPACE,
         resourceId = "spaceDifferent",
@@ -551,7 +548,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
     // Different resourceDetailId
     val available1 =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spaceDifferent",
             resourceDetailId = "1",
             startDate = testStartDate,
@@ -561,7 +558,7 @@ class FirestoreRentalTest : FirestoreTests() {
 
     // Different resourceId
     val available2 =
-        rentalRepository.isResourceAvailable(
+        rentalsRepository.isResourceAvailable(
             resourceId = "spaceOther",
             resourceDetailId = "0",
             startDate = testStartDate,
@@ -588,7 +585,7 @@ class FirestoreRentalTest : FirestoreTests() {
     advanceUntilIdle()
     Thread.sleep(500) // Wait for Firestore write
 
-    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid)
 
     assertTrue(rentals.isNotEmpty())
     val rental = rentals.first { it.resourceId == "spaceRenterVM1" }
@@ -683,7 +680,7 @@ class FirestoreRentalTest : FirestoreTests() {
     Thread.sleep(500)
 
     // Get the created rental
-    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid)
     assertTrue(rentals.isNotEmpty())
     val rental = rentals.first()
 
@@ -691,7 +688,7 @@ class FirestoreRentalTest : FirestoreTests() {
     advanceUntilIdle()
     Thread.sleep(500)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(RentalStatus.CANCELLED, updated?.status)
   }
 
@@ -709,7 +706,7 @@ class FirestoreRentalTest : FirestoreTests() {
     Thread.sleep(500)
 
     // Get the created rental
-    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid)
     assertTrue(rentals.isNotEmpty())
     val rental = rentals.first()
 
@@ -718,7 +715,7 @@ class FirestoreRentalTest : FirestoreTests() {
     advanceUntilIdle()
     Thread.sleep(500)
 
-    val updated = rentalRepository.getRental(rental.uid)
+    val updated = rentalsRepository.getRental(rental.uid)
     assertEquals(sessionId, updated?.associatedSessionId)
   }
 
@@ -736,7 +733,7 @@ class FirestoreRentalTest : FirestoreTests() {
     Thread.sleep(500)
 
     // Get the created rental
-    val rentals = rentalRepository.getRentalsByUser(account1.uid)
+    val rentals = rentalsRepository.getRentalsByUser(account1.uid)
     assertTrue(rentals.isNotEmpty())
     val rental = rentals.first()
 
@@ -744,14 +741,14 @@ class FirestoreRentalTest : FirestoreTests() {
     advanceUntilIdle()
     Thread.sleep(500)
 
-    var updated = rentalRepository.getRental(rental.uid)
+    var updated = rentalsRepository.getRental(rental.uid)
     assertEquals("session123", updated?.associatedSessionId)
 
     rentalViewModel.dissociateRentalFromSession(rental.uid)
     advanceUntilIdle()
     Thread.sleep(500)
 
-    updated = rentalRepository.getRental(rental.uid)
+    updated = rentalsRepository.getRental(rental.uid)
     assertNull(updated?.associatedSessionId)
   }
 
@@ -767,7 +764,7 @@ class FirestoreRentalTest : FirestoreTests() {
   fun multipleRentalsForSameResource_differentTimes() = runBlocking {
     // First rental
     val rental1 =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceMulti",
@@ -781,7 +778,7 @@ class FirestoreRentalTest : FirestoreTests() {
     val laterEnd = Timestamp(testEndDate.seconds + 7200, 0)
 
     val rental2 =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account2.uid,
             type = RentalType.SPACE,
             resourceId = "spaceMulti",
@@ -793,8 +790,8 @@ class FirestoreRentalTest : FirestoreTests() {
     assertNotNull(rental1)
     assertNotNull(rental2)
 
-    val fetched1 = rentalRepository.getRental(rental1.uid)
-    val fetched2 = rentalRepository.getRental(rental2.uid)
+    val fetched1 = rentalsRepository.getRental(rental1.uid)
+    val fetched2 = rentalsRepository.getRental(rental2.uid)
 
     assertNotNull(fetched1)
     assertNotNull(fetched2)
@@ -806,7 +803,7 @@ class FirestoreRentalTest : FirestoreTests() {
     Thread.sleep(100)
 
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceTimestamp",
@@ -825,7 +822,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun rentalCreation_defaultsToConfirmedStatus() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceConfirmed",
@@ -840,7 +837,7 @@ class FirestoreRentalTest : FirestoreTests() {
   @Test
   fun rentalCreation_handlesEmptyNotes() = runBlocking {
     val rental =
-        rentalRepository.createRental(
+        rentalsRepository.createRental(
             renterId = account1.uid,
             type = RentalType.SPACE,
             resourceId = "spaceEmptyNotes",
