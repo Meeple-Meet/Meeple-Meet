@@ -478,7 +478,7 @@ fun PostScreen(
 private fun PostTopBar(onBack: () -> Unit) {
   CenterAlignedTopAppBar(
       colors =
-          TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+          TopAppBarDefaults.topAppBarColors(containerColor = MessagingColors.neutralBackground),
       navigationIcon = {
         IconButton(onClick = onBack, modifier = Modifier.testTag(PostTags.NAV_BACK_BTN)) {
           Icon(
@@ -791,7 +791,7 @@ private fun PostCard(
         }
 
     HorizontalDivider(
-        color = MessagingColors.divider, thickness = Dimensions.DividerThickness.thick)
+        color = MessagingColors.thickDivider, thickness = Dimensions.DividerThickness.thick)
   }
 }
 

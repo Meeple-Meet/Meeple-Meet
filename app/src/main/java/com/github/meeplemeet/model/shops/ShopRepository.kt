@@ -65,7 +65,8 @@ class ShopRepository(
             photoCollectionUrl)
     collection.document(shop.id).set(toNoUid(shop)).await()
 
-    geoPinRepository.upsertGeoPin(ref = shop.id, type = PinType.SHOP, location = address)
+    geoPinRepository.upsertBusinessGeoPin(
+        ref = shop.id, type = PinType.SHOP, location = address, ownerId = owner.uid)
 
     accountRepository.addShopId(owner.uid, shop.id)
 
@@ -169,7 +170,7 @@ class ShopRepository(
 
     collection.document(id).update(updates).await()
 
-    if (address != null) geoPinRepository.upsertGeoPin(id, PinType.SHOP, address)
+    if (address != null) geoPinRepository.updateGeoPinLocation(id, address)
   }
 
   /**

@@ -10,8 +10,10 @@ import com.github.meeplemeet.model.ImageProcessingException
 import com.github.meeplemeet.model.RemoteStorageException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
+import com.google.firebase.Timestamp
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -101,7 +103,9 @@ class ImageRepositoryTests : FirestoreTests() {
 
     checkpoint("Save profile picture succeeds") {
       runTest {
-        imageRepository.saveAccountProfilePicture(testAccount.uid, context, testImagePath1)
+        val url =
+            imageRepository.saveAccountProfilePicture(testAccount.uid, context, testImagePath1)
+        accountRepository.setAccountPhotoUrl(testAccount.uid, url)
       }
     }
 
@@ -174,18 +178,27 @@ class ImageRepositoryTests : FirestoreTests() {
     // ========================================================================
 
     checkpoint("Save discussion profile picture succeeds") {
-      val discussionId = "test_discussion_profile_123"
-
       runTest {
-        imageRepository.saveDiscussionProfilePicture(context, discussionId, testImagePath1)
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Test Discussion", "Test Description", testAccount.uid)
+        val url =
+            imageRepository.saveDiscussionProfilePicture(context, discussion.uid, testImagePath1)
+        discussionRepository.setDiscussionProfilePictureUrl(discussion.uid, url)
       }
     }
 
     checkpoint("Load discussion profile picture returns correct data") {
-      val discussionId = "test_discussion_profile_123"
-
       runTest {
-        val bytes = imageRepository.loadDiscussionProfilePicture(context, discussionId)
+        // Create a new discussion for this test
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Test Discussion Load", "Test Description", testAccount.uid)
+        val url =
+            imageRepository.saveDiscussionProfilePicture(context, discussion.uid, testImagePath1)
+        discussionRepository.setDiscussionProfilePictureUrl(discussion.uid, url)
+
+        val bytes = imageRepository.loadDiscussionProfilePicture(context, discussion.uid)
         assertNotNull(bytes)
         assertTrue(bytes.isNotEmpty())
       }
@@ -261,6 +274,8 @@ class ImageRepositoryTests : FirestoreTests() {
 
       try {
         runTest {
+          // Set photoUrl so loadAccountProfilePicture doesn't return early
+          accountRepository.setAccountPhotoUrl(testAccount.uid, "https://example.com/photo.webp")
           val loadedBytes = imageRepository.loadAccountProfilePicture(testAccount.uid, context)
           assertNotNull(loadedBytes)
           assertTrue(loadedBytes.contentEquals(testData))
@@ -309,7 +324,8 @@ class ImageRepositoryTests : FirestoreTests() {
       val accountId = testAccount.uid
 
       runTest {
-        imageRepository.saveAccountProfilePicture(accountId, context, testImagePath1)
+        val url = imageRepository.saveAccountProfilePicture(accountId, context, testImagePath1)
+        accountRepository.setAccountPhotoUrl(accountId, url)
 
         val cacheFile = File(context.cacheDir, "accounts/$accountId")
         assertTrue("Cache file created", cacheFile.exists())
@@ -834,11 +850,18 @@ class ImageRepositoryTests : FirestoreTests() {
     // ========================================================================
 
     checkpoint("RemoteStorageException thrown when downloading non-existent file") {
-      val nonExistentId = "non_existent_account_${System.currentTimeMillis()}"
-
       runTest {
+        // Create an account with a photoUrl pointing to a non-existent file
+        val timestamp = System.currentTimeMillis()
+        val account =
+            accountRepository.createAccount(
+                "nonexistent_$timestamp",
+                "Non-Existent User",
+                email = "nonexistent_$timestamp@example.com",
+                photoUrl = "https://example.com/nonexistent.webp")
+
         try {
-          imageRepository.loadAccountProfilePicture(nonExistentId, context)
+          imageRepository.loadAccountProfilePicture(account.uid, context)
           fail("Expected RemoteStorageException to be thrown")
         } catch (e: RemoteStorageException) {
           assertTrue(
@@ -1240,14 +1263,21 @@ class ImageRepositoryTests : FirestoreTests() {
       runTest {
         // This tests the error handling in loadImage when streaming to memory
         // The code has a fallback when caching is not feasible
-        val testId = "stream_oom_${System.currentTimeMillis()}"
+        val timestamp = System.currentTimeMillis()
+        val account =
+            accountRepository.createAccount(
+                "stream_oom_$timestamp",
+                "Stream OOM User",
+                email = "stream_oom_$timestamp@example.com",
+                photoUrl = null)
 
         try {
           // First save a normal image
-          imageRepository.saveAccountProfilePicture(testId, context, testImagePath1)
+          val url = imageRepository.saveAccountProfilePicture(account.uid, context, testImagePath1)
+          accountRepository.setAccountPhotoUrl(account.uid, url)
 
           // Load it - should work fine
-          val bytes = imageRepository.loadAccountProfilePicture(testId, context)
+          val bytes = imageRepository.loadAccountProfilePicture(account.uid, context)
           assertNotNull(bytes)
           assertTrue("Streaming load succeeded", bytes.isNotEmpty())
         } catch (e: Exception) {
@@ -1265,20 +1295,35 @@ class ImageRepositoryTests : FirestoreTests() {
 
     checkpoint("Save session photo succeeds") {
       runTest {
-        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        // Create discussion and session
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Session Photo Test", "Test Description", testAccount.uid)
+        sessionRepository.createSession(
+            discussion.uid, "Test Session", "game1", "Test Game", Timestamp.now(), Location())
+
         val testImagePath = createTestImage("session_photo.jpg", 100, 100, Color.GREEN)
-        val url = imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
+        val url = imageRepository.saveSessionPhoto(context, discussion.uid, testImagePath)
         assertNotNull(url)
-        assertTrue(url.contains(discussionId))
+        assertTrue(url.contains(discussion.uid))
       }
     }
 
     checkpoint("Load session photo returns correct data") {
       runTest {
-        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        // Create discussion and session
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Session Photo Load Test", "Test Description", testAccount.uid)
+        sessionRepository.createSession(
+            discussion.uid, "Test Session", "game1", "Test Game", Timestamp.now(), Location())
+
         val testImagePath = createTestImage("session_photo_load.jpg", 100, 100, Color.YELLOW)
-        imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
-        val bytes = imageRepository.loadSessionPhoto(context, discussionId)
+        val url = imageRepository.saveSessionPhoto(context, discussion.uid, testImagePath)
+        // Update session with photoUrl so loadSessionPhoto can find it
+        sessionRepository.updateSession(discussion.uid, photoUrl = url)
+
+        val bytes = imageRepository.loadSessionPhoto(context, discussion.uid)
         assertNotNull(bytes)
         assertTrue(bytes.isNotEmpty())
       }
@@ -1286,12 +1331,21 @@ class ImageRepositoryTests : FirestoreTests() {
 
     checkpoint("Delete session photo succeeds") {
       runTest {
-        val discussionId = "test_discussion_${System.currentTimeMillis()}"
+        // Create discussion and session
+        val discussion =
+            discussionRepository.createDiscussion(
+                "Session Photo Delete Test", "Test Description", testAccount.uid)
+        sessionRepository.createSession(
+            discussion.uid, "Test Session", "game1", "Test Game", Timestamp.now(), Location())
+
         val testImagePath = createTestImage("session_photo_delete.jpg", 100, 100, Color.RED)
-        imageRepository.saveSessionPhoto(context, discussionId, testImagePath)
-        imageRepository.deleteSessionPhoto(context, discussionId)
+        val url = imageRepository.saveSessionPhoto(context, discussion.uid, testImagePath)
+        // Update session with photoUrl
+        sessionRepository.updateSession(discussion.uid, photoUrl = url)
+
+        imageRepository.deleteSessionPhoto(context, discussion.uid)
         // Try to load after delete, should throw RemoteStorageException or DiskStorageException
-        val result = runCatching { imageRepository.loadSessionPhoto(context, discussionId) }
+        val result = runCatching { imageRepository.loadSessionPhoto(context, discussion.uid) }
         assertTrue(result.isFailure)
         val exception = result.exceptionOrNull()
         assertTrue(

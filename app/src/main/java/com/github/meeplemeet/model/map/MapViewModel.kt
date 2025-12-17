@@ -5,6 +5,7 @@ package com.github.meeplemeet.model.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
+import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.cluster.Cluster
 import com.github.meeplemeet.model.map.cluster.ClusterItem
 import com.github.meeplemeet.model.map.cluster.ClusterManager
@@ -47,6 +48,7 @@ private sealed interface PinOperation {
  *
  * @property allGeoPins The complete list of geo-pins from the query.
  * @property activeFilters The set of active pin type filters.
+ * @property showOwnedBusinessesOnly If the map should only show owned businesses.
  * @property currentZoomLevel The current zoom level of the map.
  * @property clusterCache Cached cluster computation to avoid redundant calculations.
  * @property cacheVersion Incremented whenever allGeoPins, activeFilters, or zoom changes.
@@ -55,6 +57,7 @@ data class MapUIState(
     internal val allGeoPins: List<GeoPinWithLocation> = emptyList(),
     val previews: Map<String, MarkerPreview> = emptyMap(),
     val activeFilters: Set<PinType> = PinType.entries.toSet(),
+    val showOwnedBusinessesOnly: Boolean = false,
     val currentZoomLevel: Float = 14f,
     val errorMsg: String? = null,
     val selectedMarkerPreview: MarkerPreview? = null,
@@ -103,7 +106,7 @@ class MapViewModel(
    * Uses cached result if available and valid. Otherwise, computes new clusters and updates the
    * cache.
    */
-  fun getClusters(): List<Cluster<GeoPinWithLocation>> {
+  fun getClusters(account: Account): List<Cluster<GeoPinWithLocation>> {
     val state = _uiState.value
 
     // Check if cache is valid
@@ -112,7 +115,7 @@ class MapViewModel(
     }
 
     // Cache is invalid or missing - recompute
-    val filteredPins = state.allGeoPins.filter { it.geoPin.type in state.activeFilters }
+    val filteredPins = state.allGeoPins.filter { it.matchesFilters(state, account.uid) }
     val clusters =
         clusterManager.cluster(
             items = filteredPins,
@@ -123,6 +126,30 @@ class MapViewModel(
     _uiState.update { it.copy(clusterCache = ClusterCache(clusters, state.cacheVersion)) }
 
     return clusters
+  }
+
+  /**
+   * Determines if this geo-pin should be visible according to the current map UI state and user.
+   *
+   * Applies two layers of filtering:
+   * 1. Type-based filter: the pin's type must be included in [state.activeFilters].
+   * 2. Ownership filter: if [state.showOwnedBusinessesOnly] is true, only the user's business pins
+   *    (SHOP/SPACE) are kept. SESSION pins are always visible.
+   *
+   * @param state Current [MapUIState] containing filters.
+   * @param userId Current user identifier.
+   * @return True if the pin passes both type and ownership filters.
+   */
+  private fun GeoPinWithLocation.matchesFilters(state: MapUIState, userId: String): Boolean {
+    if (geoPin.type !in state.activeFilters) return false
+
+    if (!state.showOwnedBusinessesOnly) return true
+
+    return when (geoPin.type) {
+      PinType.SHOP,
+      PinType.SPACE -> geoPin.ownerId == userId
+      PinType.SESSION -> true
+    }
   }
 
   /**
@@ -141,6 +168,17 @@ class MapViewModel(
    */
   fun updateFilters(newFilters: Set<PinType>) {
     _uiState.update { it.copy(activeFilters = newFilters, cacheVersion = it.cacheVersion + 1) }
+  }
+
+  /**
+   * Updates the "show only my businesses" filter in the UI state. Invalidates cluster cache.
+   *
+   * @param enabled True to show only owned businesses, false to show all pins.
+   */
+  fun setShowOwnedBusinessesOnly(enabled: Boolean) {
+    _uiState.update {
+      it.copy(showOwnedBusinessesOnly = enabled, cacheVersion = it.cacheVersion + 1)
+    }
   }
 
   /**

@@ -28,18 +28,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -75,6 +71,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionOverviewViewModel
+import com.github.meeplemeet.ui.FocusableBasicTextField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -167,6 +165,7 @@ fun SessionsOverviewScreen(
   }
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
+  var isInputFocused by remember { mutableStateOf(false) }
 
   val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
@@ -181,15 +180,19 @@ fun SessionsOverviewScreen(
               query = searchQuery,
               onQueryChange = { searchQuery = it },
               onClearQuery = { searchQuery = "" },
+              onFocusChanged = { isInputFocused = it },
               focusManager = focusManager)
         },
         bottomBar = {
-          BottomBarWithVerification(
-              currentScreen = MeepleMeetScreen.SessionsOverview,
-              unreadCount = unreadCount,
-              onTabSelected = { navigation.navigateTo(it) },
-              verified = verified,
-              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+          val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+          if (!(shouldHide && isInputFocused)) {
+            BottomBarWithVerification(
+                currentScreen = MeepleMeetScreen.SessionsOverview,
+                unreadCount = unreadCount,
+                onTabSelected = { navigation.navigateTo(it) },
+                verified = verified,
+                onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+          }
         }) { innerPadding ->
           Box(
               modifier =
@@ -772,6 +775,7 @@ fun SessionsTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     focusManager: FocusManager
 ) {
   Column(modifier = Modifier.fillMaxWidth()) {
@@ -793,57 +797,13 @@ fun SessionsTopBar(
 
           Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-          BasicTextField(
+          FocusableBasicTextField(
               value = query,
               onValueChange = onQueryChange,
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .height(Dimensions.ContainerSize.searchFieldHeight)
-                      .background(
-                          AppColors.secondary,
-                          androidx.compose.foundation.shape.RoundedCornerShape(
-                              Dimensions.CornerRadius.round))
-                      .testTag(SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD),
-              singleLine = true,
-              textStyle =
-                  androidx.compose.ui.text.TextStyle(
-                      color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
-              cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
-              decorationBox = { innerTextField ->
-                Row(
-                    modifier =
-                        Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Icon(
-                          imageVector = Icons.Default.Search,
-                          contentDescription = "Search",
-                          tint = AppColors.textIconsFade,
-                          modifier = Modifier.size(Dimensions.IconSize.standard))
-                      Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-                      Box(modifier = Modifier.weight(1f)) {
-                        if (query.isEmpty()) {
-                          Text(
-                              text = "Search",
-                              color = AppColors.textIconsFade,
-                              fontSize = Dimensions.TextSize.subtitle)
-                        }
-                        innerTextField()
-                      }
-                      if (query.isNotEmpty()) {
-                        IconButton(
-                            onClick = onClearQuery,
-                            modifier =
-                                Modifier.size(Dimensions.IconSize.large)
-                                    .testTag(SessionsOverviewScreenTestTags.SEARCH_CLEAR)) {
-                              Icon(
-                                  imageVector = Icons.Default.Close,
-                                  contentDescription = "Clear search",
-                                  tint = AppColors.textIconsFade,
-                                  modifier = Modifier.size(Dimensions.IconSize.standard))
-                            }
-                      }
-                    }
-              })
+              onClearQuery = onClearQuery,
+              testTag = SessionsOverviewScreenTestTags.SEARCH_TEXT_FIELD,
+              testTagClear = SessionsOverviewScreenTestTags.SEARCH_CLEAR,
+              onFocusChanged = onFocusChanged)
         }
 
     // Toggle section below

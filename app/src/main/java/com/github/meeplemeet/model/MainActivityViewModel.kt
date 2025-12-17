@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -35,18 +34,7 @@ class MainActivityViewModel(
     private val accountRepository: AccountRepository = RepositoryProvider.accounts,
     private val discussionRepository: DiscussionRepository = RepositoryProvider.discussions,
 ) : AuthenticationViewModel(inTests) {
-  /**
-   * Signs out the current user and clears all cached flows.
-   *
-   * Overrides the parent signOut method to ensure that all Firestore listeners are removed when the
-   * user signs out.
-   */
-  override fun signOut() {
-    super.signOut()
-  }
 
-  // Holds cached [StateFlow]s of accounts keyed by account ID to avoid duplicate listeners.
-  private val accountFlows = mutableMapOf<String, StateFlow<Account?>>()
   private val _unreadCount = MutableStateFlow(0)
   val unreadCount: StateFlow<Int> = _unreadCount
 
@@ -95,21 +83,37 @@ class MainActivityViewModel(
               // When offline, use the loaded account from cache
               val account = if (isOnline) liveAccount else loadedAccount
               if (account != null) {
+                // Filter out blocked notifications
                 val filtered =
                     account.notifications.filter {
                       account.relationships[it.senderId] != RelationshipStatus.BLOCKED
                     }
-                val toRemove = account.notifications.filterNot { filtered.contains(it) }
-                accountRepository.deleteNotifications(account.uid, toRemove.map { it.uid })
-                account.copy(notifications = filtered)
 
-                val count = account.notifications.count { n -> !n.read }
-                _unreadCount.value = count
+                // Remove duplicates: same fields except uid and sentAt, keep newest
+                val deduplicated =
+                    filtered
+                        .groupBy { n ->
+                          listOf(
+                              n.senderId,
+                              n.discussionId,
+                              n.receiverId,
+                              n.read,
+                              n.type,
+                              n.executed())
+                        }
+                        .values
+                        .map { group -> group.maxBy { it.sentAt } }
+
+                // Delete blocked and duplicate notifications
+                val toRemove = account.notifications.filterNot { deduplicated.contains(it) }
+                accountRepository.deleteNotifications(account.uid, toRemove.map { it.uid })
+
+                _unreadCount.value = deduplicated.count { n -> !n.read }
+                account.copy(notifications = deduplicated)
               } else {
                 _unreadCount.value = 0
+                null
               }
-
-              account
             }
         .stateIn(
             scope = viewModelScope,

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -36,12 +37,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
+import com.github.meeplemeet.ui.components.ClosableToast
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -51,7 +54,7 @@ import com.github.meeplemeet.utils.KeyboardUtils
  * Finds the Activity from a Context by traversing the context hierarchy. Returns null if no
  * Activity is found.
  */
-private fun Context.findActivity(): Activity? {
+fun Context.findActivity(): Activity? {
   var context = this
   while (context is ContextWrapper) {
     if (context is Activity) return context
@@ -68,6 +71,7 @@ object CreateAccountTestTags {
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
   const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
   const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
+  const val HANDLE_INFO_ICON = "CreateAccountHandleInfoIcon"
 }
 
 object CreateAccountScreenUi {
@@ -81,7 +85,7 @@ object CreateAccountScreenUi {
   val xxLargeSpacing = Dimensions.Spacing.xxLarge
   const val IMAGE_SCREEN_SIZE_SCALING = 0.62f
   const val TITLE_FONT_SIZE_SCALING = 0.95f
-  val TITLE_FONT_SIZE_MIN_SIZE = 18f
+  const val TITLE_FONT_SIZE_MIN_SIZE = 18f
 }
 
 /**
@@ -115,6 +119,7 @@ fun CreateAccountScreen(
   var isShopChecked by remember { mutableStateOf(false) }
   var isSpaceRented by remember { mutableStateOf(false) }
   var isInputFocused by remember { mutableStateOf(false) }
+  var toast by remember { mutableStateOf<ToastData?>(null) }
   val focusManager = LocalFocusManager.current
   val scrollState = rememberScrollState()
   val activity = LocalContext.current.findActivity()
@@ -216,7 +221,6 @@ fun CreateAccountScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top) {
               // App logo displayed on top of text.
-              // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
 
               BoxWithConstraints(
@@ -240,38 +244,64 @@ fun CreateAccountScreen(
                           .padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
               /** Input field for entering the user's unique handle. */
-              FocusableInputField(
-                  value = handle,
-                  onValueChange = {
-                    handle = it
-                    if (it.isNotBlank()) {
-                      showErrors = true
-                      viewModel.checkHandleAvailable(it)
-                    } else {
-                      showErrors = false
-                    }
-                  },
-                  label = { Text("Handle") },
-                  singleLine = true,
-                  textStyle = TextStyle(color = AppColors.textIcons),
-                  colors =
-                      TextFieldDefaults.colors(
-                          focusedIndicatorColor = AppColors.textIcons,
-                          unfocusedIndicatorColor = AppColors.textIconsFade,
-                          cursorColor = AppColors.textIcons,
-                          focusedLabelColor = AppColors.textIcons,
-                          unfocusedContainerColor = Color.Transparent,
-                          focusedContainerColor = Color.Transparent,
-                          errorContainerColor = Color.Transparent,
-                          disabledContainerColor = Color.Transparent,
-                          unfocusedLabelColor = AppColors.textIconsFade,
-                          focusedTextColor = AppColors.textIcons,
-                          unfocusedTextColor = AppColors.textIconsFade),
-                  isError = showErrors && errorMessage.isNotBlank(),
-                  modifier =
-                      Modifier.fillMaxWidth()
-                          .onFocusChanged { isInputFocused = it.isFocused }
-                          .testTag(CreateAccountTestTags.HANDLE_FIELD))
+              Box(modifier = Modifier.fillMaxWidth()) {
+                FocusableInputField(
+                    value = handle,
+                    onValueChange = {
+                      handle = it
+                      if (it.isNotBlank()) {
+                        showErrors = true
+                        viewModel.checkHandleAvailable(it)
+                      } else {
+                        showErrors = false
+                      }
+                    },
+                    label = { Text("Handle") },
+                    singleLine = true,
+                    trailingIcon = {
+                      Icon(
+                          imageVector = Icons.Outlined.Info,
+                          contentDescription = "Handle information",
+                          modifier =
+                              Modifier.clickable {
+                                    toast =
+                                        if (toast == null)
+                                            ToastData(
+                                                "A unique name others use to find and recognize you.")
+                                        else null
+                                  }
+                                  .testTag(CreateAccountTestTags.HANDLE_INFO_ICON))
+                    },
+                    textStyle = TextStyle(color = AppColors.textIcons),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedIndicatorColor = AppColors.textIcons,
+                            unfocusedIndicatorColor = AppColors.textIconsFade,
+                            cursorColor = AppColors.textIcons,
+                            focusedLabelColor = AppColors.textIcons,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            errorContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            unfocusedLabelColor = AppColors.textIconsFade,
+                            focusedTextColor = AppColors.textIcons,
+                            unfocusedTextColor = AppColors.textIconsFade),
+                    isError = showErrors && errorMessage.isNotBlank(),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .onFocusChanged { isInputFocused = it.isFocused }
+                            .testTag(CreateAccountTestTags.HANDLE_FIELD))
+
+                if (toast != null) {
+                  ClosableToast(
+                      message = toast?.message ?: "",
+                      onDismiss = { toast = null },
+                      modifier =
+                          Modifier.align(Alignment.TopEnd)
+                              .zIndex(Dimensions.ZIndex.foregroundMax)
+                              .offset(y = -Dimensions.Spacing.xxxxLarge))
+                }
+              }
 
               /** Error message displayed if handle validation fails. */
               if (showErrors && errorMessage.isNotBlank()) {

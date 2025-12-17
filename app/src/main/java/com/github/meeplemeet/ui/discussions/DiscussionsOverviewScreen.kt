@@ -20,12 +20,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -59,6 +56,8 @@ import com.github.meeplemeet.model.discussions.Discussion
 import com.github.meeplemeet.model.discussions.DiscussionViewModel
 import com.github.meeplemeet.model.discussions.DiscussionsOverviewViewModel
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.ui.FocusableBasicTextField
+import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
@@ -115,6 +114,7 @@ fun DiscussionsOverviewScreen(
   val offline by OfflineModeManager.offlineModeFlow.collectAsStateWithLifecycle()
 
   var searchQuery by rememberSaveable { mutableStateOf("") }
+  var isInputFocused by remember { mutableStateOf(false) }
 
   val discussionPreviewsSorted =
       remember(account.previews, online, offline.discussions, searchQuery) {
@@ -155,15 +155,19 @@ fun DiscussionsOverviewScreen(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
             onClearQuery = { searchQuery = "" },
+            onFocusChanged = { isInputFocused = it },
             focusManager = focusManager)
       },
       bottomBar = {
-        BottomBarWithVerification(
-            currentScreen = MeepleMeetScreen.DiscussionsOverview,
-            verified = verified,
-            unreadCount = unreadCount,
-            onTabSelected = { screen -> navigation.navigateTo(screen) },
-            onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+        val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+        if (!(shouldHide && isInputFocused)) {
+          BottomBarWithVerification(
+              currentScreen = MeepleMeetScreen.DiscussionsOverview,
+              verified = verified,
+              unreadCount = unreadCount,
+              onTabSelected = { screen -> navigation.navigateTo(screen) },
+              onVerifyClick = { navigation.navigateTo(MeepleMeetScreen.Profile) })
+        }
       }) { innerPadding ->
         if (discussionPreviewsSorted.isEmpty()) {
           Box(
@@ -411,6 +415,7 @@ fun DiscussionsTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     focusManager: FocusManager
 ) {
   Column(
@@ -448,55 +453,12 @@ fun DiscussionsTopBar(
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
 
-        BasicTextField(
+        FocusableBasicTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(Dimensions.ContainerSize.searchFieldHeight)
-                    .background(
-                        AppColors.secondary,
-                        androidx.compose.foundation.shape.RoundedCornerShape(
-                            Dimensions.CornerRadius.round))
-                    .testTag(DiscussionOverviewTestTags.SEARCH_TEXT_FIELD),
-            singleLine = true,
-            textStyle =
-                androidx.compose.ui.text.TextStyle(
-                    color = AppColors.textIcons, fontSize = Dimensions.TextSize.subtitle),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.textIcons),
-            decorationBox = { innerTextField ->
-              Row(
-                  modifier = Modifier.fillMaxSize().padding(horizontal = Dimensions.Padding.medium),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = AppColors.textIconsFade,
-                        modifier = Modifier.size(Dimensions.IconSize.standard))
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-                    Box(modifier = Modifier.weight(1f)) {
-                      if (query.isEmpty()) {
-                        Text(
-                            text = "Search",
-                            color = AppColors.textIconsFade,
-                            fontSize = Dimensions.TextSize.subtitle)
-                      }
-                      innerTextField()
-                    }
-                    if (query.isNotEmpty()) {
-                      IconButton(
-                          onClick = onClearQuery,
-                          modifier =
-                              Modifier.size(Dimensions.IconSize.large)
-                                  .testTag(DiscussionOverviewTestTags.SEARCH_CLEAR)) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear search",
-                                tint = AppColors.textIconsFade,
-                                modifier = Modifier.size(Dimensions.IconSize.standard))
-                          }
-                    }
-                  }
-            })
+            onClearQuery = onClearQuery,
+            testTag = DiscussionOverviewTestTags.SEARCH_TEXT_FIELD,
+            testTagClear = DiscussionOverviewTestTags.SEARCH_CLEAR,
+            onFocusChanged = onFocusChanged)
       }
 }

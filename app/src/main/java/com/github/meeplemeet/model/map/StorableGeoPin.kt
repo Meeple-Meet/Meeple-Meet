@@ -15,8 +15,9 @@ enum class PinType {
  *
  * @property uid Globally unique identifier of the pin (Firestore document ID).
  * @property type Type of the pin (e.g. SHOP, SESSION, SPACE).
+ * @property ownerId Non-null if the pin represent a business (SPACE, SHOP).
  */
-data class StorableGeoPin(val uid: String, val type: PinType)
+data class StorableGeoPin(val uid: String, val type: PinType, val ownerId: String? = null)
 
 /** A geo-pin along with its current geographic location. */
 data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint)
@@ -26,7 +27,8 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  *
  * Firestore stores the UID as the document ID, so it is omitted from the stored object.
  */
-@Serializable data class StorableGeoPinNoUid(val type: PinType = PinType.SHOP)
+@Serializable
+data class StorableGeoPinNoUid(val type: PinType = PinType.SHOP, val ownerId: String? = null)
 
 /**
  * Converts a full [StorableGeoPin] into its Firestore-storable form [StorableGeoPinNoUid].
@@ -34,7 +36,7 @@ data class GeoPinWithLocation(val geoPin: StorableGeoPin, val location: GeoPoint
  * @param pin The map pin instance to convert.
  * @return The stripped-down form without UID for storage.
  */
-fun toNoUid(pin: StorableGeoPin): StorableGeoPinNoUid = StorableGeoPinNoUid(pin.type)
+fun toNoUid(pin: StorableGeoPin): StorableGeoPinNoUid = StorableGeoPinNoUid(pin.type, pin.ownerId)
 
 /**
  * Reconstructs a full [StorableGeoPin] object from its Firestore representation.
@@ -44,4 +46,4 @@ fun toNoUid(pin: StorableGeoPin): StorableGeoPinNoUid = StorableGeoPinNoUid(pin.
  * @return A fully constructed [StorableGeoPin] instance.
  */
 fun fromNoUid(id: String, noUid: StorableGeoPinNoUid): StorableGeoPin =
-    StorableGeoPin(id, noUid.type)
+    StorableGeoPin(id, noUid.type, noUid.ownerId)

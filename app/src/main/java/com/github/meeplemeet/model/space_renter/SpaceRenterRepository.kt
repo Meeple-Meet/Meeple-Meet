@@ -69,7 +69,8 @@ class SpaceRenterRepository(
             photoCollectionUrl)
     collection.document(spaceRenter.id).set(toNoUid(spaceRenter)).await()
 
-    geoPinRepository.upsertGeoPin(ref = spaceRenter.id, type = PinType.SPACE, location = address)
+    geoPinRepository.upsertBusinessGeoPin(
+        ref = spaceRenter.id, type = PinType.SPACE, location = address, ownerId = owner.uid)
 
     accountRepository.addSpaceRenterId(owner.uid, spaceRenter.id)
 
@@ -177,7 +178,7 @@ class SpaceRenterRepository(
 
     collection.document(id).update(updates).await()
 
-    if (address != null) geoPinRepository.upsertGeoPin(id, PinType.SPACE, address)
+    if (address != null) geoPinRepository.updateGeoPinLocation(id, address)
   }
 
   /**
