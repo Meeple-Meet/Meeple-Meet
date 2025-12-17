@@ -115,7 +115,7 @@ fun RentalSelectorDialog(
                           Icon(
                               imageVector = Icons.Default.EventBusy,
                               contentDescription = null,
-                              modifier = Modifier.size(64.dp),
+                              modifier = Modifier.size(Dimensions.IconSize.giant),
                               tint = MaterialTheme.colorScheme.onSurfaceVariant)
                           Text(
                               text = "No active space rentals",
