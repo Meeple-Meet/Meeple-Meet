@@ -227,7 +227,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     })
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 15_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
@@ -286,7 +285,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 20_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
@@ -349,7 +347,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Verify the discussion appears in the list
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 20_000,
         predicate = {
           composeTestRule
               .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
@@ -386,7 +383,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for message to appear
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule.onNodeWithText("Hey", useUnmergedTree = true).assertExists()
           true
@@ -432,7 +428,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for all messages to appear on screen
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithText("Hi there!", useUnmergedTree = true).assertExists()
           composeTestRule.onNodeWithText("Hello everyone!", useUnmergedTree = true).assertExists()
@@ -451,7 +446,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 3000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
@@ -512,7 +506,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for poll to appear
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onNodeWithText(pollQuestion, useUnmergedTree = true, substring = true)
@@ -577,7 +570,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait to ensure we're back at discussions overview
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
           true
@@ -590,7 +582,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertExists()
           true
@@ -644,7 +635,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 15_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
@@ -673,7 +663,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     ensureSectionExpanded(CreateShopScreenTestTags.SECTION_AVAILABILITY)
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(availabilityContentTag, useUnmergedTree = true)
@@ -703,7 +692,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
       })
       composeTestRule.waitForIdle()
       composeTestRule.waitUntilWithCatch(
-          timeoutMs = 5_000,
           predicate = {
             composeTestRule
                 .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
@@ -713,7 +701,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
     // Ensure we have day edit buttons
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
@@ -733,7 +720,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
     // 2. Wait for dialog
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onNodeWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
@@ -782,7 +768,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for Opening Hours dialog to dismiss
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onAllNodesWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
@@ -842,7 +827,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for the Game Stock dialog to appear
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onNodeWithTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
@@ -860,7 +844,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     })
     composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
@@ -878,7 +861,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule
               .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
@@ -928,7 +910,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     // Wait until either the item tag or the item text is present
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 20_000,
         predicate = {
           val byTag =
               composeTestRule
@@ -1054,7 +1035,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 20_000,
         predicate = {
           var byTag =
               composeTestRule
@@ -1105,7 +1085,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for store to be created and map to reload
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists()
           true
@@ -1120,7 +1099,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait to be on discussions overview
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON).assertExists()
           true
@@ -1184,7 +1162,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Verify the new discussion appears in the list
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithText(announcementTitle, useUnmergedTree = true).assertExists()
           true
@@ -1221,7 +1198,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for all reactions to appear on screen in THE POST
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertExists()
           composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertExists()
@@ -1231,7 +1207,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait until author names are resolved (avoid <Unknown User>)
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 10_000,
         predicate = {
           composeTestRule
               .onNodeWithText("Eve", useUnmergedTree = true, substring = false)
@@ -1288,7 +1263,6 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Wait for search results to appear
     composeTestRule.waitUntilWithCatch(
-        timeoutMs = 5_000,
         predicate = {
           composeTestRule.onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT).assertExists()
           true

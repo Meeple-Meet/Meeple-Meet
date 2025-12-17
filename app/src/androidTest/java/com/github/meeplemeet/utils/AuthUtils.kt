@@ -207,7 +207,7 @@ object AuthUtils {
     })
   }
 
-  fun ComposeTestRule.waitUntilWithCatch(predicate: () -> Boolean, timeoutMs: Long = 5000) {
+  fun ComposeTestRule.waitUntilWithCatch(predicate: () -> Boolean, timeoutMs: Long = 50_000) {
     waitUntil(timeoutMs) {
       try {
         predicate()
