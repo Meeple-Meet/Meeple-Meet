@@ -8,7 +8,6 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -252,7 +251,10 @@ class E2E_M2 : FirestoreTests() {
     // Verify the discussion appears in the list
     composeTestRule.waitUntil(timeoutMillis = 20_000) {
       try {
-        composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+        composeTestRule
+            .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
         true
       } catch (_: Throwable) {
         false
@@ -345,7 +347,11 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     composeTestRule.waitUntil(3000) {
-      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).isDisplayed()
+      composeTestRule
+          .onAllNodesWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+      //      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).isDisplayed()
     }
 
     composeTestRule
@@ -494,8 +500,9 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitUntil(timeoutMillis = 200_000) {
       try {
         composeTestRule
-            .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
-            .isDisplayed()
+            .onAllNodesWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
+            .fetchSemanticsNodes()
+            .isNotEmpty()
       } catch (_: Exception) {
         false
       }

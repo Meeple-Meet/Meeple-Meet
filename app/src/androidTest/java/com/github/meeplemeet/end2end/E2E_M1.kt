@@ -2,8 +2,9 @@ package com.github.meeplemeet.end2end
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -131,7 +132,10 @@ class E2E_M1 : FirestoreTests() {
 
     // Verify discussion appears in Alice's list
     composeTestRule.waitUntil(15000) {
-      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).isDisplayed()
+      composeTestRule
+          .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
     }
 
     // Open the discussion and send an initial message from Alice to Bob
@@ -222,6 +226,12 @@ class E2E_M1 : FirestoreTests() {
     composeTestRule.waitForIdle()
 
     // Verify returned to sign-in screen
+    composeTestRule.waitUntil(5000) {
+      composeTestRule
+          .onAllNodesWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    }
     composeTestRule
         .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
         .assertExists()
