@@ -29,7 +29,7 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class E2E_M1 : FirestoreTests() {
-  @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
+  @get:Rule(order = 1) val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   private val testEmail = "e2etest${UUID.randomUUID().toString().take(8)}@example.com"
   private val testPassword = "Password123!"

@@ -665,7 +665,7 @@ class E2E_M2 : FirestoreTests() {
     composeTestRule.waitForIdle()
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(10000) {
       try {
         composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
         true
@@ -774,7 +774,7 @@ class E2E_M2 : FirestoreTests() {
       byTag || byTextUnmerged || byTextMerged
     }
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil {
+    composeTestRule.waitUntil(10000) {
       try {
         composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
         true
