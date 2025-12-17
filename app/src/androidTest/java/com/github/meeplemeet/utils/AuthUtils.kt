@@ -47,7 +47,8 @@ object AuthUtils {
   ) {
     delay(3000)
     waitForIdle()
-    waitUntil(5000) { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }
+    waitUntilWithCatch(
+        { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }, timeoutMs = 5000)
     // --- Navigate to sign-up screen ---
     waitUntilWithCatch({
       onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
@@ -90,13 +91,9 @@ object AuthUtils {
     waitUntilWithCatch(
         timeoutMs = 10_000,
         predicate = {
-          try {
-            onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-          } catch (_: Throwable) {
-            false
-          }
+          onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
         })
 
     // --- Fill Create Account fields ---
@@ -157,43 +154,57 @@ object AuthUtils {
   }
 
   fun ComposeTestRule.signInUser(email: String, password: String) {
-    onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
-    onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+      true
+    })
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+      true
+    })
 
     closeKeyboardSafely()
 
-    onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
-    waitUntil(timeoutMillis = 15_000) {
-      try {
-        onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
   }
 
   fun ComposeTestRule.signOutWithBottomBar() {
     waitForIdle()
-    onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
     waitForIdle()
-    waitUntil(timeoutMillis = 5_000) {
-      try {
-        onAllNodesWithTag("Logout Button", useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
-    onNodeWithTag("Logout Button").assertExists().performClick()
+    waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          onAllNodesWithTag("Logout Button", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
+    waitUntilWithCatch({
+      onNodeWithTag("Logout Button").assertExists().performClick()
+      true
+    })
     waitForIdle()
-    onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()
+      true
+    })
   }
 
   fun ComposeTestRule.waitUntilWithCatch(predicate: () -> Boolean, timeoutMs: Long = 5000) {

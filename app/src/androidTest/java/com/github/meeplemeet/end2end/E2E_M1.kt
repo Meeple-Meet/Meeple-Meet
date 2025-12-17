@@ -118,89 +118,123 @@ class E2E_M1 : FirestoreTests() {
     // ===== PART 3: Alice signs back in, creates a discussion with Bob, and sends a message =====
     composeTestRule.signInUser(user1Email, password)
     runBlocking { waitUntilAuthReady() }
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+      true
+    })
 
     // Fill in discussion details
-    composeTestRule.onNodeWithTag("Add Title").assertExists().performTextInput(discussionTitle)
-    composeTestRule
-        .onNodeWithTag("Add Description")
-        .assertExists()
-        .performTextInput("E2E test discussion")
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Add Title").assertExists().performTextInput(discussionTitle)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Description")
+          .assertExists()
+          .performTextInput("E2E test discussion")
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Search for Bob and add him as a member during discussion creation
-    composeTestRule
-        .onNodeWithTag("Add Members", useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(user2Handle)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Members", useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(user2Handle)
+      true
+    })
 
     // Wait for search results to appear
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
-      try {
-        composeTestRule.onNodeWithTag("Add Member Element", useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule.onNodeWithTag("Add Member Element", useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Click on Bob from search results to add him
-    composeTestRule
-        .onNodeWithTag("Add Member Element", useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Member Element", useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Create the discussion with Bob as a member
-    composeTestRule
-        .onNodeWithTag("Create Discussion")
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Create Discussion")
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Verify discussion appears in Alice's list
-    composeTestRule.waitUntil(15000) {
-      composeTestRule
-          .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // Open the discussion and send an initial message from Alice to Bob
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag("Input Field", useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(initialMessageFromAlice)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Input Field", useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(initialMessageFromAlice)
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("Send Button").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Send Button").assertExists().performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Wait until the sent message is visible in the thread to ensure persistence before sign-out
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
-      try {
-        composeTestRule
-            .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
     composeTestRule.signOutWithBottomBar()
@@ -208,64 +242,84 @@ class E2E_M1 : FirestoreTests() {
     // ===== PART 6: Bob signs in and verifies he can read Alice's message =====
     composeTestRule.signInUser(user2Email, password)
     runBlocking { waitUntilAuthReady() }
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     composeTestRule.closeKeyboardSafely()
 
     // Bob should see the discussion that Alice created and added him to
-    composeTestRule.waitUntil(15_000) {
-      try {
-        composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+          true
+        })
 
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Verify Bob can read Alice's initial message
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
-      try {
-        composeTestRule
-            .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
-    composeTestRule.onNodeWithText(initialMessageFromAlice, useUnmergedTree = true).assertExists()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(initialMessageFromAlice, useUnmergedTree = true).assertExists()
+      true
+    })
 
     // ===== PART 7: Bob logs out =====
     // Navigate back from the message screen to the discussions list
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Navigate to Profile tab
-    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Logout
-    composeTestRule.onNodeWithTag("Logout Button").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Logout Button").assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Verify returned to sign-in screen
-    composeTestRule.waitUntil(5000) {
+    composeTestRule.waitUntilWithCatch({
       composeTestRule
           .onAllNodesWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
           .fetchSemanticsNodes()
           .isNotEmpty()
-    }
-    composeTestRule
-        .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
-        .assertExists()
-        .assertIsDisplayed()
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .assertExists()
+          .assertIsDisplayed()
+      true
+    })
   }
 }

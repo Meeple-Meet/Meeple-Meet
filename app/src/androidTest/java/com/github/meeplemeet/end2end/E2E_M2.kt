@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import com.github.meeplemeet.HttpClientProvider
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.ui.MapScreenTestTags
@@ -47,6 +48,12 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -119,10 +126,13 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     val isExpanded =
         composeTestRule.onAllNodesWithTag(contentTag).fetchSemanticsNodes().isNotEmpty()
     if (!isExpanded) {
-      composeTestRule
-          .onNodeWithTag(sectionBaseTag + CreateShopScreenTestTags.SECTION_TOGGLE_ICON_SUFFIX)
-          .assertExists()
-          .performClick()
+      composeTestRule.waitUntilWithCatch({
+        composeTestRule
+            .onNodeWithTag(sectionBaseTag + CreateShopScreenTestTags.SECTION_TOGGLE_ICON_SUFFIX)
+            .assertExists()
+            .performClick()
+        true
+      })
       composeTestRule.waitForIdle()
     }
   }
@@ -135,6 +145,34 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
           MapsInitializer.Renderer.LATEST,
           this)
     } catch (_: Exception) {}
+
+    val originalClient = HttpClientProvider.client
+    val mockClient =
+        originalClient
+            .newBuilder()
+            .addInterceptor { chain ->
+              val request = chain.request()
+              if (request.url.queryParameter("q") == "EPFL") {
+                val responseBody =
+                    """[{"lat":46.5191,"lon":6.5668,"display_name":"EPFL, Lausanne, Switzerland"}]"""
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(responseBody.toResponseBody("application/json".toMediaType()))
+                    .build()
+              } else {
+                chain.proceed(request)
+              }
+            }
+            .build()
+    HttpClientProvider.client = mockClient
+  }
+
+  @After
+  fun tearDown() {
+    HttpClientProvider.client = OkHttpClient()
   }
 
   @Test
@@ -148,61 +186,95 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     // Sign up the main user through UI, the rest of the other interactions will be done through
     // repositories
-    composeTestRule.onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-        .assertExists()
-        .performTextInput(mainUserEmail)
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-        .assertExists()
-        .performTextInput(mainUserPassword)
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .assertExists()
-        .performTextInput(mainUserPassword)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
+          .assertExists()
+          .performTextInput(mainUserEmail)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(mainUserPassword)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(mainUserPassword)
+      true
+    })
     composeTestRule.waitForIdle()
 
     composeTestRule.closeKeyboardSafely()
-    composeTestRule
-        .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
-      try {
-        composeTestRule
-            .onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // Fill Create Account
-    composeTestRule
-        .onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(mainUserHandle)
-    composeTestRule
-        .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(mainUserName)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(mainUserHandle)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(mainUserName)
+      true
+    })
     composeTestRule.closeKeyboardSafely()
-    composeTestRule
-        .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
-        .assertExists()
-        .performClick()
-    composeTestRule.onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER).assertIsOn()
-    composeTestRule
-        .onNodeWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER).assertIsOn()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
     // Skip the OnBoarding screen
-    composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
@@ -213,16 +285,14 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
       waitUntilShopOwnerTrue(mainUserHandle)
     }
 
-    composeTestRule.waitUntil(timeoutMillis = 20_000) {
-      try {
-        composeTestRule
-            .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 20_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // Create 3 other users through repositories
     val aliceHandle = "alice_$uniqueId"
@@ -236,20 +306,29 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
 
     // Create a discussion and add all 3 members
-    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
     val discussionTitle = "My store's name $uniqueId"
     val discussionDescription = "Let's discuss my store's name! "
 
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.ADD_TITLE)
-        .assertExists()
-        .performTextInput(discussionTitle)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.ADD_TITLE)
+          .assertExists()
+          .performTextInput(discussionTitle)
+      true
+    })
 
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.ADD_DESCRIPTION)
-        .assertExists()
-        .performTextInput(discussionDescription)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.ADD_DESCRIPTION)
+          .assertExists()
+          .performTextInput(discussionDescription)
+      true
+    })
 
     composeTestRule.waitForIdle()
 
@@ -257,26 +336,26 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     addMemberToDiscussion(bobHandle)
     addMemberToDiscussion(eveHandle)
 
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.CREATE_DISCUSSION_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Verify the discussion appears in the list
-    composeTestRule.waitUntil(timeoutMillis = 20_000) {
-      try {
-        composeTestRule
-            .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 20_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // Start the discussion
     composeTestRule.waitUntilWithCatch({
@@ -288,26 +367,30 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(DiscussionTestTags.INPUT_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performTextInput("Hey")
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.INPUT_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput("Hey")
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag(DiscussionTestTags.SEND_BUTTON).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(DiscussionTestTags.SEND_BUTTON).assertExists().performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Wait for message to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule.onNodeWithText("Hey", useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule.onNodeWithText("Hey", useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Make other users respond through repository
     val latestDiscussion = runBlocking {
@@ -348,82 +431,102 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
 
     // Wait for all messages to appear on screen
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithText("Hi there!", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Hello everyone!", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Hey team!", useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithText("Hi there!", useUnmergedTree = true).assertExists()
+          composeTestRule.onNodeWithText("Hello everyone!", useUnmergedTree = true).assertExists()
+          composeTestRule.onNodeWithText("Hey team!", useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Create a poll to ask other users for a store name
-    composeTestRule
-        .onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.ATTACHMENT_BUTTON)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(3000) {
-      composeTestRule
-          .onAllNodesWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-      //      composeTestRule.onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION).isDisplayed()
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 3000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
-    composeTestRule
-        .onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.ATTACHMENT_POLL_OPTION)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Fill in poll details
     val pollQuestion = "What should I name my shop?"
     val pollOptions = listOf("Name 1", "Name 2", "Name 3", "Name 4")
 
-    composeTestRule
-        .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
-        .assertExists()
-        .performTextInput(pollQuestion)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.QUESTION_FIELD)
+          .assertExists()
+          .performTextInput(pollQuestion)
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Add poll options
     pollOptions.forEachIndexed { index, option ->
       if (index > 1) {
-        composeTestRule.onNodeWithTag(DiscussionTestTags.ADD_OPTION_BUTTON).performClick()
+        composeTestRule.waitUntilWithCatch({
+          composeTestRule.onNodeWithTag(DiscussionTestTags.ADD_OPTION_BUTTON).performClick()
+          true
+        })
         composeTestRule.waitForIdle()
       }
 
-      composeTestRule
-          .onAllNodesWithTag(DiscussionTestTags.OPTION_TEXT_FIELD)[index]
-          .performTextInput(option)
+      composeTestRule.waitUntilWithCatch({
+        composeTestRule
+            .onAllNodesWithTag(DiscussionTestTags.OPTION_TEXT_FIELD)[index]
+            .performTextInput(option)
+        true
+      })
       composeTestRule.waitForIdle()
     }
 
-    composeTestRule
-        .onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(DiscussionTestTags.CREATE_POLL_CONFIRM)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Wait for poll to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithText(pollQuestion, useUnmergedTree = true, substring = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText(pollQuestion, useUnmergedTree = true, substring = true)
+              .assertExists()
+          true
+        })
 
     // Make the store owner vote through the UI
-    composeTestRule.onNodeWithText("Name 1", useUnmergedTree = true).performClick()
+    composeTestRule.waitUntilWithCatch(
+        {
+          composeTestRule.onNodeWithText("Name 1", useUnmergedTree = true).performClick()
+          true
+        },
+        timeoutMs = 15_000)
 
     // Make other users vote on the poll through repository
     val pollMessage = runBlocking {
@@ -452,86 +555,110 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
 
     // Wait for votes to be reflected (poll percentages should update)
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        // First option should have 50%
-        composeTestRule
-            .onNodeWithText("50%", useUnmergedTree = true, substring = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 50_000,
+        predicate = {
+          // First option should have 50%
+          composeTestRule
+              .onNodeWithText("50%", useUnmergedTree = true, substring = true)
+              .assertExists()
+          true
+        })
 
     // Create a store with that name
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Wait to ensure we're back at discussions overview
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+          true
+        })
 
-    composeTestRule.onNodeWithTag(NavigationTestTags.MAP_TAB).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.MAP_TAB).assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
-    composeTestRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).assertExists()
+          true
+        })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(MapScreenTestTags.ADD_FAB).performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Use the input inside the wrapper to fill in shop details
-    inputIn(CreateShopScreenTestTags.FIELD_SHOP).assertExists().performTextInput("Name 1")
+    composeTestRule.waitUntilWithCatch({
+      inputIn(CreateShopScreenTestTags.FIELD_SHOP).assertExists().performTextInput("Name 1")
+      true
+    })
     composeTestRule.waitForIdle()
-    inputIn(CreateShopScreenTestTags.FIELD_EMAIL)
-        .assertExists()
-        .performTextInput("shop_${uniqueId}@example.com")
+    composeTestRule.waitUntilWithCatch({
+      inputIn(CreateShopScreenTestTags.FIELD_EMAIL)
+          .assertExists()
+          .performTextInput("shop_${uniqueId}@example.com")
+      true
+    })
     composeTestRule.waitForIdle()
-    inputIn(CreateShopScreenTestTags.FIELD_PHONE).assertExists().performTextInput("0123456789")
+    composeTestRule.waitUntilWithCatch({
+      inputIn(CreateShopScreenTestTags.FIELD_PHONE).assertExists().performTextInput("0123456789")
+      true
+    })
     composeTestRule.waitForIdle()
-    inputIn(CreateShopScreenTestTags.FIELD_LINK).assertExists().performTextInput("name1games.com")
+    composeTestRule.waitUntilWithCatch({
+      inputIn(CreateShopScreenTestTags.FIELD_LINK).assertExists().performTextInput("name1games.com")
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
-    composeTestRule
-        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
-        .performTextInput("EPFL")
+    composeTestRule.waitUntilWithCatch(
+        {
+          composeTestRule
+              .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD, useUnmergedTree = true)
+              .performTextInput("EPFL")
+          true
+        },
+        timeoutMs = 30_000)
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 200_000) {
-      try {
-        composeTestRule
-            .onAllNodesWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Exception) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
-    composeTestRule
-        .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SessionComponentsTestTags.LOCATION_FIELD_ITEM + ":0")
+          .assertExists()
+          .performClick()
+      true
+    })
 
     // Set weekday opening hours
     val availabilityToggleTag =
@@ -545,16 +672,18 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
 
     ensureSectionExpanded(CreateShopScreenTestTags.SECTION_AVAILABILITY)
 
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(availabilityContentTag, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty() ||
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
           composeTestRule
-              .onAllNodesWithTag(availabilityToggleTag, useUnmergedTree = true)
+              .onAllNodesWithTag(availabilityContentTag, useUnmergedTree = true)
               .fetchSemanticsNodes()
-              .isNotEmpty()
-    }
+              .isNotEmpty() ||
+              composeTestRule
+                  .onAllNodesWithTag(availabilityToggleTag, useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+        })
 
     val contentPresent =
         composeTestRule
@@ -565,63 +694,73 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     if (!contentPresent) {
       // Bring the toggle into view and expand
       scrollListToTag(availabilityToggleTag)
-      composeTestRule
-          .onNodeWithTag(availabilityToggleTag, useUnmergedTree = true)
-          .assertExists()
-          .performClick()
-      composeTestRule.waitForIdle()
-      composeTestRule.waitUntil(timeoutMillis = 5_000) {
+      composeTestRule.waitUntilWithCatch({
         composeTestRule
-            .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .size >= 5
-      }
+            .onNodeWithTag(availabilityToggleTag, useUnmergedTree = true)
+            .assertExists()
+            .performClick()
+        true
+      })
+      composeTestRule.waitForIdle()
+      composeTestRule.waitUntilWithCatch(
+          timeoutMs = 5_000,
+          predicate = {
+            composeTestRule
+                .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .size >= 5
+          })
     }
     // Ensure we have day edit buttons
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      composeTestRule
-          .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .size >= 5
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .size >= 5
+        })
     // Set opening hours for all days (07:00 – 22:00) using one dialog + backend normalization
     // 1. Open the edit dialog for the first day
     scrollListToTag(ShopComponentsTestTags.DAY_ROW_EDIT)
-    composeTestRule
-        .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)[0]
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onAllNodesWithTag(ShopComponentsTestTags.DAY_ROW_EDIT, useUnmergedTree = true)[0]
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
     // 2. Wait for dialog
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
     // 3. Select all days chips 0..6
     (0..6).forEach { idx ->
-      try {
+      composeTestRule.waitUntilWithCatch({
         composeTestRule
             .onNodeWithTag(ShopComponentsTestTags.dayChip(idx), useUnmergedTree = true)
             .assertExists()
             .performClick()
-      } catch (_: Throwable) {}
+        true
+      })
     }
     composeTestRule.waitForIdle()
     // 4. Ensure neither Open24 nor Closed are checked.
     // Toggle Closed off (it is often initially on for empty hours)
-    try {
+    composeTestRule.waitUntilWithCatch({
       composeTestRule
           .onNodeWithTag(ShopComponentsTestTags.DIALOG_CLOSED_CHECKBOX, useUnmergedTree = true)
           .assertExists()
           .performClick()
-      composeTestRule.waitForIdle()
-    } catch (_: Throwable) {}
+      true
+    })
+    composeTestRule.waitForIdle()
     // Make sure Open24 is off (if it was on for some reason)
     // We optimistically click it only if needed; a single click when off leaves it off
     try {
@@ -632,23 +771,24 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
       // So we leave Open24 untouched here.
     } catch (_: Throwable) {}
     // 5. Save dialog (default interval currently 07:30–20:00; will normalize later)
-    composeTestRule
-        .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.DIALOG_SAVE, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Wait for Opening Hours dialog to dismiss
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onAllNodesWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .isEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithTag(ShopComponentsTestTags.DIALOG_TITLE, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isEmpty()
+        })
 
     // Seed a couple of games so the search dialog has results
     runBlocking {
@@ -692,70 +832,71 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.waitForIdle()
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(50_000) {
-      try {
-        composeTestRule.closeKeyboardSafely()
-        composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        {
+          composeTestRule.closeKeyboardSafely()
+          composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
+          true
+        },
+        timeoutMs = 50_000)
 
     // Wait for the Game Stock dialog to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithTag(ShopFormTestTags.GAME_STOCK_DIALOG_WRAPPER, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
     // Add Catan stock
-    composeTestRule
-        .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_FIELD, useUnmergedTree = true)
-        .assertExists()
-        .performTextInput("Catan")
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput("Catan")
+      true
+    })
     composeTestRule.waitForIdle()
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
-    composeTestRule
-        .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.GAME_SEARCH_ITEM + ":0", useUnmergedTree = true)
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
     // Increase quantity to 5
     setSliderValue(5)
 
     // Click save and wait for dialog to dismiss
-    composeTestRule
-        .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.GAME_DIALOG_SAVE, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
 
     // Verify Catan card now appears in Games section
     runCatching {
@@ -771,10 +912,13 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
               .fetchSemanticsNodes()
       if (contentNodes.isEmpty()) {
         scrollListToTag(gamesHeaderTag)
-        composeTestRule
-            .onNodeWithTag(gamesToggleTag, useUnmergedTree = true)
-            .assertExists()
-            .performClick()
+        composeTestRule.waitUntilWithCatch({
+          composeTestRule
+              .onNodeWithTag(gamesToggleTag, useUnmergedTree = true)
+              .assertExists()
+              .performClick()
+          true
+        })
         composeTestRule.waitForIdle()
       }
     }
@@ -783,34 +927,34 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     // Wait until either the item tag or the item text is present
-    composeTestRule.waitUntil(20_000) {
-      val byTag =
-          composeTestRule
-              .onAllNodesWithTag(itemTag, useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      val byTextUnmerged =
-          composeTestRule
-              .onAllNodes(hasText(targetName), useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      val byTextMerged =
-          composeTestRule
-              .onAllNodesWithText(targetName, useUnmergedTree = false)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      byTag || byTextUnmerged || byTextMerged
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 20_000,
+        predicate = {
+          val byTag =
+              composeTestRule
+                  .onAllNodesWithTag(itemTag, useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          val byTextUnmerged =
+              composeTestRule
+                  .onAllNodes(hasText(targetName), useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          val byTextMerged =
+              composeTestRule
+                  .onAllNodesWithText(targetName, useUnmergedTree = false)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          byTag || byTextUnmerged || byTextMerged
+        })
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil(50_000) {
-      try {
-        composeTestRule.closeKeyboardSafely()
-        composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        {
+          composeTestRule.closeKeyboardSafely()
+          composeTestRule.onNodeWithTag(CreateShopScreenTestTags.GAMES_ADD_BUTTON).performClick()
+          true
+        },
+        timeoutMs = 50_000)
 
     // Add Ticket to Ride stock
     composeTestRule.waitForIdle()
@@ -909,128 +1053,151 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     scrollListToTag(
         CreateShopScreenTestTags.SECTION_GAMES + CreateShopScreenTestTags.SECTION_HEADER_SUFFIX)
     composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntil(timeoutMillis = 20_000) {
-      var byTag =
-          composeTestRule
-              .onAllNodesWithTag(itemTag, useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      var byTextUnmerged =
-          composeTestRule
-              .onAllNodes(hasText(targetName), useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      var byTextMerged =
-          composeTestRule
-              .onAllNodesWithText(targetName, useUnmergedTree = false)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      val catan = byTag || byTextUnmerged || byTextMerged
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 20_000,
+        predicate = {
+          var byTag =
+              composeTestRule
+                  .onAllNodesWithTag(itemTag, useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          var byTextUnmerged =
+              composeTestRule
+                  .onAllNodes(hasText(targetName), useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          var byTextMerged =
+              composeTestRule
+                  .onAllNodesWithText(targetName, useUnmergedTree = false)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          val catan = byTag || byTextUnmerged || byTextMerged
 
-      byTag =
-          composeTestRule
-              .onAllNodesWithTag("Ticket", useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      byTextUnmerged =
-          composeTestRule
-              .onAllNodes(hasText(targetName), useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      byTextMerged =
-          composeTestRule
-              .onAllNodesWithText(targetName, useUnmergedTree = false)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-      val ticket = byTag || byTextUnmerged || byTextMerged
-      catan && ticket
-    }
+          byTag =
+              composeTestRule
+                  .onAllNodesWithTag("Ticket", useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          byTextUnmerged =
+              composeTestRule
+                  .onAllNodes(hasText(targetName), useUnmergedTree = true)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          byTextMerged =
+              composeTestRule
+                  .onAllNodesWithText(targetName, useUnmergedTree = false)
+                  .fetchSemanticsNodes()
+                  .isNotEmpty()
+          val ticket = byTag || byTextUnmerged || byTextMerged
+          catan && ticket
+        })
 
     // Create the store
-    composeTestRule
-        .onNodeWithTag(ShopComponentsTestTags.ACTION_CREATE, useUnmergedTree = true)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(ShopComponentsTestTags.ACTION_CREATE, useUnmergedTree = true)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Wait for store to be created and map to reload
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists()
+          true
+        })
 
     // Navigate to Discussions tab to create a new post announcing the store is live
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Wait to be on discussions overview
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON).assertExists()
+          true
+        })
 
     // Create the new post
     val announcementTitle = "Our store is now open!"
     val announcementDescription = "The store is officially live! Come visit us!"
 
-    composeTestRule
-        .onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(FeedsOverviewTestTags.ADD_POST_BUTTON)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(CreatePostTestTags.TITLE_FIELD)
-        .assertExists()
-        .performTextInput(announcementTitle)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreatePostTestTags.TITLE_FIELD)
+          .assertExists()
+          .performTextInput(announcementTitle)
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(CreatePostTestTags.BODY_FIELD)
-        .assertExists()
-        .performTextInput(announcementDescription)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreatePostTestTags.BODY_FIELD)
+          .assertExists()
+          .performTextInput(announcementDescription)
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(CreatePostTestTags.TAG_INPUT_FIELD)
-        .assertExists()
-        .performTextInput("launch")
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreatePostTestTags.TAG_INPUT_FIELD)
+          .assertExists()
+          .performTextInput("launch")
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag(CreatePostTestTags.TAG_ADD_BUTTON).performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(CreatePostTestTags.TAG_ADD_BUTTON).performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag(CreatePostTestTags.POST_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreatePostTestTags.POST_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Verify the new discussion appears in the list
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithText(announcementTitle, useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithText(announcementTitle, useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Open the new post
-    composeTestRule
-        .onNodeWithText(announcementTitle, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithText(announcementTitle, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Make other users react to the post through repository (as comments on the post)
@@ -1053,34 +1220,30 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     }
 
     // Wait for all reactions to appear on screen in THE POST
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule.onNodeWithText("Congratulations!", useUnmergedTree = true).assertExists()
+          composeTestRule.onNodeWithText("Amazing!", useUnmergedTree = true).assertExists()
+          composeTestRule.onNodeWithText("Love it!", useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Wait until author names are resolved (avoid <Unknown User>)
-    composeTestRule.waitUntil(timeoutMillis = 10_000) {
-      try {
-        composeTestRule
-            .onNodeWithText("Eve", useUnmergedTree = true, substring = false)
-            .assertExists()
-        composeTestRule
-            .onNodeWithText("Alice", useUnmergedTree = true, substring = false)
-            .assertExists()
-        composeTestRule
-            .onNodeWithText("Bob", useUnmergedTree = true, substring = false)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText("Eve", useUnmergedTree = true, substring = false)
+              .assertExists()
+          composeTestRule
+              .onNodeWithText("Alice", useUnmergedTree = true, substring = false)
+              .assertExists()
+          composeTestRule
+              .onNodeWithText("Bob", useUnmergedTree = true, substring = false)
+              .assertExists()
+          true
+        })
 
     // Verify all reactions are displayed in THE POST
     composeTestRule.waitUntilWithCatch({
@@ -1113,37 +1276,44 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
   /** Helper function to add a member to a discussion during creation */
   private fun addMemberToDiscussion(handle: String) {
     // Search for the user by handle
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS, useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(handle)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(handle)
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Wait for search results to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule.onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          composeTestRule.onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT).assertExists()
+          true
+        })
 
     composeTestRule.waitForIdle()
 
     // Click on the member from search results to add them
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS_ELEMENT)
+          .assertExists()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Clear the search field for the next member
-    composeTestRule
-        .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS, useUnmergedTree = true)
-        .performTextClearance()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(AddDiscussionTestTags.ADD_MEMBERS, useUnmergedTree = true)
+          .performTextClearance()
+      true
+    })
   }
 
   /**
@@ -1166,16 +1336,19 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
   }
   /** Set slider value by performing swipe gesture. */
   private fun setSliderValue(targetValue: Int, maxValue: Int = 100) {
-    composeTestRule.onNodeWithTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTouchInput {
-      val fraction = targetValue.toFloat() / maxValue.toFloat()
-      val targetX = left + (right - left) * fraction
-      // Slider is aligned to BottomCenter, so we should touch near the bottom
-      val targetY = top + (bottom - top) * 0.9f
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(ShopComponentsTestTags.QTY_INPUT_FIELD).performTouchInput {
+        val fraction = targetValue.toFloat() / maxValue.toFloat()
+        val targetX = left + (right - left) * fraction
+        // Slider is aligned to BottomCenter, so we should touch near the bottom
+        val targetY = top + (bottom - top) * 0.9f
 
-      down(Offset(center.x, targetY))
-      moveTo(Offset(targetX, targetY))
-      up()
-    }
+        down(Offset(center.x, targetY))
+        moveTo(Offset(targetX, targetY))
+        up()
+      }
+      true
+    })
     composeTestRule.waitForIdle()
   }
 }
