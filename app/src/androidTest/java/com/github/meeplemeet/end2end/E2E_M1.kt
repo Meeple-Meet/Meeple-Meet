@@ -19,6 +19,9 @@ import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
 import com.github.meeplemeet.utils.AuthUtils.signUpUser
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,6 +38,25 @@ class E2E_M1 : FirestoreTests() {
   private val testPassword = "Password123!"
   private val testHandle = "e2eHandle${UUID.randomUUID().toString().take(6)}"
   private val testUsername = "Test User"
+
+  // Generic retry helper used for waiting on backend state convergence
+  private suspend fun retryUntil(
+      timeoutMs: Long = 30_000,
+      intervalMs: Long = 500,
+      predicate: suspend () -> Boolean
+  ) {
+    try {
+      withTimeout(timeoutMs) {
+        while (!predicate()) {
+          continue
+        }
+      }
+    } catch (e: TimeoutCancellationException) {
+      throw AssertionError("Condition not met within ${timeoutMs}ms", e)
+    }
+  }
+
+  private suspend fun waitUntilAuthReady() = retryUntil { auth.currentUser != null }
 
   @Test
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
@@ -65,14 +87,17 @@ class E2E_M1 : FirestoreTests() {
     // ===== PART 1: Create first account (Alice) =====
     composeTestRule.waitForIdle()
     composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name)
+    runBlocking { waitUntilAuthReady() }
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 2: Create second account (Bob) =====
     composeTestRule.signUpUser(user2Email, password, user2Handle, user2Name)
+    runBlocking { waitUntilAuthReady() }
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 3: Alice signs back in, creates a discussion with Bob, and sends a message =====
     composeTestRule.signInUser(user1Email, password)
+    runBlocking { waitUntilAuthReady() }
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
     composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
 
@@ -159,6 +184,7 @@ class E2E_M1 : FirestoreTests() {
 
     // ===== PART 6: Bob signs in and verifies he can read Alice's message =====
     composeTestRule.signInUser(user2Email, password)
+    runBlocking { waitUntilAuthReady() }
     composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
     composeTestRule.waitForIdle()
 
