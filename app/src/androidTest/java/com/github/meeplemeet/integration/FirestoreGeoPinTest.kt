@@ -36,14 +36,15 @@ class FirestoreGeoPinTest : FirestoreTests() {
   @Test
   fun upsertGeoPinCreatesAllPinTypes() = runTest {
     // Create SHOP pin
-    geoPinRepository.upsertGeoPin(ref = "shop123", type = PinType.SHOP, location = testLocation1)
+    geoPinRepository.upsertBusinessGeoPin(
+        ref = "shop123", type = PinType.SHOP, location = testLocation1, ownerId = "owner1")
 
     // Create SPACE pin
-    geoPinRepository.upsertGeoPin(ref = "=space456", type = PinType.SPACE, location = testLocation2)
+    geoPinRepository.upsertBusinessGeoPin(
+        ref = "space456", type = PinType.SPACE, location = testLocation2, ownerId = "owner2")
 
     // Create SESSION pin
-    geoPinRepository.upsertGeoPin(
-        ref = "session789", type = PinType.SESSION, location = testLocation3)
+    geoPinRepository.upsertSessionGeoPin(ref = "session789", location = testLocation3)
 
     // Verify pins were created by checking Firestore collection count
     val snapshot = collection.get().await()
@@ -55,8 +56,8 @@ class FirestoreGeoPinTest : FirestoreTests() {
   fun upsertGeoPinUpdatesAllFields() = runTest {
     // Create initial pin
     val pinId = "pin-update-test"
-    geoPinRepository.upsertGeoPin(pinId, PinType.SHOP, testLocation1)
-    geoPinRepository.upsertGeoPin(pinId, PinType.SPACE, testLocation2)
+    geoPinRepository.upsertBusinessGeoPin(pinId, PinType.SHOP, testLocation1, ownerId = "owner1")
+    geoPinRepository.upsertBusinessGeoPin(pinId, PinType.SPACE, testLocation2, ownerId = "owner1")
 
     // Verify update
     val snapshot = collection.document(pinId).get().await()
@@ -71,7 +72,7 @@ class FirestoreGeoPinTest : FirestoreTests() {
   fun deleteGeoPinRemovesFromFirestoreAndGeoFirestore() = runTest {
     // Create pin
     val pinId = "pin-delete-test"
-    geoPinRepository.upsertGeoPin(pinId, PinType.SESSION, testLocation1)
+    geoPinRepository.upsertSessionGeoPin(pinId, testLocation1)
 
     // Verify exists
     val beforeDelete = collection.document(pinId).get().await()
@@ -96,7 +97,14 @@ class FirestoreGeoPinTest : FirestoreTests() {
             Triple("session1", PinType.SESSION, testLocation1),
             Triple("session2", PinType.SESSION, testLocation2))
 
-    pins.forEach { (id, type, location) -> geoPinRepository.upsertGeoPin(id, type, location) }
+    pins.forEach { (id, type, location) ->
+      when (type) {
+        PinType.SHOP,
+        PinType.SPACE ->
+            geoPinRepository.upsertBusinessGeoPin(id, type, location, ownerId = "owner1")
+        PinType.SESSION -> geoPinRepository.upsertSessionGeoPin(id, location)
+      }
+    }
 
     // Verify count
     val snapshot = collection.get().await()
@@ -108,8 +116,8 @@ class FirestoreGeoPinTest : FirestoreTests() {
   fun updateThenDeleteCompleteLifecycle() = runTest {
     // Create & update
     val pinId = "lifecycle-pin"
-    geoPinRepository.upsertGeoPin(pinId, PinType.SESSION, testLocation1)
-    geoPinRepository.upsertGeoPin(pinId, PinType.SESSION, testLocation2)
+    geoPinRepository.upsertSessionGeoPin(pinId, testLocation1)
+    geoPinRepository.updateGeoPinLocation(pinId, testLocation2)
 
     // Verify update
     val afterUpdate = collection.document(pinId).get().await()
@@ -134,7 +142,8 @@ class FirestoreGeoPinTest : FirestoreTests() {
             Location(46.5199, 6.5667, "Very Near EPFL"))
 
     locations.forEachIndexed { index, location ->
-      geoPinRepository.upsertGeoPin("shop$index", PinType.SHOP, location)
+      geoPinRepository.upsertBusinessGeoPin(
+          "shop$index", PinType.SHOP, location, ownerId = "owner1")
     }
 
     val snapshot = collection.get().await()
@@ -150,12 +159,14 @@ class FirestoreGeoPinTest : FirestoreTests() {
     val spacePinId = "gaming-space"
     val sessionPinId = "weekly-session"
 
-    geoPinRepository.upsertGeoPin(shopPinId, PinType.SHOP, testLocation1)
-    geoPinRepository.upsertGeoPin(spacePinId, PinType.SPACE, testLocation2)
-    geoPinRepository.upsertGeoPin(sessionPinId, PinType.SESSION, testLocation3)
+    geoPinRepository.upsertBusinessGeoPin(
+        shopPinId, PinType.SHOP, testLocation1, ownerId = "owner1")
+    geoPinRepository.upsertBusinessGeoPin(
+        spacePinId, PinType.SPACE, testLocation2, ownerId = "owner2")
+    geoPinRepository.upsertSessionGeoPin(sessionPinId, testLocation3)
 
-    // Update one pin
-    geoPinRepository.upsertGeoPin(shopPinId, PinType.SHOP, testLocation2)
+    // Update one pin location only
+    geoPinRepository.updateGeoPinLocation(shopPinId, testLocation2)
 
     // Delete one pin
     geoPinRepository.deleteGeoPin(sessionPinId)
@@ -172,9 +183,27 @@ class FirestoreGeoPinTest : FirestoreTests() {
     assert(!sessionSnapshot.exists())
   }
 
+  /* ========== Test 8: Location Update Only ========== */
+  @Test
+  fun updateGeoPinLocationOnlyUpdatesLocation() = runTest {
+    val pinId = "location-update-test"
+    geoPinRepository.upsertBusinessGeoPin(pinId, PinType.SHOP, testLocation1, ownerId = "owner1")
+
+    // Update location only
+    geoPinRepository.updateGeoPinLocation(pinId, testLocation2)
+
+    // Verify location updated but type unchanged
+    val snapshot = collection.document(pinId).get().await()
+    val pin = snapshot.toObject(StorableGeoPinNoUid::class.java)
+
+    assertNotNull(pin)
+    assertEquals(PinType.SHOP, pin!!.type)
+    assertEquals("owner1", pin.ownerId)
+  }
+
   /* ========== RETRY LOGIC TESTS ========== */
 
-  /* ========== Test 8: Retry on Transient Failure - Success on Second Attempt ========== */
+  /* ========== Test 9: Retry on Transient Failure - Success on Second Attempt ========== */
   @Test
   fun upsertGeoPinRetriesOnTransientFailureAndSucceeds() = runTest {
     val attemptCounter = AtomicInteger(0)
@@ -205,13 +234,13 @@ class FirestoreGeoPinTest : FirestoreTests() {
     val testRepo = StorableGeoPinRepository(mockGeoOps)
 
     // This should succeed after retry
-    testRepo.upsertGeoPin("retry-test-1", PinType.SHOP, testLocation1)
+    testRepo.upsertBusinessGeoPin("retry-test-1", PinType.SHOP, testLocation1, ownerId = "owner1")
 
     // Verify it retried (attempt counter should be 2)
     assertEquals(2, attemptCounter.get())
   }
 
-  /* ========== Test 9: Retry Exhausted - Fails After 3 Attempts ========== */
+  /* ========== Test 10: Retry Exhausted - Fails After 3 Attempts ========== */
   @Test
   fun upsertGeoPinFailsAfterAllRetriesExhausted() = runTest {
     val attemptCounter = AtomicInteger(0)
@@ -237,7 +266,7 @@ class FirestoreGeoPinTest : FirestoreTests() {
 
     // This should fail after 3 attempts
     try {
-      testRepo.upsertGeoPin("retry-test-2", PinType.SHOP, testLocation1)
+      testRepo.upsertBusinessGeoPin("retry-test-2", PinType.SHOP, testLocation1, ownerId = "owner1")
       fail("Expected exception to be thrown")
     } catch (e: Exception) {
       // Expected behavior
@@ -248,7 +277,7 @@ class FirestoreGeoPinTest : FirestoreTests() {
     assertEquals(3, attemptCounter.get())
   }
 
-  /* ========== Test 10: Delete Retry on Transient Failure ========== */
+  /* ========== Test 11: Delete Retry on Transient Failure ========== */
   @Test
   fun deleteGeoPinRetriesOnTransientFailureAndSucceeds() = runTest {
     val attemptCounter = AtomicInteger(0)
@@ -285,7 +314,7 @@ class FirestoreGeoPinTest : FirestoreTests() {
     assertEquals(2, attemptCounter.get())
   }
 
-  /* ========== Test 11: Delete Fails After All Retries ========== */
+  /* ========== Test 12: Delete Fails After All Retries ========== */
   @Test
   fun deleteGeoPinFailsAfterAllRetriesExhausted() = runTest {
     val attemptCounter = AtomicInteger(0)
@@ -322,7 +351,7 @@ class FirestoreGeoPinTest : FirestoreTests() {
     assertEquals(3, attemptCounter.get())
   }
 
-  /* ========== Test 12: Retry Succeeds on Third Attempt ========== */
+  /* ========== Test 13: Retry Succeeds on Third Attempt ========== */
   @Test
   fun upsertGeoPinSucceedsOnThirdAttempt() = runTest {
     val attemptCounter = AtomicInteger(0)
@@ -353,9 +382,43 @@ class FirestoreGeoPinTest : FirestoreTests() {
     val testRepo = StorableGeoPinRepository(mockGeoOps)
 
     // This should succeed on the third attempt
-    testRepo.upsertGeoPin("retry-test-5", PinType.SHOP, testLocation1)
+    testRepo.upsertBusinessGeoPin("retry-test-5", PinType.SHOP, testLocation1, ownerId = "owner1")
 
     // Verify it tried 3 times
     assertEquals(3, attemptCounter.get())
+  }
+
+  /* ========== Test 14: Location Update Retry Logic ========== */
+  @Test
+  fun updateGeoPinLocationRetriesOnFailure() = runTest {
+    val attemptCounter = AtomicInteger(0)
+
+    val mockGeoOps =
+        object : GeoFirestoreOperations {
+          override fun setLocation(
+              uid: String,
+              geoPoint: GeoPoint,
+              callback: (Exception?) -> Unit
+          ) {
+            val attempt = attemptCounter.incrementAndGet()
+            if (attempt == 1) {
+              callback(Exception("Transient update error"))
+            } else {
+              callback(null)
+            }
+          }
+
+          override fun removeLocation(uid: String, callback: (Exception?) -> Unit) {
+            callback(null)
+          }
+        }
+
+    val testRepo = StorableGeoPinRepository(mockGeoOps)
+
+    // This should succeed after retry
+    testRepo.updateGeoPinLocation("location-retry-test", testLocation1)
+
+    // Verify it retried
+    assertEquals(2, attemptCounter.get())
   }
 }
