@@ -125,13 +125,13 @@ class MapScreenNoPermissionTest : FirestoreTests(), OnMapsSdkInitializedCallback
     checkpoint("mapScreen_usesTimezoneBasedFallbackLocation") {
       composeRule.waitForIdle()
       val expected = getApproximateLocationFromTimezone()
-      
+
       // Wait for camera to move to expected location
       composeRule.waitUntil(timeoutMillis = 5000) {
-          val actual = cameraState.position.target
-          val latDiff = Math.abs(expected.latitude - actual.latitude)
-          val lngDiff = Math.abs(expected.longitude - actual.longitude)
-          latDiff < 0.5 && lngDiff < 0.5
+        val actual = cameraState.position.target
+        val latDiff = Math.abs(expected.latitude - actual.latitude)
+        val lngDiff = Math.abs(expected.longitude - actual.longitude)
+        latDiff < 0.5 && lngDiff < 0.5
       }
 
       val actual = cameraState.position.target

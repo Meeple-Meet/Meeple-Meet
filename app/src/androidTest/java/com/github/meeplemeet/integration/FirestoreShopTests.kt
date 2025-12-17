@@ -882,12 +882,13 @@ class FirestoreShopTests : FirestoreTests() {
         context = InstrumentationRegistry.getInstrumentation().targetContext, id = shop.id)
 
     // Verify the StateFlow was updated
-    val loadedShop = kotlinx.coroutines.withTimeout(5000) {
-      while (shopViewModel.shop.value == null) {
-        delay(100)
-      }
-      shopViewModel.shop.value
-    }
+    val loadedShop =
+        kotlinx.coroutines.withTimeout(5000) {
+          while (shopViewModel.shop.value == null) {
+            delay(100)
+          }
+          shopViewModel.shop.value
+        }
     assertNotNull(loadedShop)
     assertEquals(shop.id, loadedShop!!.id)
     assertEquals("Minimal VM Shop", loadedShop.name)

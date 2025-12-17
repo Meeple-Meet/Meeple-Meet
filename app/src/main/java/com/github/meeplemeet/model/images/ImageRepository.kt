@@ -157,8 +157,6 @@ open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatc
   open suspend fun deleteAccountProfilePicture(accountId: String, context: Context) =
       deleteImages(context, accountPath(accountId))
 
-
-
   /**
    * Deletes the account profile picture from local cache only (does not delete from Firebase
    * Storage).

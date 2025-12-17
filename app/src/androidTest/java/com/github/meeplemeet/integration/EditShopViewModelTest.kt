@@ -1,23 +1,24 @@
 package com.github.meeplemeet.integration
 
+import android.content.Context
 import com.github.meeplemeet.FirebaseProvider
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
-import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
+import com.github.meeplemeet.model.shared.game.Game
+import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.game.GameSearchResult
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
-import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.EditShopViewModel
+import com.github.meeplemeet.model.shops.GameItem
+import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
-import io.mockk.unmockkAll
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,23 +26,10 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import com.github.meeplemeet.model.shared.game.Game
-import com.github.meeplemeet.model.shared.game.GameRepository
-import com.github.meeplemeet.model.shared.game.GameSearchResult
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-
-import androidx.test.platform.app.InstrumentationRegistry
-import java.io.File
-
-import android.content.Context
-import com.github.meeplemeet.model.account.AccountRepository
-import com.github.meeplemeet.model.map.StorableGeoPinRepository
-import com.github.meeplemeet.model.shops.GameItem
-import com.github.meeplemeet.model.shops.OpeningHours
-import org.junit.BeforeClass
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EditShopViewModelTest {
@@ -56,26 +44,27 @@ class EditShopViewModelTest {
   private lateinit var locationRepo: LocationRepository
 
   // Helper classes for Fakes
-  open class FakeShopRepository : ShopRepository(mockk(relaxed=true), mockk(relaxed=true)) {
-      var updateShopCalled = false
-      var updateShopParams: Map<String, Any?> = emptyMap()
-      
-      var deleteShopCalled = false
+  open class FakeShopRepository : ShopRepository(mockk(relaxed = true), mockk(relaxed = true)) {
+    var updateShopCalled = false
+    var updateShopParams: Map<String, Any?> = emptyMap()
 
-      override suspend fun updateShop(
-          id: String,
-          ownerId: String?,
-          name: String?,
-          phone: String?,
-          email: String?,
-          website: String?,
-          address: Location?,
-          openingHours: List<OpeningHours>?,
-          gameCollection: List<GameItem>?,
-          photoCollectionUrl: List<String>?
-      ) {
-          updateShopCalled = true
-          updateShopParams = mapOf(
+    var deleteShopCalled = false
+
+    override suspend fun updateShop(
+        id: String,
+        ownerId: String?,
+        name: String?,
+        phone: String?,
+        email: String?,
+        website: String?,
+        address: Location?,
+        openingHours: List<OpeningHours>?,
+        gameCollection: List<GameItem>?,
+        photoCollectionUrl: List<String>?
+    ) {
+      updateShopCalled = true
+      updateShopParams =
+          mapOf(
               "id" to id,
               "ownerId" to ownerId,
               "name" to name,
@@ -85,70 +74,80 @@ class EditShopViewModelTest {
               "address" to address,
               "openingHours" to openingHours,
               "gameCollection" to gameCollection,
-              "photoCollectionUrl" to photoCollectionUrl
-          )
-      }
+              "photoCollectionUrl" to photoCollectionUrl)
+    }
 
-      override suspend fun deleteShop(id: String) {
-          deleteShopCalled = true
-      }
+    override suspend fun deleteShop(id: String) {
+      deleteShopCalled = true
+    }
   }
 
   open class FakeImageRepository : ImageRepository() {
-      var saveShopPhotosCalled = false
-      var saveShopPhotosParams: List<String>? = null
-      var shouldThrowOnSave = false
-      var savedUrls: List<String> = emptyList()
+    var saveShopPhotosCalled = false
+    var saveShopPhotosParams: List<String>? = null
+    var shouldThrowOnSave = false
+    var savedUrls: List<String> = emptyList()
 
-      override suspend fun saveShopPhotos(
-          context: Context,
-          shopId: String,
-          vararg inputPaths: String
-      ): List<String> {
-          if (shouldThrowOnSave) throw Exception("Upload failed")
-          saveShopPhotosCalled = true
-          saveShopPhotosParams = inputPaths.toList()
-          return savedUrls
-      }
-      
-      override suspend fun deleteShopPhotos(
-          context: Context, 
-          shopId: String, 
-          vararg storagePaths: String
-      ) {
-          // No-op
-      }
+    override suspend fun saveShopPhotos(
+        context: Context,
+        shopId: String,
+        vararg inputPaths: String
+    ): List<String> {
+      if (shouldThrowOnSave) throw Exception("Upload failed")
+      saveShopPhotosCalled = true
+      saveShopPhotosParams = inputPaths.toList()
+      return savedUrls
+    }
+
+    override suspend fun deleteShopPhotos(
+        context: Context,
+        shopId: String,
+        vararg storagePaths: String
+    ) {
+      // No-op
+    }
   }
-
-
 
   @Before
   fun setUp() {
     Dispatchers.setMain(testDispatcher)
 
-    // Mock FirebaseProvider BEFORE creating any Repository that might use it (like FakeShopRepository -> FirestoreRepository)
-    // This prevents "IllegalStateException: Cannot call useEmulator() after instance has already been initialized" in other tests
+    // Mock FirebaseProvider BEFORE creating any Repository that might use it (like
+    // FakeShopRepository -> FirestoreRepository)
+    // This prevents "IllegalStateException: Cannot call useEmulator() after instance has already
+    // been initialized" in other tests
     mockkObject(FirebaseProvider)
     every { FirebaseProvider.db } returns mockk(relaxed = true)
     every { FirebaseProvider.storage } returns mockk(relaxed = true)
-    
+
     fakeShopRepository = FakeShopRepository()
     fakeImageRepository = FakeImageRepository()
-    
+
     // Use a manual fake that returns real data class instances, not mocks
     class FakeGameRepository : GameRepository {
-        override suspend fun getGameById(gameID: String): Game = 
-            Game(uid = gameID, name = "Test Game", description = "", minPlayers = 1, maxPlayers = 4, imageURL = "", recommendedPlayers = 2, averagePlayTime = 60)
-            
-        override suspend fun getGamesById(vararg gameIDs: String): List<Game> = 
-            gameIDs.map { getGameById(it) }
-            
-        override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> = emptyList()
+      override suspend fun getGameById(gameID: String): Game =
+          Game(
+              uid = gameID,
+              name = "Test Game",
+              description = "",
+              minPlayers = 1,
+              maxPlayers = 4,
+              imageURL = "",
+              recommendedPlayers = 2,
+              averagePlayTime = 60)
+
+      override suspend fun getGamesById(vararg gameIDs: String): List<Game> =
+          gameIDs.map { getGameById(it) }
+
+      override suspend fun searchGamesByName(
+          query: String,
+          maxResults: Int
+      ): List<GameSearchResult> = emptyList()
     }
     fakeGameRepo = FakeGameRepository()
-    
+
     class FakeLocationRepository : LocationRepository {
-        override suspend fun search(query: String): List<Location> = emptyList()
+      override suspend fun search(query: String): List<Location> = emptyList()
     }
     locationRepo = FakeLocationRepository()
 
@@ -156,12 +155,12 @@ class EditShopViewModelTest {
     OfflineModeManager.clearOfflineMode()
     OfflineModeManager.setNetworkStatusForTesting(true)
 
-    viewModel = EditShopViewModel(
-        shopRepository = fakeShopRepository, 
-        imageRepository = fakeImageRepository,
-        gameRepository = fakeGameRepo,
-        locationRepository = locationRepo
-    )
+    viewModel =
+        EditShopViewModel(
+            shopRepository = fakeShopRepository,
+            imageRepository = fakeImageRepository,
+            gameRepository = fakeGameRepo,
+            locationRepository = locationRepo)
 
     // Mock RepositoryProvider to prevent OfflineModeManager from initializing real Firestore
     mockkObject(RepositoryProvider)
@@ -170,7 +169,7 @@ class EditShopViewModelTest {
     // Games and Locations are mocked via dependency injection into ViewModel
     // RepositoryProvider.games and RepositoryProvider.locations are NOT used by OfflineModeManager
     // so we skip mocking them to avoid IncompatibleClassChangeError with interfaces
-    // every { RepositoryProvider.games } returns fakeGameRepo 
+    // every { RepositoryProvider.games } returns fakeGameRepo
     // every { RepositoryProvider.locations } returns locationRepo
     every { RepositoryProvider.accounts } returns mockk(relaxed = true)
   }
@@ -268,7 +267,7 @@ class EditShopViewModelTest {
     val localPath = "/storage/emulated/0/DCIM/Camera/IMG_2023.jpg"
     val uploadedUrl =
         "https://firebasestorage.googleapis.com/v0/b/meeple-meet/o/shops%2Fshop1%2F123.webp"
-    
+
     fakeImageRepository.savedUrls = listOf(uploadedUrl)
 
     // Act
@@ -327,7 +326,7 @@ class EditShopViewModelTest {
     // Advance coroutines
     testDispatcher.scheduler.advanceUntilIdle()
 
-    // Assert done by expected exception. 
+    // Assert done by expected exception.
     // If we want to check side effects if exception is swallowed (it's not), we can:
     Assert.assertFalse(fakeShopRepository.updateShopCalled)
   }

@@ -25,7 +25,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -266,7 +265,6 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     assertTrue("Photo URL should be empty", updatedAccount?.photoUrl.isNullOrEmpty())
   }
 
-
   @Test
   fun test_sendVerificationEmail_enforces_cooldown() = runBlocking {
     authenticationRepository.loginWithEmail(testEmail, testPassword)
@@ -325,5 +323,4 @@ class ProfileScreenViewModelTest : FirestoreTests() {
     }
     return null
   }
-
 }

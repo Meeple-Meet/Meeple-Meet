@@ -142,7 +142,7 @@ class FirestoreHandlesTests : FirestoreTests() {
     // Check with new handle
     val accountWithNewHandle = testAccount.copy(handle = newHandle)
     handlesVM.handleForAccountExists(accountWithNewHandle)
-    
+
     // Wait for error to potentially appear (should be empty)
     delay(200)
 
@@ -151,11 +151,11 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // Check with old handle (should now error)
     handlesVM.handleForAccountExists(accountWithOldHandle)
-    
+
     // Wait for error message to be set
     val start = System.currentTimeMillis()
     while (handlesVM.errorMessage.value.isEmpty() && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+      delay(100)
     }
 
     // Should set error since old handle no longer exists for this account
@@ -327,11 +327,11 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // Try to change account1's handle to account2's handle - should set error
     handlesVM.setAccountHandle(accountWithHandle1, handle2)
-    
+
     // Wait for error message
     val start = System.currentTimeMillis()
     while (handlesVM.errorMessage.value.isEmpty() && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+      delay(100)
     }
 
     assertEquals(HandleAlreadyTakenException.DEFAULT_MESSAGE, handlesVM.errorMessage.value)
@@ -464,13 +464,14 @@ class FirestoreHandlesTests : FirestoreTests() {
     // Update handle
     val accountWithHandle1 = testAccount.copy(handle = handle1)
     handlesVM.setAccountHandle(accountWithHandle1, handle2)
-    
+
     // Wait for update (handle2 should become taken)
     val start = System.currentTimeMillis()
-    while (handlesRepository.checkHandleAvailable(handle2) && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+    while (handlesRepository.checkHandleAvailable(handle2) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
     }
-    
+
     assertEquals("", handlesVM.errorMessage.value)
     // Old handle freed
     assertTrue(handlesRepository.checkHandleAvailable(handle1))
@@ -513,27 +514,30 @@ class FirestoreHandlesTests : FirestoreTests() {
     handlesVM.createAccountHandle(testAccount, handle, "n")
     // Wait for creation
     var start = System.currentTimeMillis()
-    while (!handlesRepository.checkHandleAvailable(handle) && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+    while (!handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
     }
 
     // Delete the handle
     val accountWithHandle = testAccount.copy(handle = handle)
     handlesVM.deleteAccountHandle(accountWithHandle)
-    
+
     // Wait for deletion
     start = System.currentTimeMillis()
-    while (handlesRepository.checkHandleAvailable(handle) && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+    while (handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
     }
 
     // Create same handle for second account - should succeed
     handlesVM.createAccountHandle(testAccount2, handle, "n")
-    
+
     // Wait for creation for second account
     start = System.currentTimeMillis()
-    while (!handlesRepository.checkHandleAvailable(handle) && System.currentTimeMillis() - start < 5000) {
-        delay(100)
+    while (!handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
     }
     assertEquals("", handlesVM.errorMessage.value)
     assertTrue(handlesRepository.checkHandleAvailable(handle))

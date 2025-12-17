@@ -7,13 +7,10 @@ import com.github.meeplemeet.model.auth.SignUpViewModel
 import com.github.meeplemeet.model.auth.coolDownErrMessage
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -46,7 +43,8 @@ class AuthViewModelTest : FirestoreTests() {
 
   @Before
   fun setup() {
-    // Dispatchers.setMain(Dispatchers.Unconfined) // Causing concurrency issues in instrumented tests
+    // Dispatchers.setMain(Dispatchers.Unconfined) // Causing concurrency issues in instrumented
+    // tests
 
     signInViewModel = SignInViewModel()
     signUpViewModel = SignUpViewModel()
@@ -62,7 +60,7 @@ class AuthViewModelTest : FirestoreTests() {
 
   @After
   fun cleanup() {
-    // Dispatchers.resetMain() 
+    // Dispatchers.resetMain()
     runBlocking {
       auth.signOut()
       clearTestData()

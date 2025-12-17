@@ -396,7 +396,6 @@ internal fun EditSpaceRenterContent(
                             initiallyExpanded = false,
                             expanded = spacesExpanded,
                             onExpandedChange = { spacesExpanded = it },
-
                             content = {
                               SpacesList(
                                   spaces = spaces,
@@ -409,10 +408,10 @@ internal fun EditSpaceRenterContent(
                                   },
                               )
                               AddButton(
-                                onClick = { addSpace() },
-                                buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
-                                buttonTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
-                                labelTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
+                                  onClick = { addSpace() },
+                                  buttonText = AddSpaceRenterUi.Strings.BTN_ADD_SPACE,
+                                  buttonTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_BUTTON,
+                                  labelTestTag = EditSpaceRenterScreenTestTags.SPACES_ADD_LABEL)
                             },
                             testTag = EditSpaceRenterScreenTestTags.SECTION_SPACES)
                       }

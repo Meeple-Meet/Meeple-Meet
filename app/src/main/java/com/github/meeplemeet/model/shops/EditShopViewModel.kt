@@ -10,7 +10,9 @@ import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
+import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shared.location.LocationRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,9 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-import com.github.meeplemeet.model.shared.game.GameRepository
-import com.github.meeplemeet.model.shared.location.LocationRepository
 
 /**
  * ViewModel for editing and deleting existing shops.
