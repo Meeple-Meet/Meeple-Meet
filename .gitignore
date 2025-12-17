@@ -9,3 +9,7 @@ firestore-debug.log
 app/*.jks
 *.dpapi
 .kotlin
+
+build_log.txt
+test_output.txt
+cloud-functions/bgg-functions/lib/

@@ -12,6 +12,7 @@ import com.github.meeplemeet.model.shops.TimeSlot
 import com.github.meeplemeet.model.space_renter.EditSpaceRenterViewModel
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
 import com.github.meeplemeet.ui.space_renter.EditSpaceRenterScreen
@@ -22,6 +23,7 @@ import com.github.meeplemeet.utils.FirestoreTests
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -71,7 +73,7 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
               openingHours = testOpeningHours,
               spaces = listOf(Space(seats = 10, costPerHour = 15.0)),
               id = "renter1",
-              photoCollectionUrl = emptyList())
+              photoCollectionUrl = listOf("https://via.placeholder.com/150"))
       val noUid = com.github.meeplemeet.model.space_renter.toNoUid(renter)
       db.collection("space_renters").document(renter.id).set(noUid).await()
       renter = spaceRenterRepository.getSpaceRenter(renter.id)
@@ -194,6 +196,16 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
       assertTrue(backCalled)
     }
 
+    checkpoint("image_management") {
+      // Check that the delete button exists
+      val removeBtnMatcher = hasTestTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON)
+      compose.waitUntil(5000) {
+        compose.onAllNodes(removeBtnMatcher).fetchSemanticsNodes().isNotEmpty()
+      }
+      compose.onNode(removeBtnMatcher).performClick()
+      compose.waitForIdle()
+    }
+
     checkpoint("screen_saves_on_update") {
       // Switch to valid renter for save test
       currentRenterState.value = validRenter
@@ -207,10 +219,31 @@ class EditSpaceRenterScreenTest : FirestoreTests() {
       nameEditable.performTextInput("Updated Space Name")
       compose.waitForIdle()
 
+      // Remove image again (since state was reset)
+      val removeBtnMatcher = hasTestTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON)
+      compose.waitUntil(5000) {
+        compose.onAllNodes(removeBtnMatcher).fetchSemanticsNodes().isNotEmpty()
+      }
+      compose.onNode(removeBtnMatcher).performClick()
+
+      // Wait for it to disappear (confirm deletion)
+      compose.waitUntil(5000) {
+        compose.onAllNodes(removeBtnMatcher).fetchSemanticsNodes().isEmpty()
+      }
+      compose.waitForIdle()
+
       // Save updates
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
       compose.waitForIdle()
       compose.waitUntil { updatedCalled }
+
+      // Verify persistence
+      runBlocking {
+        val updated = spaceRenterRepository.getSpaceRenter(renter.id)
+        assertEquals("Updated Space Name", updated.name)
+        // Verify photos are empty (deleted)
+        assertEquals(emptyList<String>(), updated.photoCollectionUrl)
+      }
     }
 
     // Reset config to default for other tests

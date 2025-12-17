@@ -456,11 +456,19 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // Create handle
     handlesVM.createAccountHandle(testAccount, handle1, "n")
-    delay(100)
-    assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepository.checkHandleAvailable(handle1))
 
-    // Update handle
+    // Wait for the handle to be taken (creation propagation)
+    val startCreation = System.currentTimeMillis()
+    while (handlesRepository.checkHandleAvailable(handle1) &&
+        System.currentTimeMillis() - startCreation < 5000) {
+      delay(100)
+    }
+
+    assertEquals("", handlesVM.errorMessage.value)
+    // Handle should be taken (not available)
+    assertFalse(
+        "Handle should be taken after creation", handlesRepository.checkHandleAvailable(handle1))
+
     // Update handle
     val accountWithHandle1 = testAccount.copy(handle = handle1)
     handlesVM.setAccountHandle(accountWithHandle1, handle2)

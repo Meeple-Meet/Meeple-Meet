@@ -373,7 +373,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
           .assertExists()
     }
 
-    // 3) Save Success
+    // 4) Save Success
     checkpoint("Save Success") {
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
 
