@@ -5,12 +5,12 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
@@ -47,8 +47,14 @@ object AuthUtils {
         .performClick()
 
     // --- Wait for Create Account screen ---
-    waitUntil(timeoutMillis = 30_000) {
-      onAllNodesWithText("Let's go!", substring = true).fetchSemanticsNodes().isNotEmpty()
+    waitUntil(timeoutMillis = 15_000) {
+      try {
+        onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      } catch (_: Throwable) {
+        false
+      }
     }
 
     // --- Fill Create Account fields ---
