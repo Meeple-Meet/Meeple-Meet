@@ -182,6 +182,10 @@ object MapScreenTestTags {
   const val FILTER_OWNED_SWITCH = "filterOwnedSwitch"
   const val MARKER_PREVIEW_SHEET = "markerPreviewSheet"
   const val PREVIEW_TITLE = "previewTitle"
+  const val PREVIEW_TIME_ESTIMATES = "previewTimeEstimates"
+  const val PREVIEW_TIME_CAR = "previewTimeCar"
+  const val PREVIEW_TIME_BIKE = "previewTimeBike"
+  const val PREVIEW_TIME_WALK = "previewTimeWalk"
   const val PREVIEW_ADDRESS = "previewAddress"
   const val PREVIEW_OPENING_HOURS = "previewOpeningHours"
   const val PREVIEW_GAME = "previewGame"
@@ -1100,14 +1104,20 @@ private fun MarkerPreviewSheet(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xLarge),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()) {
-                  IconText(icon = Icons.Default.DirectionsCar, text = est.driving.toTimeString())
+                modifier =
+                    Modifier.fillMaxWidth().testTag(MapScreenTestTags.PREVIEW_TIME_ESTIMATES)) {
+                  IconText(
+                      icon = Icons.Default.DirectionsCar,
+                      text = est.driving.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_CAR)
                   IconText(
                       icon = Icons.AutoMirrored.Filled.DirectionsBike,
-                      text = est.bicycling.toTimeString())
+                      text = est.bicycling.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_BIKE)
                   IconText(
                       icon = Icons.AutoMirrored.Filled.DirectionsWalk,
-                      text = est.walking.toTimeString())
+                      text = est.walking.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_WALK)
                 }
 
             Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
@@ -1198,11 +1208,11 @@ private fun MarkerPreviewSheet(
 }
 
 @Composable
-private fun IconText(icon: ImageVector, text: String) {
+private fun IconText(icon: ImageVector, text: String, testTag: String) {
   Row(verticalAlignment = Alignment.CenterVertically) {
     Icon(icon, contentDescription = null)
     Spacer(Modifier.width(Dimensions.Spacing.small))
-    Text(text, style = MaterialTheme.typography.bodySmall)
+    Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(testTag))
   }
 }
 
