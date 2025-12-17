@@ -62,7 +62,7 @@ const val URL_PREFIX = "/o/"
  *
  * @property dispatcher Coroutine dispatcher for I/O operations (defaults to Dispatchers.IO)
  */
-class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
   private val storage = FirebaseProvider.storage
 
   /**
@@ -495,7 +495,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveShopPhotos(
+  open suspend fun saveShopPhotos(
       context: Context,
       shopId: String,
       vararg inputPaths: String
@@ -510,7 +510,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteShopPhotos(context: Context, shopId: String, vararg storagePaths: String) {
+  open suspend fun deleteShopPhotos(context: Context, shopId: String, vararg storagePaths: String) {
     val base = shopPath(shopId)
     if (storagePaths.isEmpty()) {
       deleteDirectory(context, base)

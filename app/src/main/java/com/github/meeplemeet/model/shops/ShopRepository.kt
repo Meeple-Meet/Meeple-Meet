@@ -22,7 +22,7 @@ import kotlinx.coroutines.tasks.await
  *
  * @property db The Firestore database instance to use for operations.
  */
-class ShopRepository(
+open class ShopRepository(
     val accountRepository: AccountRepository = RepositoryProvider.accounts,
     val geoPinRepository: StorableGeoPinRepository = RepositoryProvider.geoPins
 ) : FirestoreRepository("shops") {
@@ -140,7 +140,7 @@ class ShopRepository(
    * @param gameCollection The new game collection (optional).
    * @throws IllegalArgumentException if no fields are provided for update.
    */
-  suspend fun updateShop(
+  open suspend fun updateShop(
       id: String,
       ownerId: String? = null,
       name: String? = null,
@@ -179,7 +179,7 @@ class ShopRepository(
    *
    * @param id The unique identifier of the shop to delete.
    */
-  suspend fun deleteShop(id: String) {
+  open suspend fun deleteShop(id: String) {
     // Get the shop to retrieve the owner ID before deletion
     val shop = getShop(id)
 
