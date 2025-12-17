@@ -7,6 +7,7 @@ import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.EditShopViewModel
 import com.github.meeplemeet.model.shops.Shop
@@ -52,7 +53,7 @@ class EditShopViewModelTest {
   private lateinit var fakeShopRepository: FakeShopRepository
   private lateinit var fakeImageRepository: FakeImageRepository
   private lateinit var fakeGameRepo: GameRepository
-  private lateinit var locationRepo: NominatimLocationRepository
+  private lateinit var locationRepo: LocationRepository
 
   // Helper classes for Fakes
   open class FakeShopRepository : ShopRepository(mockk(relaxed=true), mockk(relaxed=true)) {
@@ -134,13 +135,22 @@ class EditShopViewModelTest {
     fakeShopRepository = FakeShopRepository()
     fakeImageRepository = FakeImageRepository()
     
-    fakeGameRepo = object : GameRepository {
-        override suspend fun getGameById(gameID: String): Game = mockk(relaxed = true)
-        override suspend fun getGamesById(vararg gameIDs: String): List<Game> = emptyList()
+    // Use a manual fake that returns real data class instances, not mocks
+    class FakeGameRepository : GameRepository {
+        override suspend fun getGameById(gameID: String): Game = 
+            Game(uid = gameID, name = "Test Game", description = "", minPlayers = 1, maxPlayers = 4, imageURL = "", recommendedPlayers = 2, averagePlayTime = 60)
+            
+        override suspend fun getGamesById(vararg gameIDs: String): List<Game> = 
+            gameIDs.map { getGameById(it) }
+            
         override suspend fun searchGamesByName(query: String, maxResults: Int): List<GameSearchResult> = emptyList()
     }
+    fakeGameRepo = FakeGameRepository()
     
-    locationRepo = mockk<NominatimLocationRepository>(relaxed = true)
+    class FakeLocationRepository : LocationRepository {
+        override suspend fun search(query: String): List<Location> = emptyList()
+    }
+    locationRepo = FakeLocationRepository()
 
     // Clear offline mode state
     OfflineModeManager.clearOfflineMode()
@@ -157,8 +167,11 @@ class EditShopViewModelTest {
     mockkObject(RepositoryProvider)
     every { RepositoryProvider.shops } returns fakeShopRepository
     every { RepositoryProvider.images } returns fakeImageRepository
-    every { RepositoryProvider.games } returns fakeGameRepo
-    every { RepositoryProvider.locations } returns locationRepo
+    // Games and Locations are mocked via dependency injection into ViewModel
+    // RepositoryProvider.games and RepositoryProvider.locations are NOT used by OfflineModeManager
+    // so we skip mocking them to avoid IncompatibleClassChangeError with interfaces
+    // every { RepositoryProvider.games } returns fakeGameRepo 
+    // every { RepositoryProvider.locations } returns locationRepo
     every { RepositoryProvider.accounts } returns mockk(relaxed = true)
   }
 
