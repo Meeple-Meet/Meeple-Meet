@@ -555,7 +555,8 @@ fun MeepleMeetApp(
                   signedOut = true
                 },
                 onDelete = {
-                  // ViewModel handles Firebase Auth deletion with retry logic
+                  // Sign out the user before deleting his account, avoiding an infinite loading
+                  // screen
                   FirebaseProvider.auth.signOut()
                 },
                 onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
@@ -599,20 +600,6 @@ fun MeepleMeetApp(
           }
         }
 
-        composable(MeepleMeetScreen.ShopDetails.name) {
-          if (shopId.isNotEmpty()) {
-            ShopScreen(
-                account = account!!,
-                shopId = shopId,
-                onBack = { navigationActions.goBack() },
-                onEdit = {
-                  shop = it
-                  navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
-                })
-          } else {
-            LoadingScreen()
-          }
-        }
         composable(MeepleMeetScreen.CreateShop.name) {
           CreateShopScreen(
               owner = account!!,
