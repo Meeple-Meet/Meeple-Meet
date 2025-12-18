@@ -88,6 +88,7 @@ import okhttp3.internal.toImmutableList
 //  TEST TAGS
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Test tags for the Friends Management screen and its components. */
 object FriendsManagementTestTags {
   const val SCREEN_ROOT = "FRIENDS_SCREEN_ROOT"
 
@@ -124,6 +125,7 @@ object FriendsManagementTestTags {
 //  MAGIC NUMBERS
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Default values and dimensions for the Friends Management screen. */
 object FriendsManagementDefaults {
 
   const val TITLE = "Manage your friends"
@@ -167,48 +169,58 @@ object FriendsManagementDefaults {
 //  Enums & helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Secondary actions available for user rows in the friends management screen. */
 enum class UserRowSecondaryAction {
   ADD_FRIEND,
   REMOVE_FRIEND,
   REQUEST_SENT,
 }
 
+/** Contexts in which a user row can be displayed. */
 enum class UserRowContext {
   FRIEND_LIST,
   SEARCH_RESULTS,
 }
 
+/** Tabs available in the friends management screen. */
 enum class FriendsTab {
   FRIENDS,
   REQUESTS,
   BLOCKED,
 }
 
+/** Data class representing scroll metrics for the scrollbar. */
 private data class ScrollMetrics(
     val progress: Float,
     val thumbFraction: Float,
 )
 
+/** Data class holding lists of friends, sent requests, and blocked users. */
 private data class FriendsLists(
     val friends: List<Account>,
     val sentRequests: List<Account>,
     val blockedUsers: List<Account>,
 )
 
+/** Extension properties for RelationshipStatus to check specific statuses. */
 private val RelationshipStatus?.isFriend: Boolean
   get() = (this == RelationshipStatus.FRIEND)
 
+/** Extension properties for RelationshipStatus to check specific statuses. */
 private val RelationshipStatus?.isBlocked: Boolean
   get() = (this == RelationshipStatus.BLOCKED)
 
+/** Extension properties for RelationshipStatus to check specific statuses. */
 private val RelationshipStatus?.isRequestSent: Boolean
   get() = (this == RelationshipStatus.SENT)
 
+/** UI data for a friends tab. */
 private data class FriendsTabUiData(
     val label: String,
     val testTag: String,
 )
 
+/** Converts a FriendsTab enum to its corresponding UI data. */
 private fun FriendsTab.toUiData(): FriendsTabUiData =
     when (this) {
       FriendsTab.FRIENDS ->
@@ -228,6 +240,7 @@ private fun FriendsTab.toUiData(): FriendsTabUiData =
           )
     }
 
+/** Returns the appropriate test tag prefixes based on the user row context. */
 private fun prefixesFor(context: UserRowContext): Triple<String, String, String> =
     when (context) {
       UserRowContext.FRIEND_LIST ->
@@ -244,6 +257,7 @@ private fun prefixesFor(context: UserRowContext): Triple<String, String, String>
           )
     }
 
+/** Toggles the block status of a user. */
 private fun toggleBlock(current: Account, other: Account, viewModel: FriendsScreenViewModel) {
   val status = current.relationships[other.uid]
   if (status.isBlocked) viewModel.unblockUser(current, other)
@@ -254,6 +268,13 @@ private fun toggleBlock(current: Account, other: Account, viewModel: FriendsScre
 //  Main screen
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display the Friends Management Screen.
+ *
+ * @param viewModel ViewModel for friends-related operations.
+ * @param account The current user's account.
+ * @param onBack Callback function to be invoked when the back button is pressed.
+ */
 @Composable
 fun FriendsScreen(
     account: Account,
@@ -370,6 +391,16 @@ fun FriendsScreen(
 //  Screen content
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display the main content of the Friends Management Screen.
+ *
+ * @param account The current user's account.
+ * @param lists The lists of friends, sent requests, and blocked users.
+ * @param suggestions The list of suggested accounts based on the search query.
+ * @param selectedTab The currently selected tab in the friends management screen.
+ * @param viewModel ViewModel for friends-related operations.
+ * @param onClearFocus Callback to clear focus from input fields.
+ */
 @Composable
 private fun FriendsManagementContent(
     account: Account,
@@ -464,6 +495,11 @@ private fun FriendsManagementContent(
 //  Top bar & search
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display the top bar of the Friends Management Screen.
+ *
+ * @param onBack Callback function to be invoked when the back button is pressed.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FriendsTopBar(
@@ -496,6 +532,14 @@ private fun FriendsTopBar(
   )
 }
 
+/**
+ * Composable function to display the search bar for friends management.
+ *
+ * @param query The current search query.
+ * @param onQueryChange Callback function to handle changes to the search query.
+ * @param onClearQuery Callback function to clear the search query.
+ * @param onFocusChanged Callback function to handle focus changes.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FriendsSearchBar(
@@ -562,6 +606,12 @@ private fun FriendsSearchBar(
 //  Friends tabs
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display the tab switcher for the Friends Management Screen.
+ *
+ * @param selectedTab The currently selected tab.
+ * @param onTabSelected Callback function to handle tab selection changes.
+ */
 @Composable
 private fun FriendsTabSwitcher(
     selectedTab: FriendsTab,
@@ -623,6 +673,17 @@ private fun FriendsTabSwitcher(
 //  Row & avatar
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display a user row with relationship actions.
+ *
+ * @param user The account of the user to display.
+ * @param isBlocked Boolean indicating if the user is blocked.
+ * @param secondaryAction The secondary action to display for the user row.
+ * @param context The context in which the user row is displayed.
+ * @param onBlockClick Callback function to handle block/unblock action.
+ * @param onSecondaryActionClick Callback function to handle the secondary action.
+ * @param showSecondaryAction Boolean indicating whether to show the secondary action button.
+ */
 @Composable
 private fun RelationshipUserRow(
     user: Account,
@@ -711,6 +772,14 @@ private fun RelationshipUserRow(
   }
 }
 
+/**
+ * Composable function to display the secondary action button in a user row.
+ *
+ * @param userId The ID of the user.
+ * @param secondaryAction The secondary action to display.
+ * @param actionButtonPrefix The prefix for the action button test tag.
+ * @param onSecondaryActionClick Callback function to handle the secondary action click.
+ */
 @Composable
 private fun SecondaryActionButton(
     userId: String,
@@ -744,6 +813,12 @@ private fun SecondaryActionButton(
   }
 }
 
+/**
+ * Composable function to display a user's avatar.
+ *
+ * @param account The account of the user whose avatar is to be displayed.
+ * @param modifier Modifier to be applied to the avatar.
+ */
 @Composable
 private fun UserAvatar(
     account: Account,
@@ -795,6 +870,15 @@ private fun UserAvatar(
 //  Generic list container + specific lists
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Generic composable function to display a list of friends with a scrollbar.
+ *
+ * @param T The type of items in the list.
+ * @param items The list of items to display.
+ * @param listTestTag The test tag for the list container.
+ * @param onClearFocus Callback to clear focus when clicking on the list.
+ * @param rowContent Composable function to define the content of each row in the list.
+ */
 @Composable
 private fun <T> FriendsListContainer(
     items: List<T>,
@@ -840,6 +924,15 @@ private fun <T> FriendsListContainer(
   }
 }
 
+/**
+ * Composable function to display the friends list.
+ *
+ * @param currentAccount The current user's account.
+ * @param friends The list of friends to display.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onRemoveFriend Callback function to handle removing a friend.
+ * @param onClearFocus Callback to clear focus when clicking on the list.
+ */
 @Composable
 private fun FriendsList(
     currentAccount: Account,
@@ -869,6 +962,15 @@ private fun FriendsList(
   }
 }
 
+/**
+ * Composable function to display the sent friend requests list.
+ *
+ * @param currentAccount The current user's account.
+ * @param sentRequests The list of sent friend requests to display.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onCancelRequest Callback function to handle canceling a friend request.
+ * @param onClearFocus Callback to clear focus when clicking on the list.
+ */
 @Composable
 private fun SentRequestsList(
     currentAccount: Account,
@@ -898,6 +1000,13 @@ private fun SentRequestsList(
   }
 }
 
+/**
+ * Composable function to display the blocked users list.
+ *
+ * @param blockedUsers The list of blocked users to display.
+ * @param onUnblock Callback function to handle unblocking a user.
+ * @param onClearFocus Callback to clear focus when clicking on the list.
+ */
 @Composable
 private fun BlockedUsersList(
     currentAccount: Account,
@@ -928,6 +1037,13 @@ private fun BlockedUsersList(
 //  Scrollbar
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display a custom scrollbar for the friends list.
+ *
+ * @param listState The state of the lazy list to track scroll position.
+ * @param itemCount The total number of items in the list.
+ * @param modifier Modifier to be applied to the scrollbar.
+ */
 @Composable
 private fun FriendsScrollBar(
     listState: LazyListState,
@@ -1008,6 +1124,17 @@ private fun FriendsScrollBar(
 //  Search results (list only; search bar remains outside, above tabs)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Composable function to display the search results dropdown for friends management.
+ *
+ * @param currentAccount The current user's account.
+ * @param results The list of accounts matching the search query.
+ * @param onBlockToggle Callback function to handle block/unblock action.
+ * @param onAddFriend Callback function to handle adding a friend.
+ * @param onRemoveFriend Callback function to handle removing a friend.
+ * @param onCancelRequest Callback function to handle canceling a friend request.
+ * @param onClearFocus Callback to clear focus when clicking on the list.
+ */
 @Composable
 private fun FriendsSearchResultsDropdown(
     currentAccount: Account,
