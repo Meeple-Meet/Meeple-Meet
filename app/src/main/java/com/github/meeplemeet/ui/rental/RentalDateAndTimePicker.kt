@@ -63,7 +63,6 @@ fun RentalDateAndTimePicker(
                 value = date,
                 onValueChange = onDateChange,
                 label = if (isStartDateTime) "Start Date" else "End Date",
-                editable = true,
                 testTagPick = "${RentalDateTimePickerTestTags.DATE_FIELD}_pick",
                 testTagDate = RentalDateTimePickerTestTags.DATE_FIELD)
           }
