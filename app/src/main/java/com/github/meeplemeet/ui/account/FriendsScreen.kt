@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -270,6 +269,7 @@ fun FriendsScreen(
   var searchQuery by rememberSaveable { mutableStateOf("") }
   var selectedTab by rememberSaveable { mutableStateOf(FriendsTab.FRIENDS) }
   val trimmedQuery = remember(searchQuery) { searchQuery.trim() }
+  val isSearching = trimmedQuery.isNotBlank()
 
   var friends by remember { mutableStateOf<List<Account>>(emptyList()) }
   var sentRequests by remember { mutableStateOf<List<Account>>(emptyList()) }
@@ -292,9 +292,9 @@ fun FriendsScreen(
         buckets[account.relationships[acc.uid]]?.add(acc)
       }
 
-      friends = f.toImmutableList()
-      sentRequests = s.toImmutableList()
-      blockedUsers = b.toImmutableList()
+      friends = f.sortedBy { it.handle.lowercase() }.toImmutableList()
+      sentRequests = s.sortedBy { it.handle.lowercase() }.toImmutableList()
+      blockedUsers = b.sortedBy { it.handle.lowercase() }.toImmutableList()
     }
   }
 
@@ -330,14 +330,22 @@ fun FriendsScreen(
                 .padding(innerPadding)
                 .testTag(FriendsManagementTestTags.SCREEN_ROOT),
     ) {
-      FriendsTabSwitcher(
-          selectedTab = selectedTab,
-          onTabSelected = { selectedTab = it },
+      // Search bar OUTSIDE lists and ABOVE the tabs (as before)
+      FriendsSearchBar(
+          query = searchQuery,
+          onQueryChange = { searchQuery = it },
+          onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
+          onFocusChanged = { isInputFocused = it },
       )
-      Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
 
-      // NOTE: search bar is now INSIDE the scrollable list content (first item),
-      // so it naturally disappears when you scroll down and reappears at the top.
+      if (!isSearching) {
+        Spacer(Modifier.height(FriendsManagementDefaults.Layout.BETWEEN_SEARCH_AND_TABS))
+        FriendsTabSwitcher(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it },
+        )
+      }
+
       Box(modifier = Modifier.fillMaxSize()) {
         FriendsManagementContent(
             account = account,
@@ -348,10 +356,7 @@ fun FriendsScreen(
                     blockedUsers = blockedUsers,
                 ),
             suggestions = suggestions,
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            onClearQuery = { searchQuery = FriendsManagementDefaults.RESET_QUERY_TEXT },
-            onSearchFocusChanged = { isInputFocused = it },
+            isSearching = isSearching,
             selectedTab = selectedTab,
             viewModel = viewModel,
             onClearFocus = { focusManager.clearFocus() },
@@ -370,16 +375,11 @@ private fun FriendsManagementContent(
     account: Account,
     lists: FriendsLists,
     suggestions: List<Account>,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
+    isSearching: Boolean,
     selectedTab: FriendsTab,
     viewModel: FriendsScreenViewModel,
     onClearFocus: () -> Unit = {},
 ) {
-  val isSearching = searchQuery.isNotBlank()
-
   // --- Popup state & actions ---
   var showPopup by remember { mutableStateOf(false) }
   var selectedUser by remember { mutableStateOf<Account?>(null) }
@@ -404,30 +404,33 @@ private fun FriendsManagementContent(
   }
 
   if (isSearching) {
-    FriendsSearchResultsDropdown(
-        currentAccount = account,
-        query = searchQuery,
-        onQueryChange = onSearchQueryChange,
-        onClearQuery = onClearQuery,
-        onSearchFocusChanged = onSearchFocusChanged,
-        results = suggestions.filter { it.uid != account.uid },
-        onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
-        onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
-        onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
-        onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
-        onAvatarClick = onAvatarClick,
-        onClearFocus = onClearFocus,
-    )
+    val visibleResults =
+        remember(suggestions, account.uid) {
+          suggestions
+              .asSequence()
+              .filter { it.uid != account.uid }
+              .sortedBy { it.handle.lowercase() }
+              .toList()
+        }
+
+    if (visibleResults.isNotEmpty()) {
+      FriendsSearchResultsDropdown(
+          currentAccount = account,
+          results = visibleResults,
+          onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
+          onAddFriend = { other -> viewModel.sendFriendRequest(account, other) },
+          onRemoveFriend = { other -> viewModel.removeFriend(account, other) },
+          onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
+          onAvatarClick = onAvatarClick,
+          onClearFocus = onClearFocus,
+      )
+    }
   } else {
     when (selectedTab) {
       FriendsTab.FRIENDS -> {
         FriendsList(
             currentAccount = account,
             friends = lists.friends,
-            searchQuery = searchQuery,
-            onSearchQueryChange = onSearchQueryChange,
-            onClearQuery = onClearQuery,
-            onSearchFocusChanged = onSearchFocusChanged,
             onBlockToggle = { friend -> toggleBlock(account, friend, viewModel) },
             onRemoveFriend = { friend -> viewModel.removeFriend(account, friend) },
             onAvatarClick = onAvatarClick,
@@ -438,10 +441,6 @@ private fun FriendsManagementContent(
         SentRequestsList(
             currentAccount = account,
             sentRequests = lists.sentRequests,
-            searchQuery = searchQuery,
-            onSearchQueryChange = onSearchQueryChange,
-            onClearQuery = onClearQuery,
-            onSearchFocusChanged = onSearchFocusChanged,
             onBlockToggle = { other -> toggleBlock(account, other, viewModel) },
             onCancelRequest = { other -> viewModel.rejectFriendRequest(account, other) },
             onAvatarClick = onAvatarClick,
@@ -452,10 +451,6 @@ private fun FriendsManagementContent(
         BlockedUsersList(
             currentAccount = account,
             blockedUsers = lists.blockedUsers,
-            searchQuery = searchQuery,
-            onSearchQueryChange = onSearchQueryChange,
-            onClearQuery = onClearQuery,
-            onSearchFocusChanged = onSearchFocusChanged,
             onUnblock = { other -> viewModel.unblockUser(account, other) },
             onAvatarClick = onAvatarClick,
             onClearFocus = onClearFocus,
@@ -509,66 +504,58 @@ private fun FriendsSearchBar(
     onClearQuery: () -> Unit,
     onFocusChanged: (Boolean) -> Unit = {},
 ) {
-  Column(modifier = Modifier.fillMaxWidth()) {
-    FocusableInputField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier =
-            Modifier.fillMaxWidth()
-                .testTag(FriendsManagementTestTags.SEARCH_TEXT_FIELD)
-                .heightIn(min = Dimensions.ContainerSize.timeFieldHeight)
-                .shadow(
-                    elevation = Dimensions.Elevation.high,
-                    shape = RectangleShape,
-                    clip = false,
-                )
-                .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium),
-        placeholder = {
-          Text(
-              FriendsManagementDefaults.SEARCH_PLACEHOLDER,
-              style = MaterialTheme.typography.bodyMedium,
-          )
-        },
-        singleLine = true,
-        leadingIcon = {
-          Icon(
-              imageVector = Icons.Default.Search,
-              contentDescription = "Search",
-          )
-        },
-        trailingIcon = {
-          if (query.isNotEmpty()) {
-            IconButton(
-                onClick = onClearQuery,
-                modifier = Modifier.testTag(FriendsManagementTestTags.SEARCH_CLEAR),
-            ) {
-              Icon(
-                  imageVector = Icons.Default.Close,
-                  contentDescription = "Clear search",
+  FocusableInputField(
+      value = query,
+      onValueChange = onQueryChange,
+      modifier =
+          Modifier.fillMaxWidth()
+              .testTag(FriendsManagementTestTags.SEARCH_TEXT_FIELD)
+              .heightIn(min = Dimensions.ContainerSize.timeFieldHeight)
+              .shadow(
+                  elevation = Dimensions.Elevation.high,
+                  shape = RectangleShape,
+                  clip = false,
               )
-            }
+              .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium),
+      placeholder = {
+        Text(
+            FriendsManagementDefaults.SEARCH_PLACEHOLDER,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+      },
+      singleLine = true,
+      leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+        )
+      },
+      trailingIcon = {
+        if (query.isNotEmpty()) {
+          IconButton(
+              onClick = onClearQuery,
+              modifier = Modifier.testTag(FriendsManagementTestTags.SEARCH_CLEAR),
+          ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Clear search",
+            )
           }
-        },
-        textStyle = MaterialTheme.typography.bodyMedium,
-        shape = RectangleShape,
-        colors =
-            TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-            ),
-        onFocusChanged = onFocusChanged,
-    )
-
-    // same divider style as list rows
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.onBackground,
-        thickness = Dimensions.DividerThickness.standard,
-    )
-  }
+        }
+      },
+      textStyle = MaterialTheme.typography.bodyMedium,
+      shape = RectangleShape,
+      colors =
+          TextFieldDefaults.colors(
+              focusedContainerColor = MaterialTheme.colorScheme.surface,
+              unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+              disabledContainerColor = MaterialTheme.colorScheme.surface,
+              focusedIndicatorColor = Color.Transparent,
+              unfocusedIndicatorColor = Color.Transparent,
+              disabledIndicatorColor = Color.Transparent,
+          ),
+      onFocusChanged = onFocusChanged,
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -581,7 +568,7 @@ private fun FriendsTabSwitcher(
     onTabSelected: (FriendsTab) -> Unit,
 ) {
   val tabs = FriendsTab.entries
-  val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(minimumValue = 0)
+  val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
 
   TabRow(
       selectedTabIndex = selectedIndex,
@@ -812,10 +799,6 @@ private fun UserAvatar(
 private fun <T> FriendsListContainer(
     items: List<T>,
     listTestTag: String,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
     onClearFocus: () -> Unit = {},
     rowContent: @Composable (index: Int, item: T) -> Unit,
 ) {
@@ -835,19 +818,6 @@ private fun <T> FriendsListContainer(
         state = listState,
         modifier = Modifier.fillMaxSize(),
     ) {
-      // Search bar as FIRST ITEM (not sticky): it disappears when you scroll down.
-      item(key = "search_bar") {
-        Column(
-            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
-              FriendsSearchBar(
-                  query = searchQuery,
-                  onQueryChange = onSearchQueryChange,
-                  onClearQuery = onClearQuery,
-                  onFocusChanged = onSearchFocusChanged,
-              )
-            }
-      }
-
       itemsIndexed(items) { index, item ->
         rowContent(index, item)
 
@@ -860,12 +830,10 @@ private fun <T> FriendsListContainer(
       }
     }
 
-    // Include the header item in the scrollbar math (roughly).
-    val itemCountForScrollbar = items.size + 1
     if (items.size >= FriendsManagementDefaults.Scrollbar.MIN_ITEMS_FOR_SCROLLBAR) {
       FriendsScrollBar(
           listState = listState,
-          itemCount = itemCountForScrollbar,
+          itemCount = items.size,
           modifier = Modifier.align(Alignment.CenterEnd),
       )
     }
@@ -876,10 +844,6 @@ private fun <T> FriendsListContainer(
 private fun FriendsList(
     currentAccount: Account,
     friends: List<Account>,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
     onBlockToggle: (Account) -> Unit,
     onRemoveFriend: (Account) -> Unit,
     onAvatarClick: (Account) -> Unit,
@@ -888,10 +852,6 @@ private fun FriendsList(
   FriendsListContainer(
       items = friends,
       listTestTag = FriendsManagementTestTags.FRIEND_LIST,
-      searchQuery = searchQuery,
-      onSearchQueryChange = onSearchQueryChange,
-      onClearQuery = onClearQuery,
-      onSearchFocusChanged = onSearchFocusChanged,
       onClearFocus = onClearFocus,
   ) { _, friend ->
     val status = currentAccount.relationships[friend.uid]
@@ -913,10 +873,6 @@ private fun FriendsList(
 private fun SentRequestsList(
     currentAccount: Account,
     sentRequests: List<Account>,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
     onBlockToggle: (Account) -> Unit,
     onCancelRequest: (Account) -> Unit,
     onAvatarClick: (Account) -> Unit,
@@ -925,10 +881,6 @@ private fun SentRequestsList(
   FriendsListContainer(
       items = sentRequests,
       listTestTag = FriendsManagementTestTags.SENT_REQUESTS_LIST,
-      searchQuery = searchQuery,
-      onSearchQueryChange = onSearchQueryChange,
-      onClearQuery = onClearQuery,
-      onSearchFocusChanged = onSearchFocusChanged,
       onClearFocus = onClearFocus,
   ) { _, other ->
     val status = currentAccount.relationships[other.uid]
@@ -950,10 +902,6 @@ private fun SentRequestsList(
 private fun BlockedUsersList(
     currentAccount: Account,
     blockedUsers: List<Account>,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
     onUnblock: (Account) -> Unit,
     onAvatarClick: (Account) -> Unit,
     onClearFocus: () -> Unit = {},
@@ -961,10 +909,6 @@ private fun BlockedUsersList(
   FriendsListContainer(
       items = blockedUsers,
       listTestTag = FriendsManagementTestTags.BLOCKED_LIST,
-      searchQuery = searchQuery,
-      onSearchQueryChange = onSearchQueryChange,
-      onClearQuery = onClearQuery,
-      onSearchFocusChanged = onSearchFocusChanged,
       onClearFocus = onClearFocus,
   ) { _, other ->
     RelationshipUserRow(
@@ -1061,16 +1005,12 @@ private fun FriendsScrollBar(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Search results (now a full scrollable list with search bar as first item)
+//  Search results (list only; search bar remains outside, above tabs)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun FriendsSearchResultsDropdown(
     currentAccount: Account,
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClearQuery: () -> Unit,
-    onSearchFocusChanged: (Boolean) -> Unit,
     results: List<Account>,
     onBlockToggle: (Account) -> Unit,
     onAddFriend: (Account) -> Unit,
@@ -1080,15 +1020,17 @@ private fun FriendsSearchResultsDropdown(
     onClearFocus: () -> Unit = {},
 ) {
   val visibleResults =
-      remember(results, currentAccount.uid) { results.filter { it.uid != currentAccount.uid } }
+      remember(results, currentAccount.uid) {
+        results
+            .asSequence()
+            .filter { it.uid != currentAccount.uid }
+            .sortedBy { it.handle.lowercase() }
+            .toList()
+      }
 
   FriendsListContainer(
       items = visibleResults,
       listTestTag = FriendsManagementTestTags.SEARCH_RESULTS_DROPDOWN,
-      searchQuery = query,
-      onSearchQueryChange = onQueryChange,
-      onClearQuery = onClearQuery,
-      onSearchFocusChanged = onSearchFocusChanged,
       onClearFocus = onClearFocus,
   ) { _, other ->
     val status = currentAccount.relationships[other.uid]
