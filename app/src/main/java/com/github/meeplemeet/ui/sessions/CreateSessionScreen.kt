@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.rental.RentalViewModel
 import com.github.meeplemeet.model.sessions.CreateSessionViewModel
 import com.github.meeplemeet.model.shared.GameUIState
 import com.github.meeplemeet.model.shared.location.Location
@@ -38,6 +39,7 @@ import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.*
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
+import com.github.meeplemeet.ui.rental.SessionLocationSearchWithRental
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.Elevation
@@ -157,6 +159,7 @@ fun isDateTimeInPast(
  * @param account The current user's account.
  * @param discussion The discussion context for the session.
  * @param viewModel The FirestoreViewModel for data operations.
+ * @param rentalViewModel The viewmodel for rent operations.
  * @param onBack Callback function to be invoked when navigating back.
  */
 @Composable
@@ -164,6 +167,7 @@ fun CreateSessionScreen(
     account: Account,
     discussion: Discussion,
     viewModel: CreateSessionViewModel = viewModel(),
+    rentalViewModel: RentalViewModel = viewModel(),
     onBack: () -> Unit = {}
 ) {
   // Holds the form state for the session
@@ -174,6 +178,8 @@ fun CreateSessionScreen(
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
 
+  var selectedRentalId by remember { mutableStateOf<String?>(null) }
+
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
@@ -181,6 +187,9 @@ fun CreateSessionScreen(
   var isInputFocused by remember { mutableStateOf(false) }
   // Helper to show error messages in a snackbar
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
+
+  // Load users active rentals
+  LaunchedEffect(account.uid) { rentalViewModel.loadActiveSpaceRentals(account.uid) }
 
   // Fetch participants and possibly trigger game query on discussion change
   LaunchedEffect(discussion.uid) {
@@ -254,7 +263,18 @@ fun CreateSessionScreen(
                                         ?: form.proposedGameString.ifBlank { LABEL_UNKNOWN_GAME },
                                 date = toTimestamp(form.date, form.time),
                                 location = locationUi.selectedLocation ?: Location(),
+                                rentalId = selectedRentalId,
                                 *form.participants.toTypedArray())
+                            if (selectedRentalId != null) {
+                              scope.launch {
+                                try {
+                                  rentalViewModel.associateRentalWithSession(
+                                      rentalId = selectedRentalId!!, sessionId = discussion.uid)
+                                } catch (e: Exception) {
+                                  e.printStackTrace()
+                                }
+                              }
+                            }
                           }
                           .onFailure { e ->
                             showError(e.message ?: "Failed to create session")
@@ -282,10 +302,11 @@ fun CreateSessionScreen(
                     .testTag(SessionCreationTestTags.CONTENT_COLUMN),
             verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.none)) {
 
-              // Organisation section (title, game, date, time, location)
+              // Organisation section (title, game, date, time, location, renting)
               OrganisationSection(
                   gameUi = gameUi,
                   viewModel = viewModel,
+                  rentalViewModel = rentalViewModel,
                   account = account,
                   discussion = discussion,
                   onTitleChange = {
@@ -297,7 +318,14 @@ fun CreateSessionScreen(
                   onDateChange = { form = form.copy(date = it) },
                   onTimeChange = { form = form.copy(time = it) },
                   onFocusChanged = { isInputFocused = it },
-                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION))
+                  onRentalSelected = { rentalId, location ->
+                    selectedRentalId = rentalId // Can be null if rental was unliked
+                    if (rentalId != null) {
+                      viewModel.setLocation(account, discussion, location)
+                    }
+                  },
+                  modifier = Modifier.testTag(SessionCreationTestTags.ORG_SECTION),
+                  currentRentalId = selectedRentalId)
 
               // Participants section (player selection and slider)
               ParticipantsSection(
@@ -415,6 +443,7 @@ fun DiscardButton(modifier: Modifier = Modifier, onDiscard: () -> Unit) {
 fun OrganisationSection(
     gameUi: GameUIState,
     viewModel: CreateSessionViewModel,
+    rentalViewModel: RentalViewModel,
     account: Account,
     discussion: Discussion,
     date: LocalDate?,
@@ -425,6 +454,8 @@ fun OrganisationSection(
     onDateChange: (LocalDate?) -> Unit,
     onTimeChange: (LocalTime?) -> Unit,
     onFocusChanged: (Boolean) -> Unit = {},
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   SectionCard(
       modifier
@@ -473,9 +504,21 @@ fun OrganisationSection(
 
         Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
-        // Location search field with suggestions
+        // Location search field with rental support
         Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-          SessionLocationSearchButton(account, discussion, viewModel)
+          SessionLocationSearchWithRental(
+              account = account,
+              discussion = discussion,
+              sessionViewModel = viewModel,
+              rentalViewModel = rentalViewModel,
+              sessionDate = date,
+              sessionTime = time,
+              onDateTimeUpdate = { newDate, newTime ->
+                onDateChange(newDate)
+                onTimeChange(newTime)
+              },
+              onRentalSelected = onRentalSelected,
+              currentRentalId = currentRentalId)
         }
       }
 }

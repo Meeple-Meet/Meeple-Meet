@@ -907,9 +907,28 @@ fun SessionLocationSearchButton(
     dialogTestTag: String = SessionComponentsTestTags.LOCATION_PICKER_DIALOG
 ) {
   var showDialog by rememberSaveable { mutableStateOf(false) }
+
+  // Observe the location state from ViewModel
+  val locationUi by viewModel.locationUIState.collectAsStateWithLifecycle()
+
+  // Sync selectedLocationLabel with ViewModel state
   var selectedLocationLabel by rememberSaveable {
     mutableStateOf(
         discussion.session?.location?.name?.takeIf { it.isNotBlank() } ?: TEXT_SELECT_LOCATION)
+  }
+
+  // Update label when ViewModel's selected location changes
+  LaunchedEffect(locationUi.selectedLocation) {
+    if (locationUi.selectedLocation == null) {
+      // Location cleared => reset to default
+      selectedLocationLabel = TEXT_SELECT_LOCATION
+    } else {
+      locationUi.selectedLocation?.let { location ->
+        if (location.name.isNotBlank()) {
+          selectedLocationLabel = location.name
+        }
+      }
+    }
   }
 
   Button(
@@ -933,7 +952,9 @@ fun SessionLocationSearchButton(
               Text(
                   text = selectedLocationLabel,
                   style = MaterialTheme.typography.bodySmall,
-                  color = AppColors.textIcons)
+                  color = AppColors.textIcons,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis)
               Spacer(Modifier.weight(1f))
               Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null)
             }

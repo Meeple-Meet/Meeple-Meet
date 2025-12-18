@@ -17,6 +17,7 @@ import kotlinx.serialization.Serializable
  * @property location The physical or virtual location where the session will take place
  * @property participants List of participant IDs (typically user IDs) who are part of this session
  * @property photoUrl Optional URL to the session photo stored in Firebase Storage
+ * @property rentalId Optional ID of the associated rental if this session uses a rented space
  */
 @Serializable
 data class Session(
@@ -26,5 +27,6 @@ data class Session(
     val date: Timestamp = Timestamp.now(),
     val location: Location = Location(),
     val participants: List<String> = emptyList(),
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    val rentalId: String? = null
 )

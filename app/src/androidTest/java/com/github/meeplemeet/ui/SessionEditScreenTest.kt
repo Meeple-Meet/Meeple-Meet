@@ -104,6 +104,7 @@ class SessionEditScreenTest : FirestoreTests() {
         gameName = "",
         date = futureTimestamp,
         location = Location(name = "Meeple Café"),
+        rentalId = null,
         admin.uid,
         member.uid)
 

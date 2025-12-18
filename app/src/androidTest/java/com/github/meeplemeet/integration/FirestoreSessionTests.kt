@@ -5,6 +5,7 @@ import com.github.meeplemeet.model.NotSignedInException
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.sessions.SessionEditViewModel
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.sessions.SessionViewModel
 import com.github.meeplemeet.model.shared.game.GameSearchResult
@@ -38,6 +39,7 @@ class FirestoreSessionTests : FirestoreTests() {
   lateinit var testTimestamp: Timestamp
 
   private val viewModel = SessionViewModel()
+  private val editViewModel = SessionEditViewModel()
 
   @Before
   fun setup() {
@@ -87,6 +89,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -110,6 +113,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -135,6 +139,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -163,6 +168,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -191,6 +197,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -217,6 +224,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account2)
     advanceUntilIdle()
 
@@ -242,6 +250,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -273,6 +282,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -293,6 +303,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500) // Wait for Firestore
 
@@ -317,6 +328,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -337,6 +349,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -372,6 +385,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -392,7 +406,14 @@ class FirestoreSessionTests : FirestoreTests() {
   @Test
   fun creatingSessionUpdatesDiscussionState() = runTest {
     viewModel.createSession(
-        account1, baseDiscussion, "Catan Night", "game123", "Game 123", testTimestamp, testLocation)
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null)
     advanceUntilIdle()
 
     val result = discussionRepository.getDiscussion(baseDiscussion.uid)
@@ -417,6 +438,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -437,6 +459,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     advanceUntilIdle()
 
@@ -463,6 +486,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500) // Wait for Firestore
 
@@ -486,6 +510,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account3)
     advanceUntilIdle()
   }
@@ -500,6 +525,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account3) // account3 not in discussion
     advanceUntilIdle()
 
@@ -526,6 +552,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 789",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid,
             account2.uid)
 
@@ -549,6 +576,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     // Then update just the name
@@ -571,6 +599,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newLocation = Location(latitude = 51.5074, longitude = -0.1278, name = "London")
@@ -592,6 +621,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newDate = Timestamp(testTimestamp.seconds + 3600, 0) // +1 hour
@@ -612,6 +642,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val updated =
@@ -634,6 +665,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newParticipants = listOf(account1.uid, account2.uid, account3.uid)
@@ -656,6 +688,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     val newName = "Updated Name"
@@ -694,6 +727,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     // This should throw IllegalArgumentException
@@ -712,6 +746,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     realSessionRepo.updateSession(withSession.uid, gameId = "NoGameNameProvided")
@@ -729,6 +764,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     realSessionRepo.updateSession(withSession.uid, gameName = "NoGameIdProvided")
@@ -746,6 +782,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 123",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     assertNotNull(withSession.session)
@@ -768,7 +805,8 @@ class FirestoreSessionTests : FirestoreTests() {
             "game123",
             "Game 123",
             testTimestamp,
-            testLocation)
+            testLocation,
+            rentalId = null)
 
     assertNotNull(updatedDiscussion.session)
     assertEquals(0, updatedDiscussion.session?.participants?.size)
@@ -791,6 +829,7 @@ class FirestoreSessionTests : FirestoreTests() {
             originalGameName,
             testTimestamp,
             originalLocation,
+            rentalId = null,
             account1.uid)
 
     // Update only the date
@@ -817,6 +856,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 111",
             testTimestamp,
             testLocation,
+            rentalId = null,
             account1.uid)
 
     assertNotNull(firstSession.session)
@@ -831,6 +871,7 @@ class FirestoreSessionTests : FirestoreTests() {
             "Game 222",
             Timestamp(testTimestamp.seconds + 3600, 0),
             Location(40.7128, -74.0060, "New York"),
+            rentalId = null,
             account2.uid)
 
     assertNotNull(secondSession.session)
@@ -850,6 +891,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 456",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val geoPinSnapshot = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
@@ -869,6 +911,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val beforeDelete = geoPinRepository.collection.document(baseDiscussion.uid).get().await()
@@ -891,6 +934,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1.uid)
 
     val geoPinRef = geoPinRepository.collection.document(baseDiscussion.uid)
@@ -989,6 +1033,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account2)
     advanceUntilIdle()
 
@@ -1019,6 +1064,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2,
         account3)
@@ -1047,6 +1093,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -1070,12 +1117,26 @@ class FirestoreSessionTests : FirestoreTests() {
       // create session for even indices including account1
       if (i % 2 == 0) {
         realSessionRepo.createSession(
-            d.uid, "S$i", "game$i", "Game$i", testTimestamp, testLocation, account1.uid)
+            d.uid,
+            "S$i",
+            "game$i",
+            "Game$i",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account1.uid)
         discussionsWithSession += d.uid
       } else {
         // create session without account1
         realSessionRepo.createSession(
-            d.uid, "S$i", "game$i", "Game$i", testTimestamp, testLocation, account2.uid)
+            d.uid,
+            "S$i",
+            "game$i",
+            "Game$i",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account2.uid)
         otherDiscussions += d.uid
       }
     }
@@ -1096,7 +1157,14 @@ class FirestoreSessionTests : FirestoreTests() {
     repeat(7) { i ->
       val d = discussionRepository.createDiscussion("P$i", "desc", account1.uid)
       realSessionRepo.createSession(
-          d.uid, "PS$i", "gameP$i", "GameP$i", testTimestamp, testLocation, account1.uid)
+          d.uid,
+          "PS$i",
+          "gameP$i",
+          "GameP$i",
+          testTimestamp,
+          testLocation,
+          rentalId = null,
+          account1.uid)
       createdIds += d.uid
     }
 
@@ -1118,6 +1186,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1)
     Thread.sleep(1500)
 
@@ -1147,6 +1216,7 @@ class FirestoreSessionTests : FirestoreTests() {
         "Game 123",
         testTimestamp,
         testLocation,
+        rentalId = null,
         account1,
         account2)
     advanceUntilIdle()
@@ -1156,5 +1226,409 @@ class FirestoreSessionTests : FirestoreTests() {
     // account2 (non-admin) tries to add account3 - should fail
     viewModel.addUserToSession(discussionWithSession, account2, account3)
     advanceUntilIdle()
+  }
+
+  // ========================================================================
+  // RentalId test
+  // ========================================================================
+
+  @Test
+  fun canCreateSessionWithRentalId() = runTest {
+    val rentalId = "rental123"
+
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night with Rental",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = rentalId,
+        account1,
+        account2)
+    advanceUntilIdle()
+
+    val updatedDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNotNull(updatedDiscussion.session)
+    assertEquals("Catan Night with Rental", updatedDiscussion.session?.name)
+    assertEquals(rentalId, updatedDiscussion.session?.rentalId)
+  }
+
+  @Test
+  fun canCreateSessionWithNullRentalId() = runTest {
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null,
+        account1,
+        account2)
+    advanceUntilIdle()
+
+    val updatedDiscussion = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNotNull(updatedDiscussion.session)
+    assertNull(updatedDiscussion.session?.rentalId)
+  }
+
+  @Test
+  fun canUpdateSessionRentalId() = runTest {
+    // Create session without rental
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null,
+        account1)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNull(discussionWithSession.session?.rentalId)
+
+    // Update with rental
+    val rentalId = "rental456"
+    editViewModel.updateSession(account1, discussionWithSession, rentalId = rentalId)
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(rentalId, result.session?.rentalId)
+    assertEquals("Catan Night", result.session?.name)
+  }
+
+  @Test
+  fun canRemoveRentalIdFromSession() = runTest {
+    // Create session with rental
+    val rentalId = "rental789"
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = rentalId,
+        account1)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(rentalId, discussionWithSession.session?.rentalId)
+
+    // Update to remove rental (using empty string)
+    editViewModel.updateSession(account1, discussionWithSession, rentalId = "")
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNull(result.session?.rentalId)
+    assertEquals("Catan Night", result.session?.name)
+  }
+
+  @Test
+  fun canUpdateSessionMultipleFieldsIncludingRentalId() = runTest {
+    // Create session
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Original Session",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = null,
+        account1)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    val newName = "Updated Session"
+    val newDate = Timestamp(testTimestamp.seconds + 86400, 0)
+    val newLocation = Location(latitude = 48.8566, longitude = 2.3522, name = "Paris")
+    val newRentalId = "rental999"
+
+    // Update multiple fields including rental
+    editViewModel.updateSession(
+        account1,
+        discussionWithSession,
+        name = newName,
+        date = newDate,
+        location = newLocation,
+        rentalId = newRentalId)
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(newName, result.session?.name)
+    assertEquals(newDate, result.session?.date)
+    assertEquals(newLocation, result.session?.location)
+    assertEquals(newRentalId, result.session?.rentalId)
+  }
+
+  @Test
+  fun canChangeRentalIdInExistingSession() = runTest {
+    // Create session with first rental
+    val firstRentalId = "rentalA"
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = firstRentalId,
+        account1)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(firstRentalId, discussionWithSession.session?.rentalId)
+
+    // Change to different rental
+    val secondRentalId = "rentalB"
+    editViewModel.updateSession(account1, discussionWithSession, rentalId = secondRentalId)
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals(secondRentalId, result.session?.rentalId)
+  }
+
+  @Test
+  fun updateSessionPreservesRentalIdWhenNotProvided() = runTest {
+    // Create session with rental
+    val rentalId = "rental555"
+    viewModel.createSession(
+        account1,
+        baseDiscussion,
+        "Catan Night",
+        "game123",
+        "Game 123",
+        testTimestamp,
+        testLocation,
+        rentalId = rentalId,
+        account1)
+    advanceUntilIdle()
+
+    val discussionWithSession = discussionRepository.getDiscussion(baseDiscussion.uid)
+
+    // Update only name (rentalId not provided)
+    editViewModel.updateSession(account1, discussionWithSession, name = "New Name")
+    advanceUntilIdle()
+
+    val result = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertEquals("New Name", result.session?.name)
+    assertEquals(rentalId, result.session?.rentalId) // Should be preserved
+  }
+
+  @Test
+  fun repositoryCanCreateSessionWithRentalId() = runBlocking {
+    val realSessionRepo = SessionRepository()
+    val rentalId = "rental123"
+
+    val updatedDiscussion =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Session with Rental",
+            "game789",
+            "Game 789",
+            testTimestamp,
+            testLocation,
+            rentalId = rentalId,
+            account1.uid,
+            account2.uid)
+
+    assertNotNull(updatedDiscussion.session)
+    assertEquals("Session with Rental", updatedDiscussion.session?.name)
+    assertEquals(rentalId, updatedDiscussion.session?.rentalId)
+    assertEquals(2, updatedDiscussion.session?.participants?.size)
+  }
+
+  @Test
+  fun repositoryCanCreateSessionWithNullRentalId() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val updatedDiscussion =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Session without Rental",
+            "game789",
+            "Game 789",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account1.uid)
+
+    assertNotNull(updatedDiscussion.session)
+    assertNull(updatedDiscussion.session?.rentalId)
+  }
+
+  @Test
+  fun repositoryCanUpdateSessionRentalId() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val withSession =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Session",
+            "game123",
+            "Game 123",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account1.uid)
+
+    assertNull(withSession.session?.rentalId)
+
+    val rentalId = "rental456"
+    val updated = realSessionRepo.updateSession(withSession.uid, rentalId = rentalId)
+
+    assertEquals(rentalId, updated.session?.rentalId)
+    assertEquals("Session", updated.session?.name)
+  }
+
+  @Test
+  fun repositoryCanRemoveRentalIdUsingEmptyString() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val withSession =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Session",
+            "game123",
+            "Game 123",
+            testTimestamp,
+            testLocation,
+            rentalId = "rental999",
+            account1.uid)
+
+    assertEquals("rental999", withSession.session?.rentalId)
+
+    // Update with empty string to remove
+    val updated = realSessionRepo.updateSession(withSession.uid, rentalId = "")
+
+    assertNull(updated.session?.rentalId)
+  }
+
+  @Test
+  fun repositoryUpdatePreservesRentalIdWhenNotProvided() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val rentalId = "rental777"
+    val withSession =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Original Session",
+            "game123",
+            "Game 123",
+            testTimestamp,
+            testLocation,
+            rentalId = rentalId,
+            account1.uid)
+
+    assertEquals(rentalId, withSession.session?.rentalId)
+
+    // Update only the name
+    val updated = realSessionRepo.updateSession(withSession.uid, name = "Updated Name")
+
+    assertEquals("Updated Name", updated.session?.name)
+    assertEquals(rentalId, updated.session?.rentalId) // Should be preserved
+  }
+
+  @Test
+  fun repositoryCanUpdateMultipleFieldsWithRentalId() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val withSession =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Original",
+            "game123",
+            "Game 123",
+            testTimestamp,
+            testLocation,
+            rentalId = null,
+            account1.uid)
+
+    val newName = "Updated Name"
+    val newGameId = "game999"
+    val newGameName = "Game 999"
+    val newRentalId = "rentalABC"
+
+    val updated =
+        realSessionRepo.updateSession(
+            withSession.uid,
+            name = newName,
+            gameId = newGameId,
+            gameName = newGameName,
+            rentalId = newRentalId)
+
+    assertEquals(newName, updated.session?.name)
+    assertEquals(newGameId, updated.session?.gameId)
+    assertEquals(newGameName, updated.session?.gameName)
+    assertEquals(newRentalId, updated.session?.rentalId)
+  }
+
+  @Test
+  fun deletingSessionRemovesRentalId() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    val withSession =
+        realSessionRepo.createSession(
+            baseDiscussion.uid,
+            "Session to Delete",
+            "game123",
+            "Game 123",
+            testTimestamp,
+            testLocation,
+            rentalId = "rentalToDelete",
+            account1.uid)
+
+    assertNotNull(withSession.session)
+    assertEquals("rentalToDelete", withSession.session?.rentalId)
+
+    realSessionRepo.deleteSession(withSession.uid)
+
+    val afterDelete = discussionRepository.getDiscussion(baseDiscussion.uid)
+    assertNull(afterDelete.session)
+  }
+
+  @Test
+  fun canCreateMultipleSessionsWithDifferentRentals() = runBlocking {
+    val realSessionRepo = SessionRepository()
+
+    // Create first discussion with rental A
+    val discussion1 = discussionRepository.createDiscussion("D1", "desc", account1.uid)
+    realSessionRepo.createSession(
+        discussion1.uid,
+        "Session 1",
+        "game1",
+        "Game 1",
+        testTimestamp,
+        testLocation,
+        rentalId = "rentalA",
+        account1.uid)
+
+    // Create second discussion with rental B
+    val discussion2 = discussionRepository.createDiscussion("D2", "desc", account1.uid)
+    realSessionRepo.createSession(
+        discussion2.uid,
+        "Session 2",
+        "game2",
+        "Game 2",
+        testTimestamp,
+        testLocation,
+        rentalId = "rentalB",
+        account2.uid)
+
+    val fetched1 = discussionRepository.getDiscussion(discussion1.uid)
+    val fetched2 = discussionRepository.getDiscussion(discussion2.uid)
+
+    assertEquals("rentalA", fetched1.session?.rentalId)
+    assertEquals("rentalB", fetched2.session?.rentalId)
   }
 }

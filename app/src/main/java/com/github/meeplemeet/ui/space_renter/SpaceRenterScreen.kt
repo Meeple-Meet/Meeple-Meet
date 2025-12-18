@@ -125,7 +125,7 @@ fun SpaceRenterScreen(
     account: Account,
     viewModel: SpaceRenterViewModel = viewModel(),
     onBack: () -> Unit = {},
-    onReserve: () -> Unit = {},
+    onReserve: (SpaceRenter, Space, Int) -> Unit = { _, _, _ -> },
     onEdit: (SpaceRenter?) -> Unit = {},
 ) {
   // Collect the current space renter state from the ViewModel
@@ -156,7 +156,16 @@ fun SpaceRenterScreen(
         ReservationBar(
             selectedSpace = selectedIndex?.let { spaceState?.spaces?.getOrNull(it) },
             selectedIndex = selectedIndex,
-            onApprove = onReserve)
+            onApprove = {
+              spaceState?.let { renter ->
+                selectedIndex?.let { index ->
+                  val space = renter.spaces.getOrNull(index)
+                  if (space != null) {
+                    onReserve(renter, space, index)
+                  }
+                }
+              }
+            })
       },
   ) { innerPadding ->
     // Only show the actual screen if space renter data is available
@@ -568,7 +577,7 @@ fun ReservationBar(selectedSpace: Space?, selectedIndex: Int?, onApprove: () -> 
                               ButtonDefaults.buttonColors(containerColor = AppColors.affirmative),
                           modifier = Modifier.height(Dimensions.ButtonSize.medium)) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Default.EventAvailable,
                                 contentDescription = null,
                                 modifier = Modifier.size(Dimensions.IconSize.small))
                             Spacer(Modifier.width(Dimensions.Spacing.medium))

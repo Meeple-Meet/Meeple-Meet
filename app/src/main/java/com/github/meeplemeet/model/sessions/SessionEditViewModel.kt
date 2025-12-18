@@ -60,6 +60,7 @@ class SessionEditViewModel(
    * @param date Optional new scheduled date and time
    * @param location Optional new location
    * @param participants Optional new list of participant IDs
+   * @param rentalId Optional new rental ID.
    * @throws PermissionDeniedException if requester is not a discussion admin
    * @throws IllegalArgumentException if if only one of {@code gameId} or {@code gameName} is
    *   provided
@@ -73,6 +74,7 @@ class SessionEditViewModel(
       date: Timestamp? = null,
       location: Location? = null,
       participants: List<String>? = null,
+      rentalId: String? = null
   ) {
     if (!isAdmin(requester, discussion)) {
       throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
@@ -87,7 +89,7 @@ class SessionEditViewModel(
           date = date,
           location = location,
           newParticipantList = participants,
-      )
+          rentalId = rentalId)
     }
   }
 }

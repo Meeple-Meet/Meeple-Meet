@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,14 +48,17 @@ import com.github.meeplemeet.model.map.StorableGeoPinRepository
 import com.github.meeplemeet.model.map.previews.MarkerPreviewRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
+import com.github.meeplemeet.model.rental.RentalRepository
 import com.github.meeplemeet.model.sessions.SessionRepository
 import com.github.meeplemeet.model.shared.game.CloudBggGameRepository
 import com.github.meeplemeet.model.shared.game.FirestoreGameRepository
 import com.github.meeplemeet.model.shared.game.GameRepository
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shared.location.LocationRepository
 import com.github.meeplemeet.model.shared.location.NominatimLocationRepository
 import com.github.meeplemeet.model.shops.Shop
 import com.github.meeplemeet.model.shops.ShopRepository
+import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
 import com.github.meeplemeet.ui.MapScreen
@@ -75,6 +79,7 @@ import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.posts.CreatePostScreen
 import com.github.meeplemeet.ui.posts.PostScreen
 import com.github.meeplemeet.ui.posts.PostsOverviewScreen
+import com.github.meeplemeet.ui.rental.SpaceRentalScreen
 import com.github.meeplemeet.ui.sessions.CreateSessionScreen
 import com.github.meeplemeet.ui.sessions.SessionEditScreen
 import com.github.meeplemeet.ui.sessions.SessionScreen
@@ -163,6 +168,9 @@ object RepositoryProvider {
 
   /** Lazily initialized repository for location operations. */
   val locations: LocationRepository by lazy { NominatimLocationRepository() }
+
+  /** Lazily initialized repository for rental operations. */
+  val rentals: RentalRepository by lazy { RentalRepository() }
 
   /** Lazily initialized repository for geo pin operations. */
   val geoPins: StorableGeoPinRepository by lazy { StorableGeoPinRepository() }
@@ -276,9 +284,11 @@ fun MeepleMeetApp(
   var spaceId by remember { mutableStateOf("") }
   var spaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
 
-  var userLocation by remember {
-    mutableStateOf<com.github.meeplemeet.model.shared.location.Location?>(null)
-  }
+  var rentalSpaceRenter by remember { mutableStateOf<SpaceRenter?>(null) }
+  var rentalSpace by remember { mutableStateOf<Space?>(null) }
+  var rentalSpaceIndex by remember { mutableIntStateOf(0) }
+
+  var userLocation by remember { mutableStateOf<Location?>(null) }
 
   val online by OfflineModeManager.hasInternetConnection.collectAsStateWithLifecycle()
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -650,6 +660,12 @@ fun MeepleMeetApp(
                 account = account!!,
                 spaceId = spaceId,
                 onBack = { navigationActions.goBack() },
+                onReserve = { renter, space, index ->
+                  rentalSpaceRenter = renter
+                  rentalSpace = space
+                  rentalSpaceIndex = index
+                  navigationActions.navigateTo(MeepleMeetScreen.SpaceRental, popUpTo = false)
+                },
                 onEdit = {
                   spaceRenter = it
                   navigationActions.navigateTo(MeepleMeetScreen.EditSpaceRenter, popUpTo = false)
@@ -666,6 +682,20 @@ fun MeepleMeetApp(
                 onBack = { navigationActions.goBack() },
                 onUpdated = { navigationActions.goBack() },
                 online = online)
+          } else {
+            LoadingScreen()
+          }
+        }
+        composable(MeepleMeetScreen.SpaceRental.name) {
+          if (rentalSpaceRenter != null && rentalSpace != null) {
+            SpaceRentalScreen(
+                account = account!!,
+                spaceRenter = rentalSpaceRenter!!,
+                space = rentalSpace!!,
+                spaceIndex = rentalSpaceIndex,
+                onBack = { navigationActions.goBack() },
+                onSuccess = { navigationActions.goBack() },
+            )
           } else {
             LoadingScreen()
           }

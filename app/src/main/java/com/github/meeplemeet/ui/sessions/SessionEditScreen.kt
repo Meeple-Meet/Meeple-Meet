@@ -70,18 +70,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.FriendsScreenViewModel
 import com.github.meeplemeet.model.discussions.Discussion
+import com.github.meeplemeet.model.rental.RentalViewModel
 import com.github.meeplemeet.model.sessions.Session
 import com.github.meeplemeet.model.sessions.SessionEditViewModel
 import com.github.meeplemeet.model.shared.GameUIState
+import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
 import com.github.meeplemeet.ui.components.DateAndTimePicker
 import com.github.meeplemeet.ui.components.SectionCard
 import com.github.meeplemeet.ui.components.SessionGameSearchBar
-import com.github.meeplemeet.ui.components.SessionLocationSearchButton
 import com.github.meeplemeet.ui.components.SessionParticipantAvatar
 import com.github.meeplemeet.ui.components.TopBarWithDivider
 import com.github.meeplemeet.ui.components.timestampToLocal
+import com.github.meeplemeet.ui.rental.SessionLocationSearchWithRental
 import com.github.meeplemeet.ui.theme.Dimensions
 import com.github.meeplemeet.ui.theme.Elevation
 import kotlinx.coroutines.launch
@@ -170,6 +172,7 @@ private data class SessionEditCallbacks(
  * @param account The current user's account.
  * @param discussion The discussion containing the session to edit.
  * @param viewModel The session view model.
+ * @param rentalViewModel The viewmodel for rent operations.
  * @param onBack Callback invoked to navigate back from the screen.
  */
 @Composable
@@ -177,6 +180,7 @@ fun SessionEditScreen(
     account: Account,
     discussion: Discussion,
     viewModel: SessionEditViewModel = viewModel(key = discussion.uid),
+    rentalViewModel: RentalViewModel = viewModel(),
     onBack: () -> Unit = {},
 ) {
   val session: Session? = discussion.session
@@ -188,6 +192,7 @@ fun SessionEditScreen(
 
   var form by remember { mutableStateOf(SessionForm()) }
   var allDiscussionMembers by remember { mutableStateOf<List<Account>>(emptyList()) }
+  var selectedRentalId by remember { mutableStateOf(session.rentalId) }
 
   val gameUi: GameUIState by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
@@ -212,6 +217,9 @@ fun SessionEditScreen(
       }
 
   val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
+
+  // Load users active rentals
+  LaunchedEffect(account.uid) { rentalViewModel.loadActiveSpaceRentals(account.uid) }
 
   LaunchedEffect(discussion.uid) {
     val (date, time) = timestampToLocal(session.date)
@@ -334,7 +342,25 @@ fun SessionEditScreen(
                                     date = toTimestamp(updated.date, updated.time),
                                     location = locationUi.selectedLocation ?: session.location,
                                     participants = finalParticipantIds,
-                                )
+                                    rentalId = selectedRentalId)
+
+                                if (selectedRentalId != session.rentalId) {
+                                  scope.launch {
+                                    try {
+                                      // Dissociate old rental ID if it exists
+                                      session.rentalId?.let { oldRentalId ->
+                                        rentalViewModel.dissociateRentalFromSession(oldRentalId)
+                                      }
+                                      // Associate new rental ID if it exists
+                                      selectedRentalId?.let { newRentalId ->
+                                        rentalViewModel.associateRentalWithSession(
+                                            rentalId = newRentalId, sessionId = discussion.uid)
+                                      }
+                                    } catch (e: Exception) {
+                                      e.printStackTrace()
+                                    }
+                                  }
+                                }
                               }
                               .onFailure { e ->
                                 showError(e.message ?: SessionEditStrings.FAILING_UPDATE_SESSION)
@@ -365,9 +391,16 @@ fun SessionEditScreen(
                   form = form,
                   gameUi = gameUi,
                   viewModel = viewModel,
+                  rentalViewModel = rentalViewModel,
                   onFormChange = callbacks.onFormChange,
                   onFocusChanged = callbacks.onFocusChanged,
-              )
+                  onRentalSelected = { rentalId, location ->
+                    selectedRentalId = rentalId // Can be null if it was unlinked
+                    if (rentalId != null) {
+                      viewModel.setLocation(account, discussion, location)
+                    }
+                  },
+                  currentRentalId = selectedRentalId)
 
               SessionEditParticipantsBlock(
                   account = account,
@@ -518,8 +551,11 @@ private fun EditOrganisationSection(
     form: SessionForm,
     gameUi: GameUIState,
     viewModel: SessionEditViewModel,
+    rentalViewModel: RentalViewModel,
     onFormChange: (SessionForm) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   SectionCard(
       Modifier.testTag(SessionEditTestTags.ORG_SECTION)
@@ -542,9 +578,11 @@ private fun EditOrganisationSection(
             account = account,
             discussion = discussion,
             viewModel = viewModel,
+            rentalViewModel = rentalViewModel,
             onFormChange = onFormChange,
             onFocusChanged = onFocusChanged,
-        )
+            onRentalSelected = onRentalSelected,
+            currentRentalId = currentRentalId)
       }
 }
 
@@ -624,8 +662,11 @@ private fun EditScheduleAndLocationSection(
     account: Account,
     discussion: Discussion,
     viewModel: SessionEditViewModel,
+    rentalViewModel: RentalViewModel,
     onFormChange: (SessionForm) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
+    onRentalSelected: (String?, Location) -> Unit = { _, _ -> },
+    currentRentalId: String? = null
 ) {
   Text(
       text = SessionEditStrings.SCHEDULE_AND_LOCATION_TEXT,
@@ -645,11 +686,18 @@ private fun EditScheduleAndLocationSection(
   Spacer(Modifier.height(Dimensions.Spacing.extraMedium))
 
   Box(Modifier.onFocusChanged { onFocusChanged(it.isFocused) }) {
-    SessionLocationSearchButton(
+    SessionLocationSearchWithRental(
         account = account,
         discussion = discussion,
-        viewModel = viewModel,
-    )
+        sessionViewModel = viewModel,
+        rentalViewModel = rentalViewModel,
+        sessionDate = form.date,
+        sessionTime = form.time,
+        onDateTimeUpdate = { newDate, newTime ->
+          onFormChange(form.copy(date = newDate, time = newTime))
+        },
+        onRentalSelected = onRentalSelected,
+        currentRentalId = currentRentalId)
   }
 }
 
