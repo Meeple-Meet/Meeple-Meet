@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val AUTH_FAILED_DEFAULT_MESSAGE = "Authentication failed"
-
 /**
  * ViewModel for managing user profile interactions and friend system operations.
  *
@@ -282,70 +280,6 @@ class ProfileScreenViewModel(
           }
 
       _businesses.value = Pair(shops, spaceRenters)
-    }
-  }
-
-  /**
-   * Deletes the user's account with password reauthentication.
-   *
-   * Deletion flow:
-   * 1. Reauthenticates the user with their password
-   * 2. Deletes profile picture from storage (if exists)
-   * 3. Deletes all Firestore data (discussions, sessions, shops, spaces, account document)
-   * 4. Attempts to delete Firebase Auth account (with 3 retry attempts)
-   *
-   * Note: If reauthentication fails, the entire operation is aborted and the user is shown an
-   * error. If Firebase Auth deletion fails after Firestore cleanup, we still treat it as success
-   * since the user's data is already removed.
-   *
-   * @param account The account to delete
-   * @param password The user's password for reauthentication
-   * @param context Context needed for deleting profile picture from storage
-   * @param onSuccess Callback invoked when account deletion is successful
-   * @param onFailure Callback invoked with error message if reauthentication fails
-   */
-  fun deleteAccountWithReauth(
-      account: Account,
-      password: String,
-      context: Context,
-      onSuccess: () -> Unit,
-      onFailure: (String) -> Unit
-  ) {
-    if (_uiState.value.isLoading) return
-
-    viewModelScope.launch {
-      _uiState.update { it.copy(isLoading = true, errorMsg = null) }
-
-      authRepository
-          .reauthenticateWithPassword(password)
-          .onSuccess {
-            if (!account.photoUrl.isNullOrEmpty()) {
-              runCatching { imageRepository.deleteAccountProfilePicture(account.uid, context) }
-            }
-
-            deleteAccount(account).await()
-
-            deleteFirebaseAuthAccount(
-                onSuccess = {
-                  _uiState.update {
-                    it.copy(isLoading = false, account = null, signedOut = true, errorMsg = null)
-                  }
-                  onSuccess()
-                },
-                onFailure = {
-                  _uiState.update {
-                    it.copy(isLoading = false, account = null, signedOut = true, errorMsg = null)
-                  }
-                  onSuccess()
-                })
-          }
-          .onFailure { exception ->
-            _uiState.update {
-              it.copy(
-                  isLoading = false, errorMsg = exception.message ?: AUTH_FAILED_DEFAULT_MESSAGE)
-            }
-            onFailure(exception.message ?: AUTH_FAILED_DEFAULT_MESSAGE)
-          }
     }
   }
 }
