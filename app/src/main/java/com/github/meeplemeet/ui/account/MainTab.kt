@@ -609,9 +609,9 @@ fun MainTabContent(
 ) {
   var showDelDialog by remember { mutableStateOf(false) }
   var deleteErrorMessage by remember { mutableStateOf<String?>(null) }
-  val uiState by viewModel.uiState.collectAsState()
   val focusManager = LocalFocusManager.current
   val context = LocalContext.current
+  val uiState by viewModel.uiState.collectAsState()
   var toast by remember { mutableStateOf<ToastData?>(null) }
 
   // Get current email (prefer auth email as it's the one being verified)
