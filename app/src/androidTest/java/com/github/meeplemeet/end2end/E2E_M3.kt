@@ -32,6 +32,7 @@ import com.github.meeplemeet.utils.AuthUtils
 import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
+import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -40,7 +41,6 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class E2E_M3 : FirestoreTests() {
@@ -505,11 +505,10 @@ class E2E_M3 : FirestoreTests() {
           true
         },
         20_000)
-      composeTestRule.waitUntilWithCatch(
-          {
-              composeTestRule.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).assertExists(); true
-          }
-      )
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).assertExists()
+      true
+    })
 
     // 8. Bob archives the session (Repo)
     val archivedSessionId = UUID.randomUUID().toString()
