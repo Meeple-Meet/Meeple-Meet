@@ -122,7 +122,8 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
             address = Location(45.0, 6.0, "EPFL"),
             website = "https://meeple.com",
             openingHours = openings,
-            gameCollection = games)
+            gameCollection = games,
+            photoCollectionUrl = listOf("https://via.placeholder.com/150"))
   }
 
   /* ────────────────────────────── EXT HELPERS ────────────────────────────── */
@@ -373,9 +374,33 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
           .assertExists()
     }
 
-    // 3) Save Success
+    // 3.5) Image Management
+    checkpoint("Image Management") {
+      // Since we initialized shop with a photo, we should see it in the carousel
+      // We can't easily check the image content, but we can check the carousel item exists if it
+      // has a unique tag
+      // Or simpler: We check the "Delete" button ensures we can remove it.
+      // Assuming the Carousel item has a delete button with a tag like "carousel_delete_button"
+      // We need to check CommonComponentsTestTags or similar.
+      // Let's assume we can find the delete button. If the tag isn't perfect, we might need to rely
+      // on content description or existing tags.
+      // The code uses CommonComponentsTestTags.CAROUSEL_DELETE_BUTTON usually.
+
+      val removeBtnMatcher = hasTestTag(CommonComponentsTestTags.CAROUSEL_REMOVE_BUTTON)
+      
+      // Check if button exists (it should, but we use safe check or just performClick if confident)
+      // Standard way to check existence and interact
+      if (compose.onAllNodes(removeBtnMatcher).fetchSemanticsNodes().isNotEmpty()) {
+          compose.onNode(removeBtnMatcher).performClick()
+          compose.waitForIdle()
+      }
+    }
+
+    // 4) Save Success
     checkpoint("Save Success") {
       compose.onTag(ShopComponentsTestTags.ACTION_SAVE).performClick()
+
+      compose.waitUntil(timeoutMillis = 5000) { savedCalled }
       assertEquals(true, savedCalled)
 
       // Verify persistence in Firestore
@@ -386,6 +411,9 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
         assertEquals(null, gamesMap["test_catan"]) // Deleted
         assertEquals(50, gamesMap["test_carcassonne"]) // Edited
         assertEquals(19, gamesMap["test_pandemic"]) // Added
+
+        // Verify photos are empty (deleted)
+        assertEquals(emptyList<String>(), updated.photoCollectionUrl)
       }
     }
   }
@@ -414,7 +442,7 @@ class ShopDetailsEditScreenTest : FirestoreTests() {
         EditShopScreenTestTags.SECTION_GAMES + EditShopScreenTestTags.SECTION_HEADER_SUFFIX)
     ensureSectionExpanded(EditShopScreenTestTags.SECTION_GAMES)
 
-    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).assertIsDisplayed()
+    compose.onTag(CreateShopScreenTestTags.OFFLINE_GAMES_MSG).performScrollTo().assertIsDisplayed()
     compose
         .onNodeWithTag(
             "${ShopComponentsTestTags.SHOP_GAME_DELETE}:test_catan", useUnmergedTree = true)

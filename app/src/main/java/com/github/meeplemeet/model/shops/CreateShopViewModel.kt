@@ -5,10 +5,13 @@ package com.github.meeplemeet.model.shops
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.game.GameRepository
 import com.github.meeplemeet.model.shared.location.Location
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for creating new shops.
@@ -17,21 +20,26 @@ import kotlinx.coroutines.launch
  * required fields are properly provided.
  *
  * @property shopRepo The repository used for shop operations.
+ * @property imageRepository The repository used for image operations.
  */
 class CreateShopViewModel(
     private val shopRepo: ShopRepository = RepositoryProvider.shops,
+    private val imageRepository: ImageRepository = RepositoryProvider.images,
     gameRepository: GameRepository = RepositoryProvider.games
 ) : ShopSearchViewModel(gameRepository) {
   /**
-   * Creates a new shop in Firestore.
+   * Creates a new shop in Firestore with photo upload support.
    *
    * This operation is performed asynchronously in the viewModelScope. Validates that:
    * - The shop name is not blank
    * - Exactly 7 opening hours entries are provided (one for each day of the week)
    * - A valid address is provided
    *
-   * The repository will automatically add the shop ID to the owner's businesses subcollection.
+   * Photos are uploaded to Firebase Storage after the shop is created, and the shop document is
+   * updated with the download URLs. The repository will automatically add the shop ID to the
+   * owner's businesses subcollection.
    *
+   * @param context Android context for accessing cache directory.
    * @param owner The account that owns the shop.
    * @param name The name of the shop.
    * @param phone The contact phone number for the shop (optional).
@@ -47,6 +55,7 @@ class CreateShopViewModel(
    *   entries are provided, or if the address is not valid.
    */
   fun createShop(
+      context: android.content.Context,
       owner: Account,
       name: String,
       phone: String = "",
@@ -71,16 +80,46 @@ class CreateShopViewModel(
 
       if (isOnline) {
         // ONLINE: Create immediately in Firestore
-        shopRepo.createShop(
-            owner,
-            name,
-            phone,
-            email,
-            website,
-            address,
-            openingHours,
-            gameCollection,
-            photoCollectionUrl)
+        val created =
+            shopRepo.createShop(
+                owner,
+                name,
+                phone,
+                email,
+                website,
+                address,
+                openingHours,
+                gameCollection,
+                emptyList())
+        val uploadedUrls =
+            if (photoCollectionUrl.isNotEmpty()) {
+              try {
+                // Upload photos to Firebase Storage and get download URLs
+                val urls =
+                    withContext(NonCancellable) {
+                      imageRepository.saveShopPhotos(
+                          context, created.id, *photoCollectionUrl.toTypedArray())
+                    }
+                urls
+              } catch (e: Exception) {
+                throw Exception("Photo upload failed: ${e.message}", e)
+              }
+            } else {
+              emptyList()
+            }
+
+        // Update the document with Firebase Storage download URLs
+        if (uploadedUrls.isNotEmpty()) {
+          try {
+            withContext(NonCancellable) {
+              shopRepo.updateShop(id = created.id, photoCollectionUrl = uploadedUrls)
+            }
+          } catch (e: Exception) {
+            // Updating should not crash the app; log and continue.
+            throw Exception("Failed to save photo URLs: ${e.message}", e)
+          }
+        }
+        // Return the created shop with updated photo URLs
       } else {
         // OFFLINE: Queue for later creation
 

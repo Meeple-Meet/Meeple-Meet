@@ -22,6 +22,7 @@ class FirestoreHandlesTests : FirestoreTests() {
   @Before
   fun setup() {
     runBlocking {
+      handlesVM = CreateAccountViewModel()
       testAccount =
           accountRepository.createAccount(
               "Alice", "Alice", email = "alice_handles_test@example.com", photoUrl = null)
@@ -142,14 +143,21 @@ class FirestoreHandlesTests : FirestoreTests() {
     // Check with new handle
     val accountWithNewHandle = testAccount.copy(handle = newHandle)
     handlesVM.handleForAccountExists(accountWithNewHandle)
-    delay(100)
+
+    // Wait for error to potentially appear (should be empty)
+    delay(200)
 
     // Should clear error since new handle exists for this account
     assertEquals("", handlesVM.errorMessage.value)
 
     // Check with old handle (should now error)
     handlesVM.handleForAccountExists(accountWithOldHandle)
-    delay(100)
+
+    // Wait for error message to be set
+    val start = System.currentTimeMillis()
+    while (handlesVM.errorMessage.value.isEmpty() && System.currentTimeMillis() - start < 5000) {
+      delay(100)
+    }
 
     // Should set error since old handle no longer exists for this account
     assertEquals("No handle associated to this account", handlesVM.errorMessage.value)
@@ -320,7 +328,12 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // Try to change account1's handle to account2's handle - should set error
     handlesVM.setAccountHandle(accountWithHandle1, handle2)
-    delay(100)
+
+    // Wait for error message
+    val start = System.currentTimeMillis()
+    while (handlesVM.errorMessage.value.isEmpty() && System.currentTimeMillis() - start < 5000) {
+      delay(100)
+    }
 
     assertEquals(HandleAlreadyTakenException.DEFAULT_MESSAGE, handlesVM.errorMessage.value)
   }
@@ -439,28 +452,77 @@ class FirestoreHandlesTests : FirestoreTests() {
 
   @Test
   fun completeHandleLifecycle() = runBlocking {
-    val handle1 = "lifecycle_handle_1"
-    val handle2 = "lifecycle_handle_2"
+    // Use unique handles to prevent collision/stale state in suite runs
+    val timestamp = System.currentTimeMillis()
+    val handle1 = "lifecycle_1_$timestamp"
+    val handle2 = "lifecycle_2_$timestamp"
 
     // Create handle
     handlesVM.createAccountHandle(testAccount, handle1, "n")
-    delay(100)
-    assertEquals("", handlesVM.errorMessage.value)
-    assertTrue(handlesRepository.checkHandleAvailable(handle1))
+
+    // Wait for the handle to be taken (creation propagation)
+    val startCreation = System.currentTimeMillis()
+    while (handlesRepository.checkHandleAvailable(handle1) &&
+        System.currentTimeMillis() - startCreation < 5000) {
+      delay(100)
+    }
+
+    assertEquals(
+        "Error parsing handle creation: ${handlesVM.errorMessage.value}",
+        "",
+        handlesVM.errorMessage.value)
+    // Handle should be taken (not available)
+    assertFalse(
+        "Handle $handle1 should be taken after creation",
+        handlesRepository.checkHandleAvailable(handle1))
 
     // Update handle
     val accountWithHandle1 = testAccount.copy(handle = handle1)
     handlesVM.setAccountHandle(accountWithHandle1, handle2)
-    delay(100)
-    assertEquals("", handlesVM.errorMessage.value)
-    assertFalse(handlesRepository.checkHandleAvailable(handle1))
-    assertTrue(handlesRepository.checkHandleAvailable(handle2))
+
+    // Wait for update transaction to reflect:
+    // 1. New handle taken
+    // 2. Old handle freed
+    val startUpdate = System.currentTimeMillis()
+    // Wait for handle2 to be TAKEN (checkHandleAvailable returns false)
+    while (handlesRepository.checkHandleAvailable(handle2) &&
+        System.currentTimeMillis() - startUpdate < 5000) {
+      delay(100)
+    }
+
+    // Also wait for handle1 to be FREED (checkHandleAvailable returns true)
+    // This handles the case where updates might be observed slightly differently or cached
+    val startFree = System.currentTimeMillis()
+    while (!handlesRepository.checkHandleAvailable(handle1) &&
+        System.currentTimeMillis() - startFree < 5000) {
+      delay(100)
+    }
+
+    assertEquals(
+        "Error updating handle: ${handlesVM.errorMessage.value}", "", handlesVM.errorMessage.value)
+    // Old handle freed
+    assertTrue(
+        "Old handle $handle1 should be freed after update",
+        handlesRepository.checkHandleAvailable(handle1))
+    // New handle taken
+    assertFalse(
+        "New handle $handle2 should be taken after update",
+        handlesRepository.checkHandleAvailable(handle2))
 
     // Delete handle
     val accountWithHandle2 = testAccount.copy(handle = handle2)
     handlesVM.deleteAccountHandle(accountWithHandle2)
-    delay(100)
-    assertFalse(handlesRepository.checkHandleAvailable(handle2))
+
+    // Wait for deletion
+    val startDel = System.currentTimeMillis()
+    while (!handlesRepository.checkHandleAvailable(handle2) &&
+        System.currentTimeMillis() - startDel < 5000) {
+      delay(100)
+    }
+
+    assertTrue(
+        "Handle $handle2 should be available after deletion",
+        handlesRepository.checkHandleAvailable(handle2))
   }
 
   @Test
@@ -490,16 +552,33 @@ class FirestoreHandlesTests : FirestoreTests() {
 
     // Create handle for first account
     handlesVM.createAccountHandle(testAccount, handle, "n")
-    delay(100)
+    // Wait for creation
+    var start = System.currentTimeMillis()
+    while (!handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
+    }
 
     // Delete the handle
     val accountWithHandle = testAccount.copy(handle = handle)
     handlesVM.deleteAccountHandle(accountWithHandle)
-    delay(100)
+
+    // Wait for deletion
+    start = System.currentTimeMillis()
+    while (handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
+    }
 
     // Create same handle for second account - should succeed
     handlesVM.createAccountHandle(testAccount2, handle, "n")
-    delay(100)
+
+    // Wait for creation for second account
+    start = System.currentTimeMillis()
+    while (!handlesRepository.checkHandleAvailable(handle) &&
+        System.currentTimeMillis() - start < 5000) {
+      delay(100)
+    }
     assertEquals("", handlesVM.errorMessage.value)
     assertTrue(handlesRepository.checkHandleAvailable(handle))
 

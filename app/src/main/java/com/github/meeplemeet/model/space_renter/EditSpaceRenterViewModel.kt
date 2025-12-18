@@ -1,17 +1,24 @@
+// Docs generated with Claude Code.
+
 package com.github.meeplemeet.model.space_renter
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.PermissionDeniedException
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.model.shops.OpeningHours
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for editing and deleting existing space renters.
@@ -21,9 +28,11 @@ import kotlinx.coroutines.launch
  * synchronizing pending changes when connectivity is restored.
  *
  * @property spaceRenterRepository The repository used for space renter operations.
+ * @property imageRepository The repository used for image operations.
  */
 class EditSpaceRenterViewModel(
     private val spaceRenterRepository: SpaceRenterRepository = RepositoryProvider.spaceRenters,
+    private val imageRepository: ImageRepository = RepositoryProvider.images
 ) : SpaceRenterSearchViewModel() {
   private val _currentSpaceRenter = MutableStateFlow<SpaceRenter?>(null)
   val currentSpaceRenter: StateFlow<SpaceRenter?> = _currentSpaceRenter.asStateFlow()
@@ -54,8 +63,13 @@ class EditSpaceRenterViewModel(
    * - If provided, exactly 7 opening hours entries are included (one for each day of the week)
    * - If provided, the address is valid
    *
-   * This function automatically handles both online and offline modes through OfflineModeManager.
+   * The photoCollectionUrl parameter can contain a mix of:
+   * - Existing Firebase URLs (kept as-is)
+   * - Local file paths (uploaded to Firebase) Old photos not in the new list will be deleted from
+   *   Firebase. This function automatically handles both online and offline modes through
+   *   OfflineModeManager.
    *
+   * @param context The Android context for image operations.
    * @param spaceRenter The space renter to update.
    * @param requester The account requesting the update.
    * @param owner The new owner account (optional).
@@ -67,11 +81,14 @@ class EditSpaceRenterViewModel(
    * @param openingHours The new opening hours, must include exactly 7 entries if provided
    *   (optional).
    * @param spaces The new collection of rentable spaces (optional).
+   * @param photoCollectionUrl The new photo collection (mix of Firebase URLs and local paths)
+   *   (optional).
    * @throws PermissionDeniedException if the requester is not the space renter owner.
    * @throws IllegalArgumentException if the space renter name is blank, if not exactly 7 opening
    *   hours entries are provided, or if the address is not valid.
    */
-  fun updateSpaceRenter(
+  suspend fun updateSpaceRenter(
+      context: Context,
       spaceRenter: SpaceRenter,
       requester: Account,
       owner: Account? = null,
@@ -82,21 +99,19 @@ class EditSpaceRenterViewModel(
       address: Location? = null,
       openingHours: List<OpeningHours>? = null,
       spaces: List<Space>? = null,
-      photoCollectionUrl: List<String>? = null
+      photoCollectionUrl: List<String>? = emptyList()
   ) {
     val params =
         SpaceRenterUpdateParams(
             owner, name, phone, email, website, address, openingHours, spaces, photoCollectionUrl)
     validateUpdateRequest(spaceRenter, requester, params)
 
-    viewModelScope.launch {
-      val isOnline = OfflineModeManager.hasInternetConnection.first()
+    val isOnline = OfflineModeManager.hasInternetConnection.first()
 
-      if (isOnline) {
-        handleOnlineUpdate(spaceRenter, params)
-      } else {
-        handleOfflineUpdate(spaceRenter, params)
-      }
+    if (isOnline) {
+      handleOnlineUpdate(spaceRenter, params, context)
+    } else {
+      handleOfflineUpdate(spaceRenter, params)
     }
   }
 
@@ -130,8 +145,72 @@ class EditSpaceRenterViewModel(
   /** Handles online update by persisting to repository and updating cache. */
   private suspend fun handleOnlineUpdate(
       spaceRenter: SpaceRenter,
-      params: SpaceRenterUpdateParams
+      params: SpaceRenterUpdateParams,
+      context: Context
   ) {
+    // Determine which photos are new and which should be deleted
+    val oldUrls = spaceRenter.photoCollectionUrl
+    val newPaths = params.photoCollectionUrl ?: emptyList()
+
+    // Separate existing Firebase URLs from new local paths
+    val keptUrls =
+        newPaths.filter { path ->
+          oldUrls.contains(path) && (path.startsWith("http://") || path.startsWith("https://"))
+        }
+    val localPathsToUpload =
+        newPaths.filter { path -> !path.startsWith("http://") && !path.startsWith("https://") }
+
+    // Delete old photos that were removed (only Firebase URLs, not local paths)
+    val urlsToDelete =
+        oldUrls.filter { url ->
+          !newPaths.contains(url) && (url.startsWith("http://") || url.startsWith("https://"))
+        }
+    if (urlsToDelete.isNotEmpty()) {
+      try {
+        withContext(NonCancellable) {
+          imageRepository.deleteSpaceRenterPhotos(
+              context, spaceRenter.id, *urlsToDelete.toTypedArray())
+        }
+      } catch (e: Exception) {
+        Log.e(
+            "upload",
+            "Failed to delete old space renter photos for ${spaceRenter.id}: ${e.message}",
+            e)
+      }
+    }
+
+    // Upload new local photos
+    val uploadedUrls =
+        if (localPathsToUpload.isNotEmpty()) {
+          try {
+            withContext(NonCancellable) {
+              imageRepository.saveSpaceRenterPhotos(
+                  context, spaceRenter.id, *localPathsToUpload.toTypedArray())
+            }
+          } catch (e: Exception) {
+            Log.e(
+                "upload", "Image upload failed for space renter ${spaceRenter.id}: ${e.message}", e)
+            throw e
+          }
+        } else {
+          emptyList()
+        }
+
+    // Create a map of local paths to their uploaded URLs
+    val localToUploadedMap = localPathsToUpload.zip(uploadedUrls).toMap()
+
+    // Combine kept Firebase URLs with newly uploaded URLs (preserving order from newPaths)
+    val finalPhotoUrls =
+        newPaths.mapNotNull { path ->
+          when {
+            // If it's a kept Firebase URL, use it as-is
+            keptUrls.contains(path) -> path
+            // If it's a local path that was uploaded, use the uploaded URL
+            localToUploadedMap.containsKey(path) -> localToUploadedMap[path]
+            // Otherwise skip it (shouldn't happen, but be safe)
+            else -> null
+          }
+        }
     spaceRenterRepository.updateSpaceRenter(
         spaceRenter.id,
         params.owner?.uid,
@@ -142,15 +221,24 @@ class EditSpaceRenterViewModel(
         params.address,
         params.openingHours,
         params.spaces,
-        params.photoCollectionUrl)
+        finalPhotoUrls)
 
-    val refreshed = spaceRenterRepository.getSpaceRenterSafe(spaceRenter.id)
+    // Optimistically update cache with the data we just successfully sent
+    // This avoids race conditions where getSpaceRenterSafe returns stale data
+    val updatedSpaceRenter =
+        spaceRenter.copy(
+            owner = params.owner ?: spaceRenter.owner,
+            name = params.name ?: spaceRenter.name,
+            phone = params.phone ?: spaceRenter.phone,
+            email = params.email ?: spaceRenter.email,
+            website = params.website ?: spaceRenter.website,
+            address = params.address ?: spaceRenter.address,
+            openingHours = params.openingHours ?: spaceRenter.openingHours,
+            spaces = params.spaces ?: spaceRenter.spaces,
+            photoCollectionUrl = finalPhotoUrls)
 
-    if (refreshed != null) {
-      // Update both cache and UI state
-      OfflineModeManager.updateSpaceRenterCache(refreshed)
-      _currentSpaceRenter.value = refreshed
-    }
+    OfflineModeManager.updateSpaceRenterCache(updatedSpaceRenter)
+    _currentSpaceRenter.value = updatedSpaceRenter
 
     OfflineModeManager.clearSpaceRenterChanges(spaceRenter.id)
   }

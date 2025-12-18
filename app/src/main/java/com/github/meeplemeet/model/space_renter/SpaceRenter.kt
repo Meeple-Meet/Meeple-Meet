@@ -86,7 +86,8 @@ fun toNoUid(spaceRenter: SpaceRenter): SpaceRenterNoUid =
         spaceRenter.website,
         spaceRenter.address,
         spaceRenter.openingHours,
-        spaceRenter.spaces)
+        spaceRenter.spaces,
+        spaceRenter.photoCollectionUrl)
 
 /**
  * Converts a SpaceRenterNoUid to a SpaceRenter. Reconstructs the owner Account from the provided

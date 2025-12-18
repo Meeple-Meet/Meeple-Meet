@@ -25,6 +25,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+const val URL_PREFIX = "/o/"
+
 /**
  * Repository for managing image storage and retrieval across the application.
  *
@@ -60,7 +62,7 @@ import kotlinx.coroutines.withContext
  *
  * @property dispatcher Coroutine dispatcher for I/O operations (defaults to Dispatchers.IO)
  */
-class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+open class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
   private val storage = FirebaseProvider.storage
 
   /**
@@ -106,16 +108,16 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
   private fun discussionMessagePath(id: String) =
       "${discussionMessagesDir(id)}/${UUID.randomUUID()}.webp"
 
-  private fun shopPath(id: String) = "${RepositoryProvider.shops.collectionName}/$id"
+  private fun shopPath(id: String) = "shops/$id"
 
-  private fun spaceRenterPath(id: String) = "${RepositoryProvider.spaceRenters.collectionName}/$id"
+  private fun spaceRenterPath(id: String) = "space_renters/$id"
 
   private fun cachePath(context: Context, storagePath: String) = "${context.cacheDir}/$storagePath"
 
   private fun normalizePath(candidate: String, expectedPrefix: String): String {
     val path =
-        if (candidate.contains("/o/")) {
-          val encoded = candidate.substringAfter("/o/").substringBefore('?')
+        if (candidate.contains(URL_PREFIX)) {
+          val encoded = candidate.substringAfter(URL_PREFIX).substringBefore('?')
           URLDecoder.decode(encoded, "UTF-8")
         } else {
           candidate
@@ -138,7 +140,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveAccountProfilePicture(
+  open suspend fun saveAccountProfilePicture(
       accountId: String,
       context: Context,
       inputPath: String
@@ -152,7 +154,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteAccountProfilePicture(accountId: String, context: Context) =
+  open suspend fun deleteAccountProfilePicture(accountId: String, context: Context) =
       deleteImages(context, accountPath(accountId))
 
   /**
@@ -508,7 +510,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveShopPhotos(
+  open suspend fun saveShopPhotos(
       context: Context,
       shopId: String,
       vararg inputPaths: String
@@ -523,7 +525,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteShopPhotos(context: Context, shopId: String, vararg storagePaths: String) {
+  open suspend fun deleteShopPhotos(context: Context, shopId: String, vararg storagePaths: String) {
     val base = shopPath(shopId)
     if (storagePaths.isEmpty()) {
       deleteDirectory(context, base)
@@ -543,8 +545,12 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadShopPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
-    return loadImages(context, shopPath(shopId), count)
+  suspend fun loadShopPhotos(
+      context: Context,
+      shopId: String,
+      urls: List<String>
+  ): List<ByteArray> {
+    return loadImagesByUrls(context, urls)
   }
 
   /**
@@ -558,7 +564,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
    */
-  suspend fun saveSpaceRenterPhotos(
+  open suspend fun saveSpaceRenterPhotos(
       context: Context,
       shopId: String,
       vararg inputPaths: String
@@ -575,8 +581,12 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage operations fail
    */
-  suspend fun loadSpaceRenterPhotos(context: Context, shopId: String, count: Int): List<ByteArray> {
-    return loadImages(context, spaceRenterPath(shopId), count)
+  suspend fun loadSpaceRenterPhotos(
+      context: Context,
+      shopId: String,
+      urls: List<String>
+  ): List<ByteArray> {
+    return loadImagesByUrls(context, urls)
   }
 
   /**
@@ -587,7 +597,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
    */
-  suspend fun deleteSpaceRenterPhotos(
+  open suspend fun deleteSpaceRenterPhotos(
       context: Context,
       shopId: String,
       vararg storagePaths: String
@@ -805,6 +815,30 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
 
     (cachedBytes + remoteBytes).awaitAll()
   }
+  /**
+   * Loads multiple images in parallel from their URLs.
+   *
+   * @param context Android context for accessing cache directory
+   * @param urls List of full HTTPS download URLs
+   * @return List of images as byte arrays in the same order as urls
+   */
+  private suspend fun loadImagesByUrls(context: Context, urls: List<String>): List<ByteArray> =
+      coroutineScope {
+        urls
+            .map { url ->
+              async {
+                val path =
+                    if (url.contains(URL_PREFIX)) {
+                      val encoded = url.substringAfter(URL_PREFIX).substringBefore('?')
+                      URLDecoder.decode(encoded, "UTF-8")
+                    } else {
+                      url
+                    }
+                loadImage(context, path)
+              }
+            }
+            .awaitAll()
+      }
 
   /**
    * Deletes one or more images from both local cache and Firebase Storage.

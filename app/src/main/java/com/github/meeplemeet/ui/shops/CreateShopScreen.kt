@@ -3,13 +3,17 @@
 // Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui.shops
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
@@ -40,6 +44,7 @@ import com.github.meeplemeet.ui.components.emptyWeek
 import com.github.meeplemeet.ui.components.isValidEmail
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.theme.Dimensions
+import kotlinx.coroutines.launch
 
 /* ================================================================================================
  * Test tags
@@ -128,6 +133,7 @@ fun CreateShopScreen(
 ) {
   val gameUi by viewModel.gameUIState.collectAsState()
   val locationUi by viewModel.locationUIState.collectAsState()
+  val context = LocalContext.current
 
   // Set default location when offline
   LaunchedEffect(online, userLocation) {
@@ -138,6 +144,9 @@ fun CreateShopScreen(
 
   AddShopContent(
       onBack = onBack,
+      onCreated = {
+        // No-op or handle if needed, usually navigation is handled by side effect or callback
+      },
       gameUi = gameUi,
       locationUi = locationUi,
       online = online,
@@ -164,6 +173,7 @@ fun CreateShopScreen(
 @Composable
 fun AddShopContent(
     onBack: () -> Unit,
+    onCreated: (String) -> Unit,
     gameUi: GameUIState,
     locationUi: LocationUIState,
     online: Boolean,
@@ -171,6 +181,10 @@ fun AddShopContent(
     viewModel: CreateShopViewModel,
     owner: Account
 ) {
+  val context = LocalContext.current
+  val snackbarHostState = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+
   val state =
       rememberCreateShopFormState(
           initialStock = initialStock,
@@ -178,7 +192,7 @@ fun AddShopContent(
           onSetGame = viewModel::setGame)
   val hasOpeningHours by
       remember(state.week) { derivedStateOf { state.week.any { it.hours.isNotEmpty() } } }
-
+  var photoCollectionUrl by remember { mutableStateOf(emptyList<String>()) }
   // Sync addressText with locationUi.locationQuery when typing
   LaunchedEffect(locationUi.locationQuery) {
     val sel = locationUi.selectedLocation
@@ -192,6 +206,8 @@ fun AddShopContent(
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
+  var isSaving by remember { mutableStateOf(false) }
+
   CompositionLocalProvider(
       LocalFocusableFieldObserver provides
           { token, focused ->
@@ -199,60 +215,92 @@ fun AddShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        ShopFormContent(
-            state = state,
-            viewModel = viewModel,
-            owner = owner,
-            online = online,
-            locationUi = locationUi,
-            topBar = {
-              CenterAlignedTopAppBar(
-                  title = {
-                    Text(
-                        MeepleMeetScreen.CreateShop.title,
-                        modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
-                  },
-                  navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
-                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                  },
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
-            },
-            bottomBar = {
-              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-
-              val isValid by
-                  remember(
-                      state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
-                        derivedStateOf {
-                          state.shopName.isNotBlank() &&
-                              isValidEmail(state.email) &&
-                              locationUi.selectedLocation != null &&
-                              hasOpeningHours
-                        }
-                      }
-              if (!(shouldHide && isInputFocused)) {
-                ActionBar(
-                    onDiscard = { state.onDiscard(onBack) },
-                    onPrimary = {
-                      viewModel.createShop(
-                          owner = owner,
-                          name = state.shopName,
-                          email = state.email,
-                          phone = state.phone,
-                          website = state.website,
-                          address = locationUi.selectedLocation ?: Location(),
-                          openingHours = state.week,
-                          gameCollection = state.stock,
-                          photoCollectionUrl = state.photoCollectionUrl)
-                      onBack()
+        Box(modifier = Modifier.fillMaxSize()) {
+          ShopFormContent(
+              state = state,
+              viewModel = viewModel,
+              owner = owner,
+              online = online,
+              locationUi = locationUi,
+              topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                      Text(
+                          MeepleMeetScreen.CreateShop.title,
+                          modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
                     },
-                    enabled = isValid)
-              }
-            })
+                    navigationIcon = {
+                      IconButton(
+                          onClick = onBack,
+                          enabled = !isSaving,
+                          modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                          }
+                    },
+                    modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
+              },
+              snackbarHost = {
+                SnackbarHost(
+                    snackbarHostState,
+                    modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
+              },
+              bottomBar = {
+                val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+
+                val isValid by
+                    remember(
+                        state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
+                          derivedStateOf {
+                            state.shopName.isNotBlank() &&
+                                isValidEmail(state.email) &&
+                                locationUi.selectedLocation != null &&
+                                hasOpeningHours
+                          }
+                        }
+                if (!(shouldHide && isInputFocused)) {
+                  ActionBar(
+                      onDiscard = { state.onDiscard(onBack) },
+                      onPrimary = {
+                        isSaving = true
+                        scope.launch {
+                          try {
+                            val shop =
+                                viewModel.createShop(
+                                    context = context,
+                                    owner = owner,
+                                    name = state.shopName,
+                                    email = state.email,
+                                    phone = state.phone,
+                                    website = state.website,
+                                    address = locationUi.selectedLocation ?: Location(),
+                                    openingHours = state.week,
+                                    gameCollection = state.stock,
+                                    photoCollectionUrl = state.photoCollectionUrl)
+                            onCreated(shop.id)
+                          } catch (e: IllegalArgumentException) {
+                            isSaving = false
+                            snackbarHostState.showSnackbar(e.message ?: "Validation error")
+                          } catch (e: Exception) {
+                            isSaving = false
+                            snackbarHostState.showSnackbar("Failed to create shop")
+                          }
+                        }
+                      },
+                      enabled = isValid && !isSaving)
+                }
+              })
+
+          if (isSaving) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                        .clickable(enabled = true, onClick = {}),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator()
+                }
+          }
+        }
       }
 
   OpeningHoursEditor(
@@ -276,46 +324,50 @@ fun ShopFormContent(
     locationUi: LocationUIState,
     topBar: @Composable () -> Unit,
     bottomBar: @Composable () -> Unit,
+    snackbarHost: @Composable () -> Unit = {},
     scaffoldTestTag: String = CreateShopScreenTestTags.SCAFFOLD,
     listTestTag: String = CreateShopScreenTestTags.LIST
 ) {
-  Scaffold(topBar = topBar, bottomBar = bottomBar, modifier = Modifier.testTag(scaffoldTestTag)) {
-      padding ->
-    LazyColumn(
-        modifier = Modifier.padding(padding).testTag(listTestTag),
-        contentPadding =
-            PaddingValues(
-                horizontal = AddShopUi.Dimensions.contentHPadding,
-                vertical = AddShopUi.Dimensions.contentVPadding)) {
-          item {
-            if (online) {
-              EditableImageCarousel(
-                  photoCollectionUrl = state.photoCollectionUrl,
-                  spacesCount = IMAGE_COUNT,
-                  setPhotoCollectionUrl = { state.photoCollectionUrl = it })
-            } else
-                ImageCarousel(
-                    photoCollectionUrl = state.photoCollectionUrl,
-                    maxNumberOfImages = IMAGE_COUNT,
-                    editable = false)
-          }
-          item {
-            ShopInfoSection(
-                state = state,
-                viewModel = viewModel,
-                owner = owner,
-                online = online,
-                locationUi = locationUi)
-          }
-          item { ShopAvailabilitySection(state) }
-          item { ShopGamesSection(state, online, viewModel) }
-          item {
-            Spacer(
-                Modifier.height(AddShopUi.Dimensions.bottomSpacer)
-                    .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
-          }
-        }
-  }
+  Scaffold(
+      topBar = topBar,
+      bottomBar = bottomBar,
+      snackbarHost = snackbarHost,
+      modifier = Modifier.testTag(scaffoldTestTag)) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding).testTag(listTestTag),
+            contentPadding =
+                PaddingValues(
+                    horizontal = AddShopUi.Dimensions.contentHPadding,
+                    vertical = AddShopUi.Dimensions.contentVPadding)) {
+              item {
+                if (online) {
+                  EditableImageCarousel(
+                      photoCollectionUrl = state.photoCollectionUrl,
+                      spacesCount = IMAGE_COUNT,
+                      setPhotoCollectionUrl = { state.photoCollectionUrl = it })
+                } else
+                    ImageCarousel(
+                        photoCollectionUrl = state.photoCollectionUrl,
+                        maxNumberOfImages = IMAGE_COUNT,
+                        editable = false)
+              }
+              item {
+                ShopInfoSection(
+                    state = state,
+                    viewModel = viewModel,
+                    owner = owner,
+                    online = online,
+                    locationUi = locationUi)
+              }
+              item { ShopAvailabilitySection(state) }
+              item { ShopGamesSection(state, online, viewModel) }
+              item {
+                Spacer(
+                    Modifier.height(AddShopUi.Dimensions.bottomSpacer)
+                        .testTag(CreateShopScreenTestTags.BOTTOM_SPACER))
+              }
+            }
+      }
 }
 
 /**
@@ -487,7 +539,7 @@ fun rememberCreateShopFormState(
     onSetGameQuery: (String) -> Unit,
     onSetGame: (GameSearchResult) -> Unit
 ): CreateShopFormState {
-  return remember {
+  return remember(initialShop) {
     CreateShopFormState(
         initialStock = initialStock,
         initialWeek = emptyWeek(),

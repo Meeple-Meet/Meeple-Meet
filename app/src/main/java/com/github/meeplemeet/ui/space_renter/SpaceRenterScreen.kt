@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.model.account.Account
+import com.github.meeplemeet.model.images.ImageFileUtils
 import com.github.meeplemeet.model.space_renter.Space
 import com.github.meeplemeet.model.space_renter.SpaceRenter
 import com.github.meeplemeet.model.space_renter.SpaceRenterViewModel
@@ -130,9 +132,32 @@ fun SpaceRenterScreen(
 ) {
   // Collect the current space renter state from the ViewModel
   val spaceState by viewModel.spaceRenter.collectAsStateWithLifecycle()
-  // Trigger loading of space renter data when spaceId changes
-  LaunchedEffect(spaceId) { viewModel.getSpaceRenter(spaceId) }
+  val context = LocalContext.current
+  val images by viewModel.photos.collectAsStateWithLifecycle()
+
+  // Holds the cached image file paths
+  val cachedImagePathsState = remember { mutableStateOf<List<String>>(emptyList()) }
+
   var selectedIndex by remember { mutableStateOf<Int?>(null) }
+
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+  val currentState by rememberUpdatedState(spaceId)
+
+  DisposableEffect(lifecycleOwner, currentState) {
+    val observer =
+        androidx.lifecycle.LifecycleEventObserver { _, event ->
+          if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.getSpaceRenter(currentState, context)
+          }
+        }
+    lifecycleOwner.lifecycle.addObserver(observer)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+  }
+
+  LaunchedEffect(images) {
+    val paths = images.map { bytes -> ImageFileUtils.saveByteArrayToCache(context, bytes) }
+    cachedImagePathsState.value = paths
+  }
 
   Scaffold(
       topBar = {

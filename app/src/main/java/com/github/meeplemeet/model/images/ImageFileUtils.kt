@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+const val IMAGE_EXTENSION = ".jpg"
 /**
  * Utility functions for caching user-selected images to local storage.
  *
@@ -53,7 +54,7 @@ object ImageFileUtils {
   suspend fun cacheUriToFile(context: Context, uri: Uri): String =
       withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
-        val file = File.createTempFile("gallery_", ".jpg", context.cacheDir)
+        val file = File.createTempFile("gallery_", IMAGE_EXTENSION, context.cacheDir)
         resolver.openInputStream(uri)?.use { input ->
           FileOutputStream(file).use { output -> input.copyTo(output) }
         }
@@ -87,10 +88,27 @@ object ImageFileUtils {
    */
   suspend fun saveBitmapToCache(context: Context, bitmap: Bitmap): String =
       withContext(Dispatchers.IO) {
-        val file = File.createTempFile("camera_", ".jpg", context.cacheDir)
+        val file = File.createTempFile("camera_", IMAGE_EXTENSION, context.cacheDir)
         FileOutputStream(file).use { output ->
           bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
         }
+        file.absolutePath
+      }
+  /**
+   * Saves a byte array to a temporary JPEG file in the app's cache directory.
+   *
+   * This function is useful when you have raw image bytes (e.g., received from network or
+   * processing) and want to cache them as a JPEG file.
+   *
+   * @param context Application context for accessing cache directory.
+   * @param bytes Byte array to save.
+   * @return Absolute file path to the cached JPEG file in cache directory.
+   * @throws IOException if writing to cache fails.
+   */
+  suspend fun saveByteArrayToCache(context: Context, bytes: ByteArray): String =
+      withContext(Dispatchers.IO) {
+        val file = File.createTempFile("bytes_", IMAGE_EXTENSION, context.cacheDir)
+        FileOutputStream(file).use { output -> output.write(bytes) }
         file.absolutePath
       }
 }
