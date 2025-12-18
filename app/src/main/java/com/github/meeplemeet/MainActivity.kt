@@ -602,59 +602,6 @@ fun MeepleMeetApp(
           }
         }
 
-          composable(MeepleMeetScreen.Profile.name) {
-            account?.let {
-              ProfileScreen(
-                  navigation = navigationActions,
-                  account = account!!,
-                  verified = uiState.isEmailVerified,
-                  onSignOutOrDel = {
-                    navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-                    signedOut = true
-                  },
-                  onDelete = {
-                    // ViewModel handles Firebase Auth deletion with retry logic
-                    FirebaseProvider.auth.signOut()
-                  },
-                  onFriendClick = { navigationActions.navigateTo(MeepleMeetScreen.Friends) },
-                  onNotificationClick = {
-                    navigationActions.navigateTo(MeepleMeetScreen.NotificationsTab)
-                  },
-                  onShopClick = {
-                    shopId = it
-                    navigationActions.navigateTo(MeepleMeetScreen.ShopDetails)
-                  },
-                  onSpaceRenterClick = {
-                    spaceId = it
-                    navigationActions.navigateTo(MeepleMeetScreen.SpaceDetails)
-                  })
-            } ?: navigationActions.navigateTo(MeepleMeetScreen.SignIn)
-          }
-
-          composable(MeepleMeetScreen.NotificationsTab.name) {
-            account?.let {
-              NotificationsTab(
-                  account = account!!,
-                  verified = uiState.isEmailVerified,
-                  navigationActions,
-                  onBack = { navigationActions.goBack() })
-            }
-          }
-
-          composable(MeepleMeetScreen.ShopDetails.name) {
-            if (shopId.isNotEmpty()) {
-              ShopScreen(
-                  account = account!!,
-                  shopId = shopId,
-                  onBack = { navigationActions.goBack() },
-                  onEdit = {
-                    shop = it
-                    navigationActions.navigateTo(MeepleMeetScreen.EditShop, popUpTo = false)
-                  })
-            } else {
-              LoadingScreen()
-            }
-          }
         composable(MeepleMeetScreen.CreateShop.name) {
           CreateShopScreen(
               owner = account!!,

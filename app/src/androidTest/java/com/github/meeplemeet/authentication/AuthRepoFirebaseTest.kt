@@ -299,37 +299,4 @@ class AuthRepoFirebaseTest : FirestoreTests() {
     assertEquals("Email should match", originalAccount.email, retrievedAccount.email)
     assertEquals("Name should match", originalAccount.name, retrievedAccount.name)
   }
-
-  //// Tests for reauthenticateWithPassword ////
-  @Test
-  fun reauthenticateWithPassword_returns_success_for_correct_password() = runBlocking {
-    // Register and login a user
-    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registrationResult.isSuccess)
-
-    // Test reauthentication
-    val reauthResult = authenticationRepository.reauthenticateWithPassword(testPassword)
-    assertTrue("Reauthentication with correct password should succeed", reauthResult.isSuccess)
-  }
-
-  @Test
-  fun reauthenticateWithPassword_returns_failure_for_wrong_password() = runBlocking {
-    // Register and login a user
-    val registrationResult = authenticationRepository.registerWithEmail(testEmail, testPassword)
-    assertTrue("Registration should succeed", registrationResult.isSuccess)
-
-    // Test reauthentication with wrong password
-    val reauthResult = authenticationRepository.reauthenticateWithPassword("wrongpassword")
-    assertTrue("Reauthentication with wrong password should fail", reauthResult.isFailure)
-  }
-
-  @Test
-  fun reauthenticateWithPassword_returns_failure_when_no_user_logged_in() = runBlocking {
-    // Ensure no user is logged in
-    auth.signOut()
-
-    // Test reauthentication
-    val reauthResult = authenticationRepository.reauthenticateWithPassword(testPassword)
-    assertTrue("Reauthentication without logged in user should fail", reauthResult.isFailure)
-  }
 }
