@@ -3,13 +3,14 @@ package com.github.meeplemeet.utils
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
 import com.github.meeplemeet.FirebaseProvider.auth
 import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
@@ -153,9 +154,17 @@ object AuthUtils {
   fun ComposeTestRule.closeKeyboardSafely() {
     // Tap the root of the composition to clear focus
     try {
-      onRoot().performClick()
-      waitForIdle()
-    } catch (_: Throwable) {}
+      Espresso.closeSoftKeyboard()
+    } catch (_: Throwable) {
+      val roots = onAllNodes(isRoot())
+      for (i in 0 until roots.fetchSemanticsNodes().size) {
+        try {
+          roots[i].performClick()
+        } catch (_: Throwable) {
+          // Ignore and try next
+        }
+      }
+    }
   }
 
   fun ComposeTestRule.signInUser(email: String, password: String) {
