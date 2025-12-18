@@ -5,9 +5,12 @@ import android.content.Context
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 const val BLANK_ACCOUNT_ID_ERROR = "Account id cannot be blank"
+const val MAX_NUMBER_ATTEMPT = 3
+const val DELETE_ACCOUNT_COOLDOWN = 1000L
 
 /**
  * Interface defining common account management operations for ViewModels.
@@ -122,32 +125,79 @@ interface AccountViewModel : UserProfilePopupActions {
   }
 
   /**
-   * Deletes an account from Firestore.
+   * Deletes an account and all associated data from Firestore.
+   *
+   * This method performs a comprehensive cleanup:
+   * - Removes the account's unique handle
+   * - Removes the account from all discussions and sessions they participated in
+   * - Deletes all shops owned by the account
+   * - Deletes all space rentals owned by the account
+   * - Deletes the account document itself
+   *
+   * Note: This does NOT delete the Firebase Authentication account or profile picture from storage.
+   * Those deletions are handled in ProfileScreenViewModel.deleteAccountWithReauth().
+   *
+   * IMPORTANT: This must be called with `await()` or within a suspend context to ensure completion
+   * before Firebase Auth deletion, otherwise security rules will reject operations.
    *
    * @param account The account to delete
+   * @return Deferred that completes when all Firestore deletions finish
    */
-  fun deleteAccount(account: Account) {
-    scope.launch {
-      // Remove the user's handle
-      RepositoryProvider.handles.deleteAccountHandle(account.handle)
+  fun deleteAccount(account: Account) =
+      scope.async {
+        RepositoryProvider.handles.deleteAccountHandle(account.handle)
 
-      // Leave all the discussions and sessions the account is a part of
-      account.previews.forEach { (id, _) ->
-        val disc = RepositoryProvider.discussions.getDiscussion(id)
-        if (disc.session != null)
+        account.previews.forEach { (id, _) ->
+          val disc = RepositoryProvider.discussions.getDiscussion(id)
+          if (disc.session != null) {
             RepositoryProvider.sessions.updateSession(
                 id, newParticipantList = disc.session.participants - account.uid)
-        RepositoryProvider.discussions.removeUserFromDiscussion(
-            disc, account.uid, disc.creatorId == account.uid)
+          }
+          RepositoryProvider.discussions.removeUserFromDiscussion(
+              disc, account.uid, disc.creatorId == account.uid)
+        }
+
+        val (shops, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
+        RepositoryProvider.shops.deleteShops(shops)
+        RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+
+        RepositoryProvider.accounts.deleteAccount(account.uid)
       }
 
-      // Delete all shops and spaces owned by the account
-      val (shops, spaces) = RepositoryProvider.accounts.getBusinessIds(account.uid)
-      RepositoryProvider.shops.deleteShops(shops)
-      RepositoryProvider.spaceRenters.deleteSpaceRenters(spaces)
+  /**
+   * Deletes the user's Firebase Authentication account with retry logic. This should be called
+   * AFTER deleting Firestore data, as auth is needed for Firestore deletion. Attempts to delete the
+   * account up to 3 times in case of transient network failures.
+   *
+   * @param onSuccess Callback invoked if account deletion succeeds
+   * @param onFailure Callback invoked with error message if all retry attempts fail
+   */
+  fun deleteFirebaseAuthAccount(onSuccess: () -> Unit = {}, onFailure: (String) -> Unit = {}) {
+    scope.launch {
+      val maxRetries = MAX_NUMBER_ATTEMPT
+      var attempt = 0
+      var lastError: String? = null
 
-      // Delete the account
-      RepositoryProvider.accounts.deleteAccount(account.uid)
+      while (attempt < maxRetries) {
+        attempt++
+        val result = RepositoryProvider.authentication.deleteAuthAccount()
+
+        result
+            .onSuccess {
+              onSuccess()
+              return@launch
+            }
+            .onFailure { exception ->
+              lastError = exception.message ?: "Unknown error occurred"
+              if (attempt < maxRetries) {
+                // Wait before retrying (exponential backoff: 1s, 2s, 3s)
+                kotlinx.coroutines.delay(DELETE_ACCOUNT_COOLDOWN * attempt)
+              }
+            }
+      }
+
+      // If we get here, all retries failed
+      onFailure(lastError ?: "Failed to delete account after $maxRetries attempts")
     }
   }
 
