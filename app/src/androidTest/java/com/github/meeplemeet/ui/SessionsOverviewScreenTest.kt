@@ -97,7 +97,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
           compose.waitUntil { emptyText().isNotDisplayed() }
           sessionCard(discussion.uid).assertIsDisplayed()
@@ -118,7 +117,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
           sessionCard(discussion.uid).performClick()
@@ -140,7 +138,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
           compose.waitUntil { sessionCard(discussion.uid).isDisplayed() }
 
@@ -168,7 +165,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               pastDate,
               testLocation,
-              rentalId = null,
               account.uid)
 
           compose.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
@@ -205,7 +201,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               pastDate,
               testLocation,
-              rentalId = null,
               account.uid)
 
           compose.waitUntil(2000) {
@@ -270,7 +265,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               withinTwoHours,
               testLocation,
-              rentalId = null,
               otherUid,
               account.uid)
 
@@ -298,7 +292,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               game.name,
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
 
           compose.waitUntil(2000) { sessionCard(discussion.uid).isDisplayed() }
@@ -335,7 +328,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               gameName = "Chess",
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
           sessionRepository.createSession(
               discussion2.uid,
@@ -344,7 +336,6 @@ class SessionsOverviewScreenTest : FirestoreTests() {
               gameName = "Cards",
               futureDate,
               testLocation,
-              rentalId = null,
               account.uid)
 
           compose.waitUntil(2000) { compose.onNodeWithText("Chess Tournament").isDisplayed() }

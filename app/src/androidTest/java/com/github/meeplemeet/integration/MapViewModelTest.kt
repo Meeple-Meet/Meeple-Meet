@@ -169,7 +169,6 @@ class MapViewModelTest : FirestoreTests() {
         testGame.name,
         Timestamp.now(),
         testLocation,
-        rentalId = null,
         testAccount1.uid)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)
@@ -592,7 +591,6 @@ class MapViewModelTest : FirestoreTests() {
         testGame.name,
         Timestamp.now(),
         testLocation,
-        rentalId = null,
         testAccount1.uid)
 
     viewModel.startGeoQuery(testLocation, radiusKm = 10.0, currentUserId = testAccount1.uid)

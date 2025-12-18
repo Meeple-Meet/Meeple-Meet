@@ -56,7 +56,6 @@ open class CreateSessionViewModel(
    * @param gameId The ID of the game to be played
    * @param date The scheduled date and time of the session
    * @param location Where the session will take place
-   * @param rentalId The ID of the rental associated with this session (optional).
    * @param participants Participant IDs for the session
    * @throws PermissionDeniedException if requester is not a discussion admin
    */
@@ -68,7 +67,6 @@ open class CreateSessionViewModel(
       gameName: String,
       date: Timestamp,
       location: Location,
-      rentalId: String? = null,
       vararg participants: Account
   ) {
     if (!isAdmin(requester, discussion)) throw PermissionDeniedException(ERROR_ADMIN_PERMISSION)
@@ -91,7 +89,6 @@ open class CreateSessionViewModel(
           gameName,
           date,
           location,
-          rentalId,
           requester.uid,
           *participantsToAdd.map { it.uid }.toTypedArray())
 
