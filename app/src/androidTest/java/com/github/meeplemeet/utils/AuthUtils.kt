@@ -2,117 +2,231 @@ package com.github.meeplemeet.utils
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
+import com.github.meeplemeet.FirebaseProvider.auth
+import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.auth.OnBoardingTestTags
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 
 object AuthUtils {
-  fun ComposeTestRule.signUpUser(
+  private suspend fun waitUntilAuthReady() = retryUntil { auth.currentUser != null }
+
+  private suspend fun retryUntil(
+      timeoutMs: Long = 30_000,
+      intervalMs: Long = 500,
+      predicate: suspend () -> Boolean
+  ) {
+    try {
+      withTimeout(timeoutMs) {
+        while (!predicate()) {
+          continue
+        }
+      }
+    } catch (e: TimeoutCancellationException) {
+      throw AssertionError("Condition not met within ${timeoutMs}ms", e)
+    }
+  }
+
+  suspend fun ComposeTestRule.signup(
       email: String,
       password: String,
       handle: String,
-      username: String
+      username: String,
+      isShopOwner: Boolean = false
   ) {
+    delay(3000)
+    waitForIdle()
+    waitUntilWithCatch(
+        { onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).isDisplayed() }, timeoutMs = 5000)
     // --- Navigate to sign-up screen ---
-    onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON).assertExists().performClick()
+      true
+    })
 
     // --- Fill out email and password ---
-    onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+      true
+    })
 
-    onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+      true
+    })
 
-    onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-        .assertExists()
-        .performTextInput(password)
-
-    // --- Close keyboard (Compose-only!) ---
-    closeKeyboardSafely()
+    waitUntilWithCatch({
+      onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(password)
+      true
+    })
 
     // --- Submit ---
-    onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    waitUntilWithCatch({
+      closeKeyboardSafely()
+      onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
-    // --- Wait for Create Account screen ---
-    waitUntil(timeoutMillis = 10_000) {
-      onAllNodesWithText("Let's go!", substring = true).fetchSemanticsNodes().isNotEmpty()
-    }
+    // --- Wait for Create Account screen
+    //
+    // onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON).fetchSemanticsNodes().isNotEmpty()
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // --- Fill Create Account fields ---
-    onNodeWithText("Handle", substring = true).assertExists().performTextInput(handle)
+    waitUntilWithCatch({
+      onNodeWithText("Handle", substring = true).assertExists().performTextInput(handle)
+      true
+    })
 
-    onNodeWithText("Username", substring = true).assertExists().performTextInput(username)
+    waitUntilWithCatch({
+      onNodeWithText("Username", substring = true).assertExists().performTextInput(username)
+      true
+    })
 
-    closeKeyboardSafely()
-
-    onNodeWithText("Let's go!").assertIsEnabled().performClick()
-
-    // --- Wait for Onboarding ---
-    waitUntil(timeoutMillis = 10_000) {
-      onAllNodesWithTag(OnBoardingTestTags.SKIP_BUTTON).fetchSemanticsNodes().isNotEmpty()
+    if (isShopOwner) {
+      waitUntilWithCatch({
+        closeKeyboardSafely()
+        onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER).assertExists().performClick()
+        true
+      })
     }
 
+    waitUntilWithCatch({
+      onNodeWithText("Let's go!").assertIsEnabled().performClick()
+      true
+    })
+
+    waitUntilAuthReady()
+    // --- Wait for Onboarding ---
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          onAllNodesWithTag(OnBoardingTestTags.SKIP_BUTTON).fetchSemanticsNodes().isNotEmpty()
+        })
+
     // --- Skip onboarding ---
-    onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).performClick()
+      true
+    })
 
     waitForIdle()
 
     // --- Wait for main app ---
-    waitUntil(timeoutMillis = 10_000) {
-      onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
+    waitUntilWithCatch(
+        timeoutMs = 10_000,
+        predicate = {
+          onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
-    onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists().assertIsDisplayed()
+    waitUntilWithCatch({
+      onNodeWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU).assertExists().assertIsDisplayed()
+      true
+    })
   }
 
   fun ComposeTestRule.closeKeyboardSafely() {
     // Tap the root of the composition to clear focus
     try {
-      onRoot().performClick()
-      waitForIdle()
-    } catch (_: Throwable) {}
-  }
-
-  fun ComposeTestRule.signInUser(email: String, password: String) {
-    onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
-    onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
-
-    Espresso.closeSoftKeyboard()
-
-    onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
-
-    waitUntil(timeoutMillis = 15_000) {
-      try {
-        onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
-            .fetchSemanticsNodes()
-            .isNotEmpty()
-      } catch (_: Throwable) {
-        false
+      Espresso.closeSoftKeyboard()
+    } catch (_: Throwable) {
+      val roots = onAllNodes(isRoot())
+      for (i in 0 until roots.fetchSemanticsNodes().size) {
+        try {
+          roots[i].performClick()
+        } catch (_: Throwable) {
+          // Ignore and try next
+        }
       }
     }
   }
 
+  fun ComposeTestRule.signInUser(email: String, password: String) {
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.EMAIL_FIELD).assertExists().performTextInput(email)
+      true
+    })
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).assertExists().performTextInput(password)
+      true
+    })
+
+    waitUntilWithCatch({
+      closeKeyboardSafely()
+      onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
+
+    waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
+  }
+
   fun ComposeTestRule.signOutWithBottomBar() {
-    onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
     waitForIdle()
-    onNodeWithTag("Logout Button").assertExists().performClick()
+    waitUntilWithCatch({
+      onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
     waitForIdle()
-    onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()
+    waitUntilWithCatch(
+        timeoutMs = 5_000,
+        predicate = {
+          onAllNodesWithTag("Logout Button", useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
+    waitUntilWithCatch({
+      onNodeWithTag("Logout Button").assertExists().performClick()
+      true
+    })
+    waitForIdle()
+    waitUntilWithCatch({
+      onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON).assertExists()
+      true
+    })
+  }
+
+  fun ComposeTestRule.waitUntilWithCatch(predicate: () -> Boolean, timeoutMs: Long = 50_000) {
+    waitUntil(timeoutMs) {
+      try {
+        predicate()
+      } catch (_: Throwable) {
+        false
+      }
+    }
   }
 }

@@ -3,21 +3,27 @@ package com.github.meeplemeet.end2end
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.FlakyTest
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.ui.auth.SignInScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
+import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
-import com.github.meeplemeet.utils.AuthUtils.signUpUser
+import com.github.meeplemeet.utils.AuthUtils.signup
+import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
-import org.junit.Ignore
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,30 +32,66 @@ import org.junit.runner.RunWith
  * End-to-end test for Meeple Meet application. Tests the complete user journey from sign-up to
  * navigating the app.
  */
-@Ignore("flaky test")
 @RunWith(AndroidJUnit4::class)
 class E2E_M1 : FirestoreTests() {
-  @get:Rule val composeTestRule = createAndroidComposeRule<MainActivity>()
+  @get:Rule(order = 1) val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   private val testEmail = "e2etest${UUID.randomUUID().toString().take(8)}@example.com"
   private val testPassword = "Password123!"
   private val testHandle = "e2eHandle${UUID.randomUUID().toString().take(6)}"
   private val testUsername = "Test User"
 
+  // Generic retry helper used for waiting on backend state convergence
+  private suspend fun retryUntil(
+      timeoutMs: Long = 30_000,
+      intervalMs: Long = 500,
+      predicate: suspend () -> Boolean
+  ) {
+    try {
+      withTimeout(timeoutMs) {
+        while (!predicate()) {
+          continue
+        }
+      }
+    } catch (e: TimeoutCancellationException) {
+      throw AssertionError("Condition not met within ${timeoutMs}ms", e)
+    }
+  }
+
+  private suspend fun waitUntilAuthReady() = retryUntil { auth.currentUser != null }
+
   @Test
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
-    composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername)
+    runBlocking { composeTestRule.signup(testEmail, testPassword, testHandle, testUsername) }
 
     // Step 6: Navigate through the main tabs to verify full access
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
-
-    composeTestRule.signOutWithBottomBar()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.DISCOVER_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.signOutWithBottomBar()
+      true
+    })
   }
 
   @Test
+  @FlakyTest
   fun twoUsers_createAndJoinDiscussion() {
     val user1Email = "user1_${UUID.randomUUID().toString().take(8)}@example.com"
     val user2Email = "user2_${UUID.randomUUID().toString().take(8)}@example.com"
@@ -63,151 +105,220 @@ class E2E_M1 : FirestoreTests() {
 
     // ===== PART 1: Create first account (Alice) =====
     composeTestRule.waitForIdle()
-    composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name)
+    runBlocking { composeTestRule.signup(user1Email, password, user1Handle, user1Name) }
+    runBlocking { waitUntilAuthReady() }
+    composeTestRule.waitForIdle()
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 2: Create second account (Bob) =====
-    composeTestRule.signUpUser(user2Email, password, user2Handle, user2Name)
+    runBlocking { composeTestRule.signup(user2Email, password, user2Handle, user2Name) }
+    runBlocking { waitUntilAuthReady() }
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 3: Alice signs back in, creates a discussion with Bob, and sends a message =====
     composeTestRule.signInUser(user1Email, password)
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
-    composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+    runBlocking { waitUntilAuthReady() }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Add Discussion").assertExists().performClick()
+      true
+    })
 
     // Fill in discussion details
-    composeTestRule.onNodeWithTag("Add Title").assertExists().performTextInput(discussionTitle)
-    composeTestRule
-        .onNodeWithTag("Add Description")
-        .assertExists()
-        .performTextInput("E2E test discussion")
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Add Title").assertExists().performTextInput(discussionTitle)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Description")
+          .assertExists()
+          .performTextInput("E2E test discussion")
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Search for Bob and add him as a member during discussion creation
-    composeTestRule
-        .onNodeWithTag("Add Members", useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(user2Handle)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Members", useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(user2Handle)
+      true
+    })
 
     // Wait for search results to appear
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule.onNodeWithTag("Add Member Element", useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule.onNodeWithTag("Add Member Element", useUnmergedTree = true).assertExists()
+          true
+        })
 
     // Click on Bob from search results to add him
-    composeTestRule
-        .onNodeWithTag("Add Member Element", useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Add Member Element", useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Create the discussion with Bob as a member
-    composeTestRule
-        .onNodeWithTag("Create Discussion")
-        .assertExists()
-        .assertIsEnabled()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Create Discussion")
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Verify discussion appears in Alice's list
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onAllNodesWithText(discussionTitle, useUnmergedTree = true)
+              .fetchSemanticsNodes()
+              .isNotEmpty()
+        })
 
     // Open the discussion and send an initial message from Alice to Bob
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule
-        .onNodeWithTag("Input Field", useUnmergedTree = true)
-        .assertExists()
-        .performTextInput(initialMessageFromAlice)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag("Input Field", useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(initialMessageFromAlice)
+      true
+    })
 
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("Send Button").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Send Button").assertExists().performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
 
     // Wait until the sent message is visible in the thread to ensure persistence before sign-out
-    composeTestRule.waitUntil(timeoutMillis = 5_000) {
-      try {
-        composeTestRule
-            .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
 
     composeTestRule.waitForIdle()
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 6: Bob signs in and verifies he can read Alice's message =====
     composeTestRule.signInUser(user2Email, password)
-    composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).assertExists().performClick()
+    runBlocking { waitUntilAuthReady() }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
-    Espresso.closeSoftKeyboard()
-
     // Bob should see the discussion that Alice created and added him to
-    composeTestRule.waitUntil(15_000) {
-      try {
-        composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule.closeKeyboardSafely()
+          composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
+          true
+        })
 
-    composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Verify Bob can read Alice's initial message
-    composeTestRule.waitUntil(timeoutMillis = 15_000) {
-      try {
-        composeTestRule
-            .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
-            .assertExists()
-        true
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch(
+        timeoutMs = 15_000,
+        predicate = {
+          composeTestRule
+              .onNodeWithText(initialMessageFromAlice, useUnmergedTree = true)
+              .assertExists()
+          true
+        })
 
-    composeTestRule.onNodeWithText(initialMessageFromAlice, useUnmergedTree = true).assertExists()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(initialMessageFromAlice, useUnmergedTree = true).assertExists()
+      true
+    })
 
     // ===== PART 7: Bob logs out =====
     // Navigate back from the message screen to the discussions list
-    composeTestRule
-        .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
-        .assertExists()
-        .performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Navigate to Profile tab
-    composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(NavigationTestTags.PROFILE_TAB).assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Logout
-    composeTestRule.onNodeWithTag("Logout Button").assertExists().performClick()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag("Logout Button").assertExists().performClick()
+      true
+    })
     composeTestRule.waitForIdle()
 
     // Verify returned to sign-in screen
-    composeTestRule
-        .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
-        .assertExists()
-        .assertIsDisplayed()
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onAllNodesWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
+          .assertExists()
+          .assertIsDisplayed()
+      true
+    })
   }
 }
