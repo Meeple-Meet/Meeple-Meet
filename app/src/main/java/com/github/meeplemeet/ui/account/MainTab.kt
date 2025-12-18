@@ -1,5 +1,5 @@
 package com.github.meeplemeet.ui.account
-//AI was used in this file
+// AI was used in this file
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -609,8 +609,9 @@ fun MainTabContent(
 ) {
   var showDelDialog by remember { mutableStateOf(false) }
   var deleteErrorMessage by remember { mutableStateOf<String?>(null) }
-  val focusManager = LocalFocusManager.current
   val uiState by viewModel.uiState.collectAsState()
+  val focusManager = LocalFocusManager.current
+  val context = LocalContext.current
   var toast by remember { mutableStateOf<ToastData?>(null) }
 
   // Get current email (prefer auth email as it's the one being verified)
