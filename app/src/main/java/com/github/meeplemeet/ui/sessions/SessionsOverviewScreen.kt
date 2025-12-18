@@ -33,12 +33,18 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.SentimentDissatisfied
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +72,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.github.meeplemeet.model.account.Account
@@ -92,6 +99,7 @@ const val NO_SESSIONS_DEFAULT_TEXT = "No sessions yet"
 const val NO_SESSIONS_HISTORY_TEXT = "No past sessions yet"
 const val AMOUNT_OF_PICTURES_PER_ROW = 3
 const val TITLE_MAX_LINES = 1
+val TAB_BOTTOM_BAR_HEIGHT = 3.dp
 
 object SessionsOverviewScreenTestTags {
   const val TEST_TAG_ARCHIVE_BUTTON = "archiveButton"
@@ -561,12 +569,12 @@ fun SessionCard(
 
   // Confirmation dialog for archiving without image
   if (showArchiveConfirmation) {
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = { showArchiveConfirmation = false },
         title = { Text("Archive Session") },
         text = { Text("This session doesn't have an image. Are you sure you want to archive it?") },
         confirmButton = {
-          androidx.compose.material3.TextButton(
+          TextButton(
               onClick = {
                 viewModel.archiveSession(context, id)
                 scope.launch { offsetX.animateTo(0f) }
@@ -576,9 +584,7 @@ fun SessionCard(
               }
         },
         dismissButton = {
-          androidx.compose.material3.TextButton(onClick = { showArchiveConfirmation = false }) {
-            Text("Cancel")
-          }
+          TextButton(onClick = { showArchiveConfirmation = false }) { Text("Cancel") }
         })
   }
 }
@@ -598,40 +604,73 @@ fun SessionCard(
  */
 @Composable
 private fun SessionToggle(onNext: () -> Unit, onHistory: () -> Unit, showHistory: Boolean) {
-  Row(modifier = Modifier.fillMaxWidth().height(Dimensions.Spacing.xxxLarge)) {
-    /* ----  LEFT HALF – Next Sessions  ---- */
-    Box(
-        modifier =
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .background(if (!showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onNext() }
-                .testTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS),
-        contentAlignment = Alignment.Center) {
+  val selectedIndex = if (showHistory) 1 else 0
+
+  TabRow(
+      selectedTabIndex = selectedIndex,
+      modifier = Modifier.fillMaxWidth(),
+      containerColor = AppColors.primary,
+      contentColor = AppColors.textIcons,
+      indicator = { tabPositions ->
+        TabRowDefaults.PrimaryIndicator(
+            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+            height = TAB_BOTTOM_BAR_HEIGHT,
+            color = AppColors.neutral,
+        )
+      },
+      divider = {
+        HorizontalDivider(
+            color = AppColors.divider,
+            thickness = Dimensions.DividerThickness.standard,
+        )
+      },
+  ) {
+    Tab(
+        selected = !showHistory,
+        onClick = onNext,
+        modifier = Modifier.testTag(SessionsOverviewScreenTestTags.TEST_TAG_NEXT_SESSIONS),
+        selectedContentColor = AppColors.neutral,
+        unselectedContentColor = AppColors.textIconsFade,
+        icon = {
+          Icon(
+              imageVector = Icons.AutoMirrored.Filled.Article,
+              contentDescription = "Next sessions",
+              modifier = Modifier.size(Dimensions.IconSize.large),
+          )
+        },
+        text = {
           Text(
               text = "Next sessions",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Normal,
-              color = if (!showHistory) AppColors.textIcons else AppColors.textIconsFade)
-        }
+              style = MaterialTheme.typography.labelSmall,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+          )
+        },
+    )
 
-    /* ----  RIGHT HALF – History  ---- */
-    Box(
-        modifier =
-            Modifier.weight(1f)
-                .fillMaxHeight()
-                .background(if (showHistory) AppColors.primary else AppColors.divider)
-                .clickable { onHistory() }
-                .testTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY),
-        contentAlignment = Alignment.Center) {
+    Tab(
+        selected = showHistory,
+        onClick = onHistory,
+        modifier = Modifier.testTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY),
+        selectedContentColor = AppColors.neutral,
+        unselectedContentColor = AppColors.textIconsFade,
+        icon = {
+          Icon(
+              imageVector = Icons.Outlined.Archive,
+              contentDescription = "History",
+              modifier = Modifier.size(Dimensions.IconSize.large),
+          )
+        },
+        text = {
           Text(
               text = "History",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Normal,
-              color = if (showHistory) AppColors.textIcons else AppColors.textIconsFade)
-        }
+              style = MaterialTheme.typography.labelSmall,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+          )
+        },
+    )
   }
-  HorizontalDivider(color = AppColors.divider, thickness = Dimensions.DividerThickness.standard)
 }
 
 /**
@@ -786,8 +825,11 @@ fun SessionsTopBar(
                 .background(AppColors.primary)
                 .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                 .padding(
-                    horizontal = Dimensions.Padding.extraLarge,
-                    vertical = Dimensions.Spacing.large)) {
+                    start = Dimensions.Padding.extraLarge,
+                    end = Dimensions.Padding.extraLarge,
+                    top = Dimensions.Spacing.large,
+                    bottom = Dimensions.Spacing.small,
+                )) {
           Text(
               text = title,
               color = AppColors.textIcons,
