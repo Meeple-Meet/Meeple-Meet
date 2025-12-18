@@ -15,6 +15,7 @@ EXCLUDED_FILES=(
   "$TEST_DIR/java/com/github/meeplemeet/ui/MapScreenTest.kt"
   "$TEST_DIR/java/com/github/meeplemeet/end2end/E2E_M1.kt"
   "$TEST_DIR/java/com/github/meeplemeet/end2end/E2E_M2.kt"
+  "$TEST_DIR/java/com/github/meeplemeet/end2end/E2E_M3.kt"
   "$TEST_DIR/java/com/github/meeplemeet/utils/AuthUtils.kt"
 )
 
