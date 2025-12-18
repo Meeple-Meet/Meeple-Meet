@@ -235,11 +235,6 @@ class MainTabComposableTest : FirestoreTests() {
 
   private fun ComposeTestRule.delAccountPopupCancel() = onTag(DeleteAccSectionTestTags.CANCEL)
 
-  private fun ComposeTestRule.delAccountPasswordInput() =
-      onTag(DeleteAccSectionTestTags.PASSWORD_INPUT)
-
-  private fun ComposeTestRule.delAccountErrorText() = onTag(DeleteAccSectionTestTags.ERROR_TEXT)
-
   // =======================
   // NAVIGATION HELPERS
   // =======================
