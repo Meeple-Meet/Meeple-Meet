@@ -118,7 +118,7 @@ class SpaceRentalScreenTest : FirestoreTests() {
       compose.onNodeWithText("End").assertExists()
 
       // Date/time pickers should be present
-      compose.onAllNodesWithTag(RentalDateTimePickerTestTags.DATE_FIELD).assertCountEquals(4)
+      compose.onAllNodesWithTag(RentalDateTimePickerTestTags.DATE_FIELD).assertCountEquals(2)
     }
 
     checkpoint("buttons_exist_and_back_button_works") {
