@@ -1,6 +1,9 @@
 /** Documentation was written with the help of ChatGPT */
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.github.meeplemeet.ui.account
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -17,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -30,12 +34,17 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.CreateAccountViewModel
 import com.github.meeplemeet.ui.FocusableInputField
 import com.github.meeplemeet.ui.UiBehaviorConfig
+import com.github.meeplemeet.ui.components.ClosableToast
 import com.github.meeplemeet.ui.discussions.AddDiscussionTestTags
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
@@ -45,7 +54,7 @@ import com.github.meeplemeet.utils.KeyboardUtils
  * Finds the Activity from a Context by traversing the context hierarchy. Returns null if no
  * Activity is found.
  */
-private fun Context.findActivity(): Activity? {
+fun Context.findActivity(): Activity? {
   var context = this
   while (context is ContextWrapper) {
     if (context is Activity) return context
@@ -62,6 +71,7 @@ object CreateAccountTestTags {
   const val SUBMIT_BUTTON = "CreateAccountSubmitButton"
   const val CHECKBOX_OWNER = "CreateAccountCheckboxOwner"
   const val CHECKBOX_RENTER = "CreateAccountCheckboxRenter"
+  const val HANDLE_INFO_ICON = "CreateAccountHandleInfoIcon"
 }
 
 object CreateAccountScreenUi {
@@ -70,11 +80,12 @@ object CreateAccountScreenUi {
   val extraLargePadding = Dimensions.Padding.extraLarge
   val smallPadding = Dimensions.Padding.small
   val mediumPadding = Dimensions.Padding.medium
-  val largePadding = Dimensions.Padding.large
-  val tinyPadding = Dimensions.Padding.tiny
   val extraLargeSpacing = Dimensions.Spacing.extraLarge
   val mediumSpacing = Dimensions.Spacing.medium
   val xxLargeSpacing = Dimensions.Spacing.xxLarge
+  const val IMAGE_SCREEN_SIZE_SCALING = 0.62f
+  const val TITLE_FONT_SIZE_SCALING = 0.95f
+  const val TITLE_FONT_SIZE_MIN_SIZE = 18f
 }
 
 /**
@@ -90,6 +101,7 @@ object CreateAccountScreenUi {
  * @param onBack Callback function to be executed when the user wants to go back to the previous
  *   screen.
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun CreateAccountScreen(
     account: Account,
@@ -107,6 +119,7 @@ fun CreateAccountScreen(
   var isShopChecked by remember { mutableStateOf(false) }
   var isSpaceRented by remember { mutableStateOf(false) }
   var isInputFocused by remember { mutableStateOf(false) }
+  var toast by remember { mutableStateOf<ToastData?>(null) }
   val focusManager = LocalFocusManager.current
   val scrollState = rememberScrollState()
   val activity = LocalContext.current.findActivity()
@@ -199,22 +212,20 @@ fun CreateAccountScreen(
         Column(
             modifier =
                 Modifier.fillMaxSize()
+                    .background(AppColors.primary)
+                    .padding(padding)
                     .imePadding()
                     .verticalScroll(scrollState)
-                    .background(AppColors.primary)
                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
                     .padding(CreateAccountScreenUi.xxLargePadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top) {
-
               // App logo displayed on top of text.
               val isDarkTheme = isSystemInDarkTheme()
-              Box(
-                  modifier =
-                      Modifier.size(
-                          Dimensions.IconSize.massive
-                              .times(3)
-                              .plus(Dimensions.Padding.extraLarge))) {
+
+              BoxWithConstraints(
+                  modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val logoSize = (maxWidth * CreateAccountScreenUi.IMAGE_SCREEN_SIZE_SCALING)
                     Image(
                         painter =
                             painterResource(
@@ -222,49 +233,75 @@ fun CreateAccountScreen(
                                     if (isDarkTheme) R.drawable.logo_dark
                                     else R.drawable.logo_clear),
                         contentDescription = "Meeple Meet Logo",
-                        modifier = Modifier.fillMaxSize())
+                        modifier = Modifier.size(logoSize).fillMaxSize())
                   }
-              /** Title text shown below the image placeholder. */
-              Text(
-                  "You're almost there!",
-                  style =
-                      TextStyle(
-                          fontSize = Dimensions.TextSize.extraLarge, color = AppColors.neutral),
-                  modifier = Modifier.padding(bottom = CreateAccountScreenUi.extraLargePadding))
 
-              /** Input field for entering the user's unique handle. */
-              FocusableInputField(
-                  value = handle,
-                  onValueChange = {
-                    handle = it
-                    if (it.isNotBlank()) {
-                      showErrors = true
-                      viewModel.checkHandleAvailable(it)
-                    } else {
-                      showErrors = false
-                    }
-                  },
-                  label = { Text("Handle") },
-                  singleLine = true,
-                  textStyle = TextStyle(color = AppColors.textIcons),
-                  colors =
-                      TextFieldDefaults.colors(
-                          focusedIndicatorColor = AppColors.textIcons,
-                          unfocusedIndicatorColor = AppColors.textIconsFade,
-                          cursorColor = AppColors.textIcons,
-                          focusedLabelColor = AppColors.textIcons,
-                          unfocusedContainerColor = Color.Transparent,
-                          focusedContainerColor = Color.Transparent,
-                          errorContainerColor = Color.Transparent,
-                          disabledContainerColor = Color.Transparent,
-                          unfocusedLabelColor = AppColors.textIconsFade,
-                          focusedTextColor = AppColors.textIcons,
-                          unfocusedTextColor = AppColors.textIconsFade),
-                  isError = showErrors && errorMessage.isNotBlank(),
+              /** Title text shown below the image placeholder. */
+              AutoSizeSingleLineTitle(
+                  text = "You're almost there!",
                   modifier =
                       Modifier.fillMaxWidth()
-                          .onFocusChanged { isInputFocused = it.isFocused }
-                          .testTag(CreateAccountTestTags.HANDLE_FIELD))
+                          .padding(bottom = CreateAccountScreenUi.extraLargePadding))
+
+              /** Input field for entering the user's unique handle. */
+              Box(modifier = Modifier.fillMaxWidth()) {
+                FocusableInputField(
+                    value = handle,
+                    onValueChange = {
+                      handle = it
+                      if (it.isNotBlank()) {
+                        showErrors = true
+                        viewModel.checkHandleAvailable(it)
+                      } else {
+                        showErrors = false
+                      }
+                    },
+                    label = { Text("Handle") },
+                    singleLine = true,
+                    trailingIcon = {
+                      Icon(
+                          imageVector = Icons.Outlined.Info,
+                          contentDescription = "Handle information",
+                          modifier =
+                              Modifier.clickable {
+                                    toast =
+                                        if (toast == null)
+                                            ToastData(
+                                                "A unique name others use to find and recognize you.")
+                                        else null
+                                  }
+                                  .testTag(CreateAccountTestTags.HANDLE_INFO_ICON))
+                    },
+                    textStyle = TextStyle(color = AppColors.textIcons),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedIndicatorColor = AppColors.textIcons,
+                            unfocusedIndicatorColor = AppColors.textIconsFade,
+                            cursorColor = AppColors.textIcons,
+                            focusedLabelColor = AppColors.textIcons,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            errorContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            unfocusedLabelColor = AppColors.textIconsFade,
+                            focusedTextColor = AppColors.textIcons,
+                            unfocusedTextColor = AppColors.textIconsFade),
+                    isError = showErrors && errorMessage.isNotBlank(),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .onFocusChanged { isInputFocused = it.isFocused }
+                            .testTag(CreateAccountTestTags.HANDLE_FIELD))
+
+                if (toast != null) {
+                  ClosableToast(
+                      message = toast?.message ?: "",
+                      onDismiss = { toast = null },
+                      modifier =
+                          Modifier.align(Alignment.TopEnd)
+                              .zIndex(Dimensions.ZIndex.foregroundMax)
+                              .offset(y = -Dimensions.Spacing.xxxxLarge))
+                }
+              }
 
               /** Error message displayed if handle validation fails. */
               if (showErrors && errorMessage.isNotBlank()) {
@@ -398,4 +435,37 @@ fun RoleCheckBox(
                   style = MaterialTheme.typography.bodySmall)
             }
       }
+}
+
+/**
+ * Composable that displays a single-line title text which automatically adjusts its font size to
+ * fit within its container without overflowing.
+ *
+ * @param text The title text to display.
+ * @param modifier Optional [Modifier] for styling the Text composable.
+ */
+@Composable
+private fun AutoSizeSingleLineTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+  var fontSize by remember(text) { mutableStateOf(Dimensions.TextSize.extraLarge) }
+
+  Text(
+      text = text,
+      modifier = modifier,
+      color = AppColors.neutral,
+      maxLines = 1,
+      softWrap = false,
+      textAlign = TextAlign.Center,
+      overflow = TextOverflow.Clip,
+      style =
+          MaterialTheme.typography.headlineSmall.copy(
+              fontSize = fontSize, color = AppColors.neutral),
+      onTextLayout = { layout ->
+        if (layout.hasVisualOverflow &&
+            fontSize > CreateAccountScreenUi.TITLE_FONT_SIZE_MIN_SIZE.sp) {
+          fontSize = (fontSize.value * CreateAccountScreenUi.TITLE_FONT_SIZE_SCALING).sp
+        }
+      })
 }

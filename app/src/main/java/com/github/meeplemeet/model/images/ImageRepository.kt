@@ -160,8 +160,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * Storage).
    *
    * This method is useful for cache eviction scenarios where the remote image should be preserved
-   * but local storage needs to be freed. Used by [OfflineModeManager] when evicting old cached
-   * accounts.
+   * but local storage needs to be freed. Used by
+   * [com.github.meeplemeet.model.offline.OfflineModeManager] when evicting old cached accounts.
    *
    * @param accountId The unique identifier for the account
    * @param context Android context for accessing cache directory
@@ -181,6 +181,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws RemoteStorageException if Firebase Storage download fails
    */
   suspend fun loadAccountProfilePicture(accountId: String, context: Context): ByteArray {
+    val acc = RepositoryProvider.accounts.getAccountSafe(accountId)
+    if (acc == null || acc.photoUrl == null) return ByteArray(0)
     return loadImage(context, accountPath(accountId))
   }
 
@@ -191,8 +193,9 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * Storage. This operation requires admin privileges in the discussion (enforced by caller).
    *
    * ## Usage
-   * Typically called by [DiscussionDetailsViewModel.setDiscussionProfilePicture], which handles
-   * permission checks and updates the discussion document.
+   * Typically called by
+   * [com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel.setDiscussionProfilePicture],
+   * which handles permission checks and updates the discussion document.
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion
@@ -201,7 +204,9 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws ImageProcessingException if image encoding fails
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
-   * @see DiscussionDetailsViewModel.setDiscussionProfilePicture for high-level API
+   * @see
+   *   com.github.meeplemeet.model.discussions.DiscussionDetailsViewModel.setDiscussionProfilePicture
+   *   for high-level API
    * @see loadDiscussionProfilePicture to retrieve the profile picture
    */
   suspend fun saveDiscussionProfilePicture(
@@ -224,8 +229,11 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    *   exist
    * @see saveDiscussionProfilePicture to upload a profile picture
    */
-  suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray =
-      loadImage(context, discussionProfilePath(discussionId))
+  suspend fun loadDiscussionProfilePicture(context: Context, discussionId: String): ByteArray {
+    val discussion = RepositoryProvider.discussions.getDiscussionSafe(discussionId)
+    if (discussion == null || discussion.profilePictureUrl == null) return ByteArray(0)
+    return loadImage(context, discussionProfilePath(discussionId))
+  }
 
   suspend fun deleteLocalDiscussionProfilePicture(context: Context, discussionId: String) =
       deleteLocalImages(context, discussionProfilePath(discussionId))
@@ -237,8 +245,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * operation requires admin privileges in the discussion (enforced by caller).
    *
    * ## Usage
-   * Typically called by [SessionViewModel.saveSessionPhoto], which handles permission checks and
-   * updates the session document with the returned photo URL.
+   * Typically called by [com.github.meeplemeet.model.sessions.SessionViewModel.saveSessionPhoto],
+   * which handles permission checks and updates the session document with the returned photo URL.
    *
    * @param context Android context for accessing cache directory
    * @param discussionId The unique identifier for the discussion containing the session
@@ -247,7 +255,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws ImageProcessingException if image encoding fails
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
-   * @see SessionViewModel.saveSessionPhoto for high-level API
+   * @see com.github.meeplemeet.model.sessions.SessionViewModel.saveSessionPhoto for high-level API
    * @see loadSessionPhoto to retrieve the session photo
    * @see deleteSessionPhoto to delete the session photo
    */
@@ -264,7 +272,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @param discussionId The unique identifier for the discussion containing the session
    * @throws DiskStorageException if disk delete fails
    * @throws RemoteStorageException if Firebase Storage delete fails
-   * @see SessionViewModel.deleteSessionPhoto for high-level API
+   * @see com.github.meeplemeet.model.sessions.SessionViewModel.deleteSessionPhoto for high-level
+   *   API
    * @see saveSessionPhoto to upload a session photo
    */
   suspend fun deleteSessionPhoto(context: Context, discussionId: String) =
@@ -282,11 +291,15 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws DiskStorageException if disk read fails
    * @throws RemoteStorageException if Firebase Storage download fails or session photo doesn't
    *   exist
-   * @see SessionViewModel.loadSessionPhoto for high-level API
+   * @see com.github.meeplemeet.model.sessions.SessionViewModel.loadSessionPhoto for high-level API
    * @see saveSessionPhoto to upload a session photo
    */
-  suspend fun loadSessionPhoto(context: Context, discussionId: String): ByteArray =
-      loadImage(context, sessionPhotoPath(discussionId))
+  suspend fun loadSessionPhoto(context: Context, discussionId: String): ByteArray {
+    val discussion = RepositoryProvider.discussions.getDiscussionSafe(discussionId)
+    if (discussion == null || discussion.session == null || discussion.session.photoUrl == null)
+        return ByteArray(0)
+    return loadImage(context, sessionPhotoPath(discussionId))
+  }
 
   /**
    * Moves a session photo to the archived sessions storage location.
@@ -392,7 +405,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * 2. [ImageFileUtils] caches the image to app cache directory
    * 3. This method uploads the cached file to Firebase Storage
    * 4. Returns download URLs to be stored in Message.photoUrl field
-   * 5. [DiscussionRepository.sendPhotoMessageToDiscussion] creates the message with photoUrl
+   * 5. [com.github.meeplemeet.model.discussions.DiscussionRepository.sendPhotoMessageToDiscussion]
+   *    creates the message with photoUrl
    *
    * ## Storage Organization
    * Photos are organized under the discussion's messages directory, separate from the discussion
@@ -405,7 +419,8 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @throws ImageProcessingException if image encoding fails for any photo
    * @throws DiskStorageException if disk write fails
    * @throws RemoteStorageException if Firebase Storage upload fails
-   * @see DiscussionViewModel.sendMessageWithPhoto for high-level API
+   * @see com.github.meeplemeet.model.discussions.DiscussionViewModel.sendMessageWithPhoto for
+   *   high-level API
    * @see deleteDiscussionPhotoMessages to delete message photos
    * @see ImageFileUtils.cacheUriToFile for caching gallery selections
    */
@@ -934,7 +949,7 @@ class ImageRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
    * @return The encoded WebP image as a byte array
    * @throws ImageProcessingException if image decoding or encoding fails
    */
-  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 1600, quality: Int = 60): ByteArray {
+  private fun encodeWebP(inputPath: String, targetMaxPx: Int = 1600, quality: Int = 80): ByteArray {
     // Check if file exists and is readable
     val inputFile = File(inputPath)
     if (!inputFile.exists()) {

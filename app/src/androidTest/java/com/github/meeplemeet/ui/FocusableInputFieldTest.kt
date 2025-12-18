@@ -536,8 +536,293 @@ class FocusableInputFieldTest : FirestoreTests() {
     }
   }
 
+  /* ---------------------- FocusableBasicTextField tests ------------------------------- */
+
+  @Test
+  fun comprehensive_focusable_basic_text_field_test() = runBlocking {
+    lateinit var stage: androidx.compose.runtime.MutableIntState
+    var clearQueryCalled by mutableStateOf(false)
+
+    compose.setContent {
+      val s = remember { mutableIntStateOf(0) }
+      stage = s
+
+      when (s.intValue) {
+        // Stage 0-2: Basic tests
+        0,
+        1,
+        2 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = {
+                textValue = it
+                onValueChangeCalled = true
+              },
+              onClearQuery = { clearQueryCalled = true },
+              testTag = TEST_TAG_BASIC_INPUT,
+              onFocusChanged = { focused ->
+                onFocusChangedCalled = true
+                lastFocusState = focused
+              })
+        }
+
+        // Stage 3: Disabled state
+        3 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              enabled = enabledState)
+        }
+
+        // Stage 4: Read-only state
+        4 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              readOnly = readOnlyState)
+        }
+
+        // Stage 5: Keyboard options
+        5 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              keyboardOptions = keyboardOptionsState)
+        }
+
+        // Stage 6: Visual transformation
+        6 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              visualTransformation = visualTransformationState)
+        }
+
+        // Stage 7: Global observer
+        7 -> {
+          CompositionLocalProvider(
+              LocalFocusableFieldObserver provides
+                  { token, focused ->
+                    globalObserverToken = token
+                    globalObserverFocusState = focused
+                  }) {
+                FocusableBasicTextField(
+                    value = textValue,
+                    onValueChange = { textValue = it },
+                    testTag = TEST_TAG_BASIC_INPUT)
+              }
+        }
+
+        // Stage 8: Custom interaction source
+        8 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              interactionSource = interactionSourceState)
+        }
+
+        // Stage 9, 10: Keyboard hide behavior
+        9,
+        10 -> {
+          FocusableBasicTextField(
+              value = textValue,
+              onValueChange = { textValue = it },
+              testTag = TEST_TAG_BASIC_INPUT,
+              onFocusChanged = { focused ->
+                onFocusChangedCalled = true
+                lastFocusState = focused
+              })
+        }
+      }
+    }
+
+    fun basicInputField() = compose.onNodeWithTag(TEST_TAG_BASIC_INPUT)
+
+    // ============================================================================
+    // Stage 0: Basic smoke test - Initial render
+    // ============================================================================
+    stage.intValue = 0
+    compose.waitForIdle()
+
+    checkpoint("Basic field renders") { basicInputField().assertExists() }
+
+    checkpoint("Basic text input works") {
+      basicInputField().performTextInput("Hello")
+      compose.waitForIdle()
+      assert(textValue == "Hello")
+      assert(onValueChangeCalled)
+    }
+
+    checkpoint("Basic focus change callback fires") {
+      basicInputField().performClick()
+      compose.waitForIdle()
+      assert(onFocusChangedCalled)
+      assert(lastFocusState)
+    }
+
+    // ============================================================================
+    // Stage 1: Clear button functionality
+    // ============================================================================
+    stage.intValue = 1
+    textValue = "Some text"
+    clearQueryCalled = false
+    compose.waitForIdle()
+
+    checkpoint("Clear button visible when text present") {
+      compose.onNodeWithContentDescription("Clear search").assertExists()
+    }
+
+    checkpoint("Clear button calls onClearQuery") {
+      compose.onNodeWithContentDescription("Clear search").performClick()
+      compose.waitForIdle()
+      assert(clearQueryCalled)
+    }
+
+    // ============================================================================
+    // Stage 2: Clear button hidden when empty
+    // ============================================================================
+    stage.intValue = 2
+    textValue = ""
+    compose.waitForIdle()
+
+    checkpoint("Clear button hidden when text empty") {
+      compose.onNodeWithContentDescription("Clear search").assertDoesNotExist()
+    }
+
+    // ============================================================================
+    // Stage 3: Disabled state
+    // ============================================================================
+    stage.intValue = 3
+    textValue = ""
+    compose.waitForIdle()
+
+    enabledState = false
+    compose.waitForIdle()
+    checkpoint("Basic disabled field renders") {
+      basicInputField().assertExists()
+      basicInputField().assertIsNotEnabled()
+    }
+
+    enabledState = true
+    compose.waitForIdle()
+    checkpoint("Basic enabled field renders") { basicInputField().assertIsEnabled() }
+
+    // ============================================================================
+    // Stage 4: Read-only state
+    // ============================================================================
+    stage.intValue = 4
+    textValue = ""
+    compose.waitForIdle()
+
+    readOnlyState = true
+    compose.waitForIdle()
+    checkpoint("Basic read-only field renders") { basicInputField().assertExists() }
+
+    readOnlyState = false
+    compose.waitForIdle()
+    checkpoint("Basic editable field renders") { basicInputField().assertExists() }
+
+    // ============================================================================
+    // Stage 5: Keyboard options
+    // ============================================================================
+    stage.intValue = 5
+    textValue = ""
+    keyboardOptionsState = KeyboardOptions(keyboardType = KeyboardType.Email)
+    compose.waitForIdle()
+
+    checkpoint("Basic email keyboard type renders") { basicInputField().assertExists() }
+
+    keyboardOptionsState = KeyboardOptions(imeAction = ImeAction.Search)
+    compose.waitForIdle()
+    checkpoint("Basic IME action configuration") { basicInputField().assertExists() }
+
+    // ============================================================================
+    // Stage 6: Visual transformation
+    // ============================================================================
+    stage.intValue = 6
+    textValue = ""
+    visualTransformationState = PasswordVisualTransformation()
+    compose.waitForIdle()
+
+    checkpoint("Basic password transformation renders") { basicInputField().assertExists() }
+
+    checkpoint("Basic text input works with transformation") {
+      basicInputField().performTextInput("secret")
+      compose.waitForIdle()
+      assert(textValue == "secret")
+    }
+
+    // ============================================================================
+    // Stage 7: Global observer
+    // ============================================================================
+    stage.intValue = 7
+    textValue = ""
+    visualTransformationState = androidx.compose.ui.text.input.VisualTransformation.None
+    globalObserverToken = null
+    globalObserverFocusState = null
+    compose.waitForIdle()
+
+    checkpoint("Basic global observer fires on focus") {
+      basicInputField().performClick()
+      compose.waitForIdle()
+      assert(globalObserverToken != null)
+      assert(globalObserverFocusState == true)
+    }
+
+    // ============================================================================
+    // Stage 8: Custom interaction source
+    // ============================================================================
+    stage.intValue = 8
+    textValue = ""
+    interactionSourceState = MutableInteractionSource()
+    compose.waitForIdle()
+
+    checkpoint("Basic custom interaction source renders") { basicInputField().assertExists() }
+
+    checkpoint("Basic interaction with custom source") {
+      basicInputField().performClick()
+      compose.waitForIdle()
+      basicInputField().performTextInput("Test")
+      assert(textValue == "Test")
+    }
+
+    // ============================================================================
+    // Stage 9: Clear focus on keyboard hide (enabled)
+    // ============================================================================
+    stage.intValue = 9
+    textValue = ""
+    onFocusChangedCalled = false
+    lastFocusState = false
+    interactionSourceState = null
+    UiBehaviorConfig.clearFocusOnKeyboardHide = true
+    compose.waitForIdle()
+
+    checkpoint("Basic field gains focus") {
+      basicInputField().performClick()
+      compose.waitForIdle()
+      assert(lastFocusState)
+    }
+
+    // ============================================================================
+    // Stage 10: Clear focus on keyboard hide (disabled)
+    // ============================================================================
+    stage.intValue = 10
+    onFocusChangedCalled = false
+    lastFocusState = false
+    UiBehaviorConfig.clearFocusOnKeyboardHide = false
+    compose.waitForIdle()
+
+    checkpoint("Basic field with config disabled renders") { basicInputField().assertExists() }
+  }
+
   companion object {
     private const val TEST_TAG_INPUT = "focusable_input_field"
     private const val TEST_TAG_INPUT_2 = "focusable_input_field_2"
+    private const val TEST_TAG_BASIC_INPUT = "focusable_basic_input_field"
   }
 }

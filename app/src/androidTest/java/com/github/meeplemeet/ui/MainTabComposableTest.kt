@@ -23,6 +23,7 @@ import com.github.meeplemeet.ui.account.PreferencesSectionTestTags
 import com.github.meeplemeet.ui.account.PrivateInfoTestTags
 import com.github.meeplemeet.ui.account.ProfileNavigationTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
+import com.github.meeplemeet.ui.components.CommonComponentsTestTags
 import com.github.meeplemeet.ui.theme.AppTheme
 import com.github.meeplemeet.utils.Checkpoint
 import com.github.meeplemeet.utils.FirestoreTests
@@ -515,14 +516,6 @@ class MainTabComposableTest : FirestoreTests() {
       compose.subPageBackButton().performClick()
       compose.waitForIdle()
       compose.publicInfoRoot().assertExists()
-
-      compose.settingsRowBusinesses().performClick()
-      compose.waitForIdle()
-      compose.rolesTitle().assertExists().performClick()
-      compose.roleShopCheckbox().assertExists() // UI updated correctly
-
-      compose.subPageBackButton().performClick()
-      compose.waitForIdle()
     }
 
     // ---------------------------------------------------------------------
@@ -551,6 +544,32 @@ class MainTabComposableTest : FirestoreTests() {
       compose.delAccountPopupConfirm().assertExists().performClick()
       assert(delClicked)
       compose.waitForIdle()
+    }
+
+    checkpoint("Handle icon displays toast") {
+      // Basic behavior
+      compose.onNodeWithTag(PublicInfoTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertExists()
+          .assertTextContains("A unique name others use to find and recognize you.")
+      compose.waitForIdle()
+      compose
+          .onNodeWithTag(
+              CommonComponentsTestTags.CLOSABLE_TOAST_CLOSE_BUTTON, useUnmergedTree = true)
+          .performClick()
+      compose.waitForIdle()
+
+      // Assert that the icon acts as a toggle
+      compose.onNodeWithTag(PublicInfoTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertExists()
+          .assertTextContains("A unique name others use to find and recognize you.")
+      compose.onNodeWithTag(PublicInfoTestTags.HANDLE_INFO_ICON).performClick()
+      compose
+          .onNodeWithTag(CommonComponentsTestTags.CLOSABLE_TOAST, useUnmergedTree = true)
+          .assertDoesNotExist()
     }
   }
 }

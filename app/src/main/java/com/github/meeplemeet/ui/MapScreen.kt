@@ -25,7 +25,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,11 +44,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
@@ -77,6 +79,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRowScope
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -90,13 +94,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -111,15 +118,19 @@ import com.github.meeplemeet.R
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.map.GeoPinWithLocation
 import com.github.meeplemeet.model.map.MapViewModel
-import com.github.meeplemeet.model.map.MarkerPreview
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPin
+import com.github.meeplemeet.model.map.previews.MarkerPreview
+import com.github.meeplemeet.model.map.routes.DefaultTravelSpeeds
+import com.github.meeplemeet.model.map.routes.TransportMode
+import com.github.meeplemeet.model.map.routes.TravelInfo
 import com.github.meeplemeet.model.shared.location.Location
 import com.github.meeplemeet.ui.navigation.BottomBarWithVerification
 import com.github.meeplemeet.ui.navigation.MeepleMeetScreen
 import com.github.meeplemeet.ui.navigation.NavigationActions
 import com.github.meeplemeet.ui.theme.AppColors
 import com.github.meeplemeet.ui.theme.Dimensions
+import com.github.meeplemeet.ui.theme.LocalThemeIsDark
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -144,6 +155,7 @@ import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.log10
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
@@ -167,13 +179,17 @@ object MapScreenTestTags {
   const val FILTER_SHOP_CHIP = "filterShop"
   const val FILTER_SPACE_CHIP = "filterSpace"
   const val FILTER_SESSIONS_CHIP = "filterSession"
+  const val FILTER_OWNED_SWITCH = "filterOwnedSwitch"
   const val MARKER_PREVIEW_SHEET = "markerPreviewSheet"
   const val PREVIEW_TITLE = "previewTitle"
+  const val PREVIEW_TIME_ESTIMATES = "previewTimeEstimates"
+  const val PREVIEW_TIME_CAR = "previewTimeCar"
+  const val PREVIEW_TIME_BIKE = "previewTimeBike"
+  const val PREVIEW_TIME_WALK = "previewTimeWalk"
   const val PREVIEW_ADDRESS = "previewAddress"
   const val PREVIEW_OPENING_HOURS = "previewOpeningHours"
   const val PREVIEW_GAME = "previewGame"
   const val PREVIEW_DATE = "previewDate"
-  const val PREVIEW_CLOSE_BUTTON = "previewCloseButton"
   const val PREVIEW_VIEW_DETAILS_BUTTON = "previewViewDetailsButton"
   const val PREVIEW_NAVIGATE_BUTTON = "previewNavigateButton"
   const val CLUSTER_SHEET = "clusterSheet"
@@ -244,6 +260,12 @@ private object MapScaleBarDefaults {
   val TICK_WIDTH = 2.dp
   val LABEL_SPACING = 2.dp
 }
+
+private data class TravelEstimates(
+    val driving: TravelInfo,
+    val bicycling: TravelInfo,
+    val walking: TravelInfo
+)
 
 private const val DEFAULT_RADIUS_KM = 10.0
 private const val DEFAULT_ZOOM_LEVEL = 14f
@@ -326,6 +348,7 @@ fun MapScreen(
   var isCameraCentered by remember { mutableStateOf(false) }
   var isQueryLaunched by remember { mutableStateOf(false) }
   var includeTypes by remember { mutableStateOf(PinType.entries.toSet()) }
+  var showOwnedOnly by remember { mutableStateOf(false) }
 
   // --- UI controls (filters & creation) ---
   var showFilterButtons by remember { mutableStateOf(false) }
@@ -425,6 +448,9 @@ fun MapScreen(
   /** Updates the ViewModel filters whenever the set of included pin types changes. */
   LaunchedEffect(includeTypes) { viewModel.updateFilters(includeTypes) }
 
+  /** Updates the ViewModel owned-only filter whenever it changes. */
+  LaunchedEffect(showOwnedOnly) { viewModel.setShowOwnedBusinessesOnly(showOwnedOnly) }
+
   /** Displays any error message emitted by the ViewModel in a snackbar. */
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { msg ->
@@ -464,13 +490,14 @@ fun MapScreen(
         when {
           markerPreview != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedPin() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedPin() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(pin = uiState.selectedPin)
                   } else {
                     MarkerPreviewSheet(
                         preview = uiState.selectedMarkerPreview!!,
-                        onClose = { viewModel.clearSelectedPin() },
                         pin = uiState.selectedPin!!,
                         userLocation = userLocation,
                         onRedirect = onRedirect)
@@ -479,7 +506,9 @@ fun MapScreen(
           }
           clusterPreviews != null -> {
             ModalBottomSheet(
-                sheetState = sheetState, onDismissRequest = { viewModel.clearSelectedCluster() }) {
+                sheetState = sheetState,
+                onDismissRequest = { viewModel.clearSelectedCluster() },
+                containerColor = AppColors.primary) {
                   if (isLoading) {
                     MarkerPreviewLoadingSheet(null)
                   } else {
@@ -538,7 +567,7 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
           // --- Google Map content ---
-          val isDarkTheme = isSystemInDarkTheme()
+          val isDarkTheme = LocalThemeIsDark.current
           val mapStyleOptions =
               if (isDarkTheme) {
                 MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
@@ -579,7 +608,7 @@ fun MapScreen(
                       mapStyleOptions = mapStyleOptions, isMyLocationEnabled = permissionGranted),
               uiSettings =
                   MapUiSettings(myLocationButtonEnabled = false, zoomControlsEnabled = false)) {
-                val clusters = viewModel.getClusters()
+                val clusters = viewModel.getClusters(account = account)
 
                 clusters
                     .filter { it.items.isNotEmpty() }
@@ -653,68 +682,16 @@ fun MapScreen(
                                   Dimensions.ButtonSize.standard +
                                   Dimensions.Spacing.medium,
                           y = Dimensions.Padding.medium)) {
-                Surface(
-                    modifier =
-                        Modifier.widthIn(
-                                max =
-                                    Dimensions.ComponentWidth.spaceLabelWidth.plus(
-                                        Dimensions.Padding.extraMedium))
-                            .wrapContentHeight(),
-                    tonalElevation = Dimensions.Elevation.high,
-                    shape = RoundedCornerShape(Dimensions.CornerRadius.large),
-                    color = AppColors.primary.copy(alpha = 0.95f)) {
-                      Column(
-                          modifier =
-                              Modifier.padding(
-                                  horizontal = Dimensions.Padding.medium,
-                                  vertical = Dimensions.Padding.mediumSmall),
-                          verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.small)) {
-                            PinType.entries.forEach { type ->
-                              val selected = includeTypes.contains(type)
-                              FilterChip(
-                                  selected = selected,
-                                  onClick = {
-                                    includeTypes =
-                                        if (selected) includeTypes - type else includeTypes + type
-                                  },
-                                  label = {
-                                    Text(
-                                        text =
-                                            type.name.lowercase().replaceFirstChar {
-                                              it.uppercaseChar()
-                                            },
-                                        color = AppColors.textIcons,
-                                        style = MaterialTheme.typography.labelLarge)
-                                  },
-                                  leadingIcon = {
-                                    Checkbox(
-                                        checked = selected,
-                                        onCheckedChange = null,
-                                        modifier = Modifier.size(Dimensions.IconSize.medium))
-                                  },
-                                  colors =
-                                      SelectableChipColors(
-                                          containerColor = AppColors.primary,
-                                          leadingIconColor = Color.Transparent,
-                                          trailingIconColor = Color.Transparent,
-                                          disabledContainerColor = Color.Transparent,
-                                          disabledLabelColor = Color.Transparent,
-                                          disabledLeadingIconColor = Color.Transparent,
-                                          disabledTrailingIconColor = Color.Transparent,
-                                          disabledSelectedContainerColor = Color.Transparent,
-                                          selectedLabelColor = Color.Transparent,
-                                          selectedLeadingIconColor = Color.Transparent,
-                                          selectedTrailingIconColor = Color.Transparent,
-                                          labelColor = AppColors.textIcons,
-                                          selectedContainerColor = Color.Transparent),
-                                  modifier =
-                                      Modifier.testTag(pinTypeTestTag(type))
-                                          .height(Dimensions.Padding.huge)
-                                          .background(AppColors.primary)
-                                          .fillMaxWidth())
-                            }
-                          }
-                    }
+                FilterPanel(
+                    includeTypes = includeTypes,
+                    onTypeToggle = { type ->
+                      includeTypes =
+                          if (includeTypes.contains(type)) includeTypes - type
+                          else includeTypes + type
+                    },
+                    showOwnedOnly = showOwnedOnly,
+                    onOwnedOnlyToggle = { showOwnedOnly = !showOwnedOnly },
+                    canFilterOwned = account.shopOwner || account.spaceRenter)
               }
 
           // --- Dialog for business creation if ambiguous ---
@@ -1011,6 +988,36 @@ private fun GeoPinWithLocation.distanceToString(location: Location): String {
   else String.format(Locale.getDefault(), "%.1f km", km)
 }
 
+private fun GeoPinWithLocation.approxTravelEstimates(userLocation: Location): TravelEstimates {
+  val distanceMeters = distanceTo(userLocation) * 1000 // km -> m
+  return TravelEstimates(
+      driving =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.DRIVING,
+              true,
+              TransportMode.DRIVING),
+      bicycling =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.BICYCLING,
+              true,
+              TransportMode.BICYCLING),
+      walking =
+          TravelInfo(
+              distanceMeters,
+              distanceMeters / DefaultTravelSpeeds.WALKING,
+              true,
+              TransportMode.WALKING))
+}
+
+private fun TravelInfo.toTimeString(): String {
+  val mins = max(durationSeconds / 60, 1.0).toInt()
+  val hours = mins / 60
+  val minsOnly = mins % 60
+  return if (hours > 0) "${hours}h ${minsOnly}m" else "${minsOnly}m"
+}
+
 /**
  * Displays a simple loading sheet while fetching marker preview data.
  *
@@ -1056,19 +1063,18 @@ private fun MarkerPreviewLoadingSheet(pin: GeoPinWithLocation?) {
  *     - Date with calendar icon
  *
  * The sheet includes:
- * - A close button (top-right)
  * - A "View details" button
  * - A "Navigate" button opening Google Maps directions
  */
 @Composable
 private fun MarkerPreviewSheet(
     preview: MarkerPreview,
-    onClose: () -> Unit,
     pin: GeoPinWithLocation,
     userLocation: Location?,
     onRedirect: (StorableGeoPin) -> Unit
 ) {
   val context = LocalContext.current
+  val estimates = userLocation?.let { pin.approxTravelEstimates(it) }
 
   Column(
       modifier =
@@ -1076,81 +1082,105 @@ private fun MarkerPreviewSheet(
               .padding(Dimensions.Padding.extraLarge)
               .testTag(MapScreenTestTags.MARKER_PREVIEW_SHEET)) {
         Box(modifier = Modifier.fillMaxWidth()) {
-          val title =
-              if (userLocation != null) "${preview.name} — ${pin.distanceToString(userLocation)}"
-              else preview.name
+          val title = buildAnnotatedString {
+            append(preview.name)
+            estimates?.let {
+              append(
+                  " — ${it.driving.distanceMeters.let { d -> if (d < 1000) "${d.toInt()} m" else String.format("%.1f km", d / 1000) }}")
+            }
+          }
           Text(
               text = title,
               style = MaterialTheme.typography.titleLarge,
               modifier =
                   Modifier.align(Alignment.CenterStart).testTag(MapScreenTestTags.PREVIEW_TITLE))
-
-          IconButton(
-              onClick = onClose,
-              modifier =
-                  Modifier.align(Alignment.TopEnd)
-                      .testTag(MapScreenTestTags.PREVIEW_CLOSE_BUTTON)) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close preview")
-              }
         }
 
         Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
 
-        when (preview) {
-          is MarkerPreview.ShopMarkerPreview,
-          is MarkerPreview.SpaceMarkerPreview -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-              Text(
-                  text = preview.address,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+          // --- Travel time row ---
+          estimates?.let { est ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.Spacing.xLarge),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier.fillMaxWidth().testTag(MapScreenTestTags.PREVIEW_TIME_ESTIMATES)) {
+                  IconText(
+                      icon = Icons.Default.DirectionsCar,
+                      text = est.driving.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_CAR)
+                  IconText(
+                      icon = Icons.AutoMirrored.Filled.DirectionsBike,
+                      text = est.bicycling.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_BIKE)
+                  IconText(
+                      icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                      text = est.walking.toTimeString(),
+                      testTag = MapScreenTestTags.PREVIEW_TIME_WALK)
+                }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
-              val isOpen =
-                  when (preview) {
-                    is MarkerPreview.ShopMarkerPreview -> preview.open
-                    is MarkerPreview.SpaceMarkerPreview -> preview.open
-                    else -> false
-                  }
-              Text(
-                  text = if (isOpen) "Open" else "Closed",
-                  color =
-                      if (isOpen) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.error,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
-            }
+            Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
           }
-          is MarkerPreview.SessionMarkerPreview -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(
-                  text = "Playing: ${preview.game}",
-                  modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+
+          when (preview) {
+            is MarkerPreview.ShopMarkerPreview,
+            is MarkerPreview.SpaceMarkerPreview -> {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                Text(
+                    text = preview.address,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+              }
+
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.AccessTime, contentDescription = "Opening hours")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.medium))
+                val isOpen =
+                    when (preview) {
+                      is MarkerPreview.ShopMarkerPreview -> preview.open
+                      is MarkerPreview.SpaceMarkerPreview -> preview.open
+                      else -> false
+                    }
+                Text(
+                    text = if (isOpen) "Open" else "Closed",
+                    color =
+                        if (isOpen) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_OPENING_HOURS))
+              }
             }
+            is MarkerPreview.SessionMarkerPreview -> {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.SportsEsports, contentDescription = "Game")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = "Playing: ${preview.game}",
+                    modifier = Modifier.alignByBaseline().testTag(MapScreenTestTags.PREVIEW_GAME))
+              }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(
-                  text = preview.address,
-                  modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
-            }
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Location")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = preview.address,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_ADDRESS))
+              }
 
-            Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
+              Spacer(modifier = Modifier.height(Dimensions.Spacing.small))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
-              Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
-              Text(text = preview.date, modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Date")
+                Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+                Text(
+                    text = preview.date,
+                    modifier = Modifier.testTag(MapScreenTestTags.PREVIEW_DATE))
+              }
             }
           }
         }
@@ -1175,6 +1205,15 @@ private fun MarkerPreviewSheet(
               }
         }
       }
+}
+
+@Composable
+private fun IconText(icon: ImageVector, text: String, testTag: String) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Icon(icon, contentDescription = null)
+    Spacer(Modifier.width(Dimensions.Spacing.small))
+    Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(testTag))
+  }
 }
 
 /**
@@ -1522,6 +1561,132 @@ private fun StaticVerticalMapMenu(
                 Icon(Icons.Default.AddLocationAlt, contentDescription = "Create")
               }
         }
+      }
+}
+
+/**
+ * Filter panel with Switch toggle for "My Businesses" filter.
+ *
+ * Features:
+ * - Minimal backgrounds on FilterChips (outline only)
+ * - Text on left, Switch on right for intuitive layout
+ * - Compact switch scaled to match checkbox size
+ *
+ * @param includeTypes currently active pin type filters
+ * @param onTypeToggle callback when a pin type chip is toggled
+ * @param showOwnedOnly whether to show only user-owned businesses
+ * @param onOwnedOnlyToggle callback when the owned-only switch is toggled
+ * @param canFilterOwned whether the user can filter by ownership (shop owner or space renter)
+ */
+@Composable
+private fun FilterPanel(
+    includeTypes: Set<PinType>,
+    onTypeToggle: (PinType) -> Unit,
+    showOwnedOnly: Boolean,
+    onOwnedOnlyToggle: () -> Unit,
+    canFilterOwned: Boolean
+) {
+  Surface(
+      modifier =
+          Modifier.widthIn(
+                  min = Dimensions.ComponentWidth.spaceLabelWidth,
+                  max = Dimensions.ComponentWidth.spaceLabelWidth.times(1.5f))
+              .wrapContentHeight(),
+      tonalElevation = Dimensions.Elevation.high,
+      shape = RoundedCornerShape(Dimensions.CornerRadius.large),
+      color = AppColors.primary.copy(alpha = 0.95f)) {
+        Column(
+            modifier =
+                Modifier.padding(
+                    horizontal = Dimensions.Padding.medium,
+                    vertical = Dimensions.Padding.mediumSmall),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Spacing.extraSmall)) {
+              // Pin type filters
+              PinType.entries.forEach { type ->
+                val selected = includeTypes.contains(type)
+                FilterChip(
+                    selected = selected,
+                    onClick = { onTypeToggle(type) },
+                    label = {
+                      Text(
+                          text = type.name.lowercase().replaceFirstChar { it.uppercaseChar() },
+                          color = AppColors.textIcons,
+                          style = MaterialTheme.typography.labelLarge)
+                    },
+                    leadingIcon = {
+                      Checkbox(
+                          checked = selected,
+                          onCheckedChange = null,
+                          modifier = Modifier.size(Dimensions.IconSize.medium))
+                    },
+                    colors =
+                        SelectableChipColors(
+                            containerColor = Color.Transparent,
+                            leadingIconColor = Color.Transparent,
+                            trailingIconColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            disabledLabelColor = Color.Transparent,
+                            disabledLeadingIconColor = Color.Transparent,
+                            disabledTrailingIconColor = Color.Transparent,
+                            disabledSelectedContainerColor = Color.Transparent,
+                            selectedLabelColor = Color.Transparent,
+                            selectedLeadingIconColor = Color.Transparent,
+                            selectedTrailingIconColor = Color.Transparent,
+                            labelColor = AppColors.textIcons,
+                            selectedContainerColor = Color.Transparent),
+                    modifier =
+                        Modifier.testTag(pinTypeTestTag(type))
+                            .height(Dimensions.Padding.xxxLarge)
+                            .fillMaxWidth())
+              }
+
+              // Owned businesses filter
+              if (canFilterOwned) {
+                HorizontalDivider(
+                    modifier =
+                        Modifier.fillMaxWidth().padding(vertical = Dimensions.Spacing.extraSmall),
+                    thickness = Dimensions.DividerThickness.standard,
+                    color = AppColors.textIcons.copy(alpha = 0.3f))
+
+                Row(
+                    modifier =
+                        Modifier.testTag(MapScreenTestTags.FILTER_OWNED_SWITCH)
+                            .fillMaxWidth()
+                            .height(Dimensions.Padding.xxxLarge)
+                            .clickable { onOwnedOnlyToggle() }
+                            .padding(horizontal = Dimensions.Padding.mediumSmall),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                      Text(
+                          text = "My Businesses",
+                          color = AppColors.textIcons,
+                          style = MaterialTheme.typography.labelLarge,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier.weight(1f, fill = false))
+
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.small))
+
+                      // Box to center the scaled switch
+                      Box(
+                          modifier = Modifier.size(Dimensions.IconSize.medium),
+                          contentAlignment = Alignment.Center) {
+                            Switch(
+                                checked = showOwnedOnly,
+                                onCheckedChange = { onOwnedOnlyToggle() },
+                                modifier = Modifier.scale(0.7f),
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedThumbColor = AppColors.textIcons,
+                                        checkedTrackColor = AppColors.neutral.copy(alpha = 0.8f),
+                                        uncheckedThumbColor =
+                                            AppColors.textIcons.copy(alpha = 0.5f),
+                                        uncheckedTrackColor =
+                                            AppColors.textIcons.copy(alpha = 0.3f)))
+                          }
+                    }
+              }
+            }
       }
 }
 

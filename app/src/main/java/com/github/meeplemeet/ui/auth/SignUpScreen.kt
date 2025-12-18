@@ -1,5 +1,8 @@
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.github.meeplemeet.ui.auth
 // Github Copilot was used for this file
+
 import android.content.Context
 import android.util.Patterns
 import androidx.compose.foundation.BorderStroke
@@ -33,6 +36,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.meeplemeet.R
@@ -66,28 +71,10 @@ const val CANNOT_BE_EMPTY_EMAIL_TEXT = "Email cannot be empty"
 const val ALREADY_HAVE_ACCOUNT_TEXT = "Already have an account? "
 const val LOG_IN_TEXT = "Log in."
 const val OPTION_TEXT = "OR"
+const val BASELINE_SCREEN_HEIGTH = 840
+const val MIN_SCALE = 0.82f
+const val IMAGE_SCALING_FACTOR = 0.3f
 
-/**
- * SignUpScreen - User registration interface for new users
- *
- * This composable provides a complete registration experience with:
- * - Email/password registration with comprehensive validation
- * - Password confirmation to ensure accuracy
- * - Google sign-up integration via Credential Manager
- * - Real-time client-side validation with error feedback
- * - Server-side error handling and display
- * - Loading states during registration operations
- * - Navigation to sign-in screen for existing users
- *
- * The screen features enhanced validation compared to sign-in, including:
- * - Password strength requirements (minimum 6 characters)
- * - Password confirmation matching
- * - Immediate feedback on validation errors
- *
- * @param viewModel Authentication view model that manages auth state and operations
- * @param context Android context, used for Credential Manager and other platform services
- * @param credentialManager Credential manager instance for Google sign-up
- */
 @Composable
 fun SignUpScreen(
     viewModel: SignUpViewModel = viewModel(),
@@ -96,30 +83,19 @@ fun SignUpScreen(
     onLogInClick: () -> Unit = {},
     onRegister: () -> Unit = {},
 ) {
-  // Local state management for form inputs and validation
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var confirmPassword by remember { mutableStateOf("") }
-  var passwordVisible by remember { mutableStateOf(false) } // Controls password visibility toggle
-  var confirmPasswordVisible by remember {
-    mutableStateOf(false)
-  } // Controls confirm password visibility toggle
-  var emailError by remember {
-    mutableStateOf<String?>(null)
-  } // Client-side email validation errors
-  var passwordError by remember {
-    mutableStateOf<String?>(null)
-  } // Client-side password validation errors
-  var confirmPasswordError by remember {
-    mutableStateOf<String?>(null)
-  } // Password confirmation validation errors
+  var passwordVisible by remember { mutableStateOf(false) }
+  var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+  var emailError by remember { mutableStateOf<String?>(null) }
+  var passwordError by remember { mutableStateOf<String?>(null) }
+  var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
   val focusManager = LocalFocusManager.current
-
-  // Observe authentication state from the ViewModel
   val uiState by viewModel.uiState.collectAsState()
 
-  // Check if all credentials are valid in real-time
   val isFormValid =
       remember(email, password, confirmPassword) {
         email.isNotBlank() &&
@@ -130,10 +106,8 @@ fun SignUpScreen(
             password == confirmPassword
       }
 
-  // Snackbar state
   val snackbarHostState = remember { SnackbarHostState() }
 
-  // Show snackbar when there's an error
   LaunchedEffect(uiState.errorMsg) {
     uiState.errorMsg?.let { error ->
       val errorMessage =
@@ -147,12 +121,6 @@ fun SignUpScreen(
     }
   }
 
-  /**
-   * Validates email format and emptiness
-   *
-   * @param email The email string to validate
-   * @return Error message if invalid, null if valid
-   */
   fun validateEmail(email: String): String? {
     return when {
       email.isBlank() -> CANNOT_BE_EMPTY_EMAIL_TEXT
@@ -161,12 +129,6 @@ fun SignUpScreen(
     }
   }
 
-  /**
-   * Validates password strength and emptiness Enforces minimum length requirement for security
-   *
-   * @param password The password string to validate
-   * @return Error message if invalid, null if valid
-   */
   fun validatePassword(password: String): String? {
     return when {
       password.isBlank() -> EMPTY_PWD_TEXT
@@ -175,13 +137,6 @@ fun SignUpScreen(
     }
   }
 
-  /**
-   * Validates password confirmation matches the original password
-   *
-   * @param password The original password
-   * @param confirmPassword The confirmation password to validate
-   * @return Error message if invalid, null if valid
-   */
   fun validateConfirmPassword(password: String, confirmPassword: String): String? {
     return when {
       confirmPassword.isBlank() -> PWD_CONFIRMATION_TEXT
@@ -190,299 +145,260 @@ fun SignUpScreen(
     }
   }
 
-  // Main UI layout using Scaffold for proper Snackbar positioning
   Scaffold(
       snackbarHost = { SnackbarHost(snackbarHostState) },
       containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
-        Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .imePadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(paddingValues)
-                    .padding(Dimensions.Padding.xxLarge)
-                    .background(MaterialTheme.colorScheme.background)
-                    .pointerInput(Unit) {
-                      detectTapGestures(onTap = { focusManager.clearFocus() })
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+          val rawScale = maxHeight.value / BASELINE_SCREEN_HEIGTH
+          val scale = rawScale.coerceIn(MIN_SCALE, 1f)
+
+          fun Dp.s(): Dp = this * scale
+          fun TextUnit.s(): TextUnit = this * scale
+
+          val outerPadding = Dimensions.Padding.xxLarge.s()
+
+          val baseLogoSize =
+              (Dimensions.IconSize.massive.times(other = 3)) + Dimensions.Padding.extraLarge
+          val logoSize = minOf(baseLogoSize.s(), (maxHeight * IMAGE_SCALING_FACTOR))
+
+          Column(
+              modifier =
+                  Modifier.fillMaxSize()
+                      .imePadding()
+                      .verticalScroll(rememberScrollState())
+                      .padding(outerPadding)
+                      .background(MaterialTheme.colorScheme.background)
+                      .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                      },
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.SpaceBetween) {
+                val isDarkTheme = isSystemInDarkTheme()
+
+                Image(
+                    painter =
+                        painterResource(
+                            id = if (isDarkTheme) R.drawable.logo_dark else R.drawable.logo_clear),
+                    contentDescription = "Meeple Meet Logo",
+                    modifier = Modifier.size(logoSize).fillMaxSize())
+
+                Text(
+                    SIGN_UP_TEXT,
+                    style = TextStyle(fontSize = Dimensions.TextSize.displayMedium.s()),
+                    color = AppColors.neutral,
+                    modifier =
+                        Modifier.padding(bottom = Dimensions.Padding.extraLarge.s())
+                            .testTag(NavigationTestTags.SCREEN_TITLE))
+
+                FocusableInputField(
+                    leadingIcon = {
+                      Icon(imageVector = Icons.Default.Email, contentDescription = null)
                     },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween) {
-              // Top spacing
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
+                    value = email,
+                    onValueChange = {
+                      email = it
+                      emailError = if (it.isNotEmpty()) validateEmail(it) else null
+                    },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    isError = emailError != null,
+                    modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.EMAIL_FIELD))
 
-              // App logo - changes based on theme
-              val isDarkTheme = isSystemInDarkTheme()
-              Box(
-                  modifier =
-                      Modifier.size(
-                          Dimensions.IconSize.massive
-                              .times(3)
-                              .plus(Dimensions.Padding.extraLarge))) {
-                    Image(
-                        painter =
-                            painterResource(
-                                id =
-                                    if (isDarkTheme) R.drawable.logo_dark
-                                    else R.drawable.logo_clear),
-                        contentDescription = "Meeple Meet Logo",
-                        modifier = Modifier.fillMaxSize())
-                  }
+                if (emailError != null) {
+                  Text(
+                      text = emailError!!,
+                      color = MaterialTheme.colorScheme.error,
+                      style = MaterialTheme.typography.bodySmall,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(
+                                  start = Dimensions.Padding.extraLarge.s(),
+                                  top = Dimensions.Padding.small.s()))
+                }
 
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.xxLarge))
-
-              // Welcome message
-              Text(
-                  SIGN_UP_TEXT,
-                  style = TextStyle(fontSize = Dimensions.TextSize.displayMedium),
-                  color = AppColors.neutral,
-                  modifier =
-                      Modifier.padding(bottom = Dimensions.Padding.extraLarge)
-                          .testTag(NavigationTestTags.SCREEN_TITLE))
-
-              // Email input field with validation
-              FocusableInputField(
-                  leadingIcon = {
-                    Icon(imageVector = Icons.Default.Email, contentDescription = null)
-                  },
-                  value = email,
-                  onValueChange = {
-                    email = it
-                    // Validate email in real-time as user types
-                    emailError = if (it.isNotEmpty()) validateEmail(it) else null
-                  },
-                  label = { Text("Email") },
-                  singleLine = true,
-                  isError = emailError != null, // Show error state visually
-                  modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.EMAIL_FIELD))
-
-              // Display email validation error if present
-              if (emailError != null) {
-                Text(
-                    text = emailError!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                start = Dimensions.Padding.extraLarge,
-                                top = Dimensions.Padding.small))
-              }
-
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
-
-              // Password input field with visibility toggle and validation
-              FocusableInputField(
-                  leadingIcon = {
-                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
-                  },
-                  value = password,
-                  onValueChange = {
-                    password = it
-                    // Validate password in real-time as user types
-                    passwordError = if (it.isNotEmpty()) validatePassword(it) else null
-                    // Also re-validate confirm password if it's not empty
-                    if (confirmPassword.isNotEmpty()) {
-                      confirmPasswordError = validateConfirmPassword(it, confirmPassword)
-                    }
-                  },
-                  label = { Text("Password") },
-                  singleLine = true,
-                  // Toggle between showing/hiding password based on passwordVisible state
-                  visualTransformation =
-                      if (passwordVisible) VisualTransformation.None
-                      else PasswordVisualTransformation(),
-                  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                  isError = passwordError != null, // Show error state visually
-                  trailingIcon = {
-                    // Password visibility toggle button
-                    IconButton(
-                        onClick = { passwordVisible = !passwordVisible },
-                        modifier =
-                            Modifier.testTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE)) {
-                          Icon(
-                              imageVector =
-                                  if (passwordVisible) Icons.Filled.Visibility
-                                  else Icons.Filled.VisibilityOff,
-                              contentDescription =
-                                  if (passwordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
-                        }
-                  },
-                  modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.PASSWORD_FIELD))
-
-              // Display password validation error if present
-              if (passwordError != null) {
-                Text(
-                    text = passwordError!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                start = Dimensions.Padding.extraLarge,
-                                top = Dimensions.Padding.small))
-              }
-
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-
-              // Password confirmation field with visibility toggle and validation
-              // This ensures users enter their password correctly by requiring them to type it
-              // twice
-              FocusableInputField(
-                  leadingIcon = {
-                    Icon(imageVector = Icons.Default.Lock, contentDescription = null)
-                  },
-                  value = confirmPassword,
-                  onValueChange = {
-                    confirmPassword = it
-                    // Validate confirm password in real-time as user types
-                    confirmPasswordError =
-                        if (it.isNotEmpty()) validateConfirmPassword(password, it) else null
-                  },
-                  label = { Text("Confirm Password") },
-                  singleLine = true,
-                  // Toggle between showing/hiding confirm password based on confirmPasswordVisible
-                  // state
-                  visualTransformation =
-                      if (confirmPasswordVisible) VisualTransformation.None
-                      else PasswordVisualTransformation(),
-                  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                  isError = confirmPasswordError != null, // Show error state visually
-                  trailingIcon = {
-                    // Confirm password visibility toggle button
-                    IconButton(
-                        onClick = { confirmPasswordVisible = !confirmPasswordVisible },
-                        modifier =
-                            Modifier.testTag(
-                                SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)) {
-                          Icon(
-                              imageVector =
-                                  if (confirmPasswordVisible) Icons.Filled.Visibility
-                                  else Icons.Filled.VisibilityOff,
-                              contentDescription =
-                                  if (confirmPasswordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
-                        }
-                  },
-                  modifier =
-                      Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD))
-
-              // Display password confirmation validation error if present
-              if (confirmPasswordError != null) {
-                Text(
-                    text = confirmPasswordError!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(
-                                start = Dimensions.Padding.extraLarge,
-                                top = Dimensions.Padding.small))
-              }
-
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge))
-
-              // Email/Password Registration Button
-              Button(
-                  onClick = {
-                    // Perform comprehensive client-side validation before submitting
-                    val emailValidation = validateEmail(email)
-                    val passwordValidation = validatePassword(password)
-                    val confirmPasswordValidation =
-                        validateConfirmPassword(password, confirmPassword)
-
-                    emailError = emailValidation
-                    passwordError = passwordValidation
-                    confirmPasswordError = confirmPasswordValidation
-
-                    // Only proceed with registration if all validation passes
-                    if (emailValidation == null &&
-                        passwordValidation == null &&
-                        confirmPasswordValidation == null) {
-                      viewModel.registerWithEmail(email, password, onRegister)
-                    }
-                  },
-                  colors =
-                      ButtonDefaults.buttonColors(
-                          containerColor = AppColors.affirmative,
-                          contentColor = AppColors.textIcons),
-                  modifier =
-                      Modifier.fillMaxWidth(0.6f).testTag(SignUpScreenTestTags.SIGN_UP_BUTTON),
-                  enabled =
-                      isFormValid &&
-                          !uiState.isLoading // Enable only when form is valid and not loading
-                  ) {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                      Row(
-                          verticalAlignment = Alignment.CenterVertically,
-                          modifier = Modifier.align(Alignment.CenterStart)) {
-                            Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null)
-                          }
-                      Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge))
-
-                      // Show loading indicator during authentication
-                      if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier =
-                                Modifier.size(Dimensions.IconSize.small)
-                                    .testTag(SignInScreenTestTags.LOADING_INDICATOR),
-                            color = MaterialTheme.colorScheme.onPrimary)
+                FocusableInputField(
+                    leadingIcon = {
+                      Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                    },
+                    value = password,
+                    onValueChange = {
+                      password = it
+                      passwordError = if (it.isNotEmpty()) validatePassword(it) else null
+                      if (confirmPassword.isNotEmpty()) {
+                        confirmPasswordError = validateConfirmPassword(it, confirmPassword)
                       }
-                      Text(SIGN_UP_TEXT)
-                    }
-                  }
+                    },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation =
+                        if (passwordVisible) VisualTransformation.None
+                        else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    isError = passwordError != null,
+                    trailingIcon = {
+                      IconButton(
+                          onClick = { passwordVisible = !passwordVisible },
+                          modifier =
+                              Modifier.testTag(SignUpScreenTestTags.PASSWORD_VISIBILITY_TOGGLE)) {
+                            Icon(
+                                imageVector =
+                                    if (passwordVisible) Icons.Filled.Visibility
+                                    else Icons.Filled.VisibilityOff,
+                                contentDescription =
+                                    if (passwordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
+                          }
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag(SignUpScreenTestTags.PASSWORD_FIELD))
 
-              // Divider between authentication methods
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.large))
-              Text(
-                  OPTION_TEXT,
-                  style =
-                      MaterialTheme.typography.bodyMedium.copy(
-                          fontSize = Dimensions.TextSize.subtitle),
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.padding(vertical = Dimensions.Padding.small))
+                if (passwordError != null) {
+                  Text(
+                      text = passwordError!!,
+                      color = MaterialTheme.colorScheme.error,
+                      style = MaterialTheme.typography.bodySmall,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(
+                                  start = Dimensions.Padding.extraLarge.s(),
+                                  top = Dimensions.Padding.small.s()))
+                }
 
-              // Google Sign Up Button
-              OutlinedButton(
-                  onClick = {
-                    // Initiate Google sign-up flow through ViewModel
-                    // Note: Google sign-up and sign-in use the same flow - if the account exists,
-                    // it signs in, if it doesn't exist, it creates a new account
-                    viewModel.googleSignIn(context, credentialManager, onRegister)
-                  },
-                  colors =
-                      ButtonDefaults.outlinedButtonColors(
-                          containerColor = AppColors.primary, contentColor = AppColors.textIcons),
-                  border = BorderStroke(Dimensions.Elevation.low, AppColors.divider),
-                  modifier =
-                      Modifier.fillMaxWidth(0.6f)
-                          .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON),
-                  enabled = !uiState.isLoading // Disable during any authentication process
-                  ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.google_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimensions.IconSize.standard),
-                        tint = Color.Unspecified)
-                    Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge))
-                    Text("Connect with Google")
-                  }
-
-              // Push navigation link to bottom
-              Spacer(modifier = Modifier.weight(1f))
-
-              // Navigation to Sign In screen for existing users
-              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Text(ALREADY_HAVE_ACCOUNT_TEXT)
-                Text(
-                    text = LOG_IN_TEXT,
-                    color = MaterialTheme.colorScheme.primary,
+                FocusableInputField(
+                    leadingIcon = {
+                      Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+                    },
+                    value = confirmPassword,
+                    onValueChange = {
+                      confirmPassword = it
+                      confirmPasswordError =
+                          if (it.isNotEmpty()) validateConfirmPassword(password, it) else null
+                    },
+                    label = { Text("Confirm Password") },
+                    singleLine = true,
+                    visualTransformation =
+                        if (confirmPasswordVisible) VisualTransformation.None
+                        else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    isError = confirmPasswordError != null,
+                    trailingIcon = {
+                      IconButton(
+                          onClick = { confirmPasswordVisible = !confirmPasswordVisible },
+                          modifier =
+                              Modifier.testTag(
+                                  SignUpScreenTestTags.CONFIRM_PASSWORD_VISIBILITY_TOGGLE)) {
+                            Icon(
+                                imageVector =
+                                    if (confirmPasswordVisible) Icons.Filled.Visibility
+                                    else Icons.Filled.VisibilityOff,
+                                contentDescription =
+                                    if (confirmPasswordVisible) HIDE_PWD_TEXT else SHOW_PWD_TEXT)
+                          }
+                    },
                     modifier =
-                        Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable {
-                          onLogInClick()
-                        })
-              }
+                        Modifier.fillMaxWidth()
+                            .testTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD))
 
-              // Bottom spacing
-              Spacer(modifier = Modifier.height(Dimensions.Spacing.medium))
-            }
+                if (confirmPasswordError != null) {
+                  Text(
+                      text = confirmPasswordError!!,
+                      color = MaterialTheme.colorScheme.error,
+                      style = MaterialTheme.typography.bodySmall,
+                      modifier =
+                          Modifier.fillMaxWidth()
+                              .padding(
+                                  start = Dimensions.Padding.extraLarge.s(),
+                                  top = Dimensions.Padding.small.s()))
+                }
+
+                Spacer(modifier = Modifier.height(Dimensions.Spacing.extraLarge.s()))
+
+                Button(
+                    onClick = {
+                      val emailValidation = validateEmail(email)
+                      val passwordValidation = validatePassword(password)
+                      val confirmPasswordValidation =
+                          validateConfirmPassword(password, confirmPassword)
+
+                      emailError = emailValidation
+                      passwordError = passwordValidation
+                      confirmPasswordError = confirmPasswordValidation
+
+                      if (emailValidation == null &&
+                          passwordValidation == null &&
+                          confirmPasswordValidation == null) {
+                        viewModel.registerWithEmail(email, password, onRegister)
+                      }
+                    },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = AppColors.affirmative,
+                            contentColor = AppColors.textIcons),
+                    modifier =
+                        Modifier.fillMaxWidth(0.6f).testTag(SignUpScreenTestTags.SIGN_UP_BUTTON),
+                    enabled = isFormValid && !uiState.isLoading) {
+                      Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.align(Alignment.CenterStart)) {
+                              Icon(imageVector = Icons.Default.PersonAdd, contentDescription = null)
+                            }
+                        Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge.s()))
+
+                        if (uiState.isLoading) {
+                          CircularProgressIndicator(
+                              modifier =
+                                  Modifier.size(Dimensions.IconSize.small.s())
+                                      .testTag(SignInScreenTestTags.LOADING_INDICATOR),
+                              color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                        Text(SIGN_UP_TEXT)
+                      }
+                    }
+
+                Spacer(modifier = Modifier.height(Dimensions.Spacing.medium.s()))
+                Text(
+                    OPTION_TEXT,
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = Dimensions.TextSize.subtitle.s()),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = Dimensions.Padding.small.s()))
+
+                OutlinedButton(
+                    onClick = { viewModel.googleSignIn(context, credentialManager, onRegister) },
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            containerColor = AppColors.primary, contentColor = AppColors.textIcons),
+                    border = BorderStroke(Dimensions.Elevation.low.s(), AppColors.divider),
+                    modifier =
+                        Modifier.fillMaxWidth(0.6f)
+                            .testTag(SignUpScreenTestTags.GOOGLE_SIGN_UP_BUTTON),
+                    enabled = !uiState.isLoading) {
+                      Icon(
+                          painter = painterResource(id = R.drawable.google_logo),
+                          contentDescription = null,
+                          modifier = Modifier.size(Dimensions.IconSize.standard.s()),
+                          tint = Color.Unspecified)
+                      Spacer(modifier = Modifier.width(Dimensions.Spacing.extraLarge.s()))
+                      Text("Connect with Google")
+                    }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center) {
+                      Text(ALREADY_HAVE_ACCOUNT_TEXT)
+                      Text(
+                          text = LOG_IN_TEXT,
+                          color = MaterialTheme.colorScheme.primary,
+                          modifier =
+                              Modifier.testTag(SignUpScreenTestTags.SIGN_IN_BUTTON).clickable {
+                                onLogInClick()
+                              })
+                    }
+
+                Spacer(modifier = Modifier.height(Dimensions.Spacing.medium.s()))
+              }
+        }
       }
 }
