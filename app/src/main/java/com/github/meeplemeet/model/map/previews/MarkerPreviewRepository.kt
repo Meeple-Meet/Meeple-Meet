@@ -1,8 +1,9 @@
-package com.github.meeplemeet.model.map
+package com.github.meeplemeet.model.map.previews
 
 import com.github.meeplemeet.RepositoryProvider
 import com.github.meeplemeet.model.discussions.DiscussionRepository
-import com.github.meeplemeet.model.map.MarkerPreview.*
+import com.github.meeplemeet.model.map.PinType
+import com.github.meeplemeet.model.map.StorableGeoPin
 import com.github.meeplemeet.model.shops.OpeningHours
 import com.github.meeplemeet.model.shops.ShopRepository
 import com.github.meeplemeet.model.space_renter.SpaceRenterRepository
@@ -31,12 +32,16 @@ class MarkerPreviewRepository(
 ) {
 
   /**
-   * Transforms a list of [StorableGeoPin]s into their corresponding [MarkerPreview]s in parallel.
+   * Transforms a list of [com.github.meeplemeet.model.map.StorableGeoPin]s into their corresponding
+   * [MarkerPreview]s in parallel.
    *
    * Each pin is fetched according to its type:
-   * - [PinType.SHOP] → fetches the shop and builds a [ShopMarkerPreview]
-   * - [PinType.SESSION] → fetches the session and game to build a [SessionMarkerPreview]
-   * - [PinType.SPACE] → fetches the space renter and builds a [SpaceMarkerPreview]
+   * - [com.github.meeplemeet.model.map.PinType.SHOP] → fetches the shop and builds a
+   *   [MarkerPreview.ShopMarkerPreview]
+   * - [com.github.meeplemeet.model.map.PinType.SESSION] → fetches the session and game to build a
+   *   [MarkerPreview.SessionMarkerPreview]
+   * - [com.github.meeplemeet.model.map.PinType.SPACE] → fetches the space renter and builds a
+   *   [MarkerPreview.SpaceMarkerPreview]
    *
    * @param pins List of pins to transform
    * @return List of [MarkerPreview?]s. A preview may be `null` if the corresponding entity could
@@ -53,7 +58,7 @@ class MarkerPreviewRepository(
           .map { pin ->
             async {
               val shop = shopRepository.getShop(pin.uid)
-              ShopMarkerPreview(
+              MarkerPreview.ShopMarkerPreview(
                   name = shop.name,
                   address = shop.address.name,
                   open = isOpenNow(shop.openingHours))
@@ -68,7 +73,7 @@ class MarkerPreviewRepository(
             async {
               val session = discussionRepository.getDiscussion(pin.uid).session
               session?.let {
-                SessionMarkerPreview(
+                MarkerPreview.SessionMarkerPreview(
                     title = it.name,
                     address = it.location.name,
                     game = it.gameName,
@@ -84,7 +89,7 @@ class MarkerPreviewRepository(
           .map { pin ->
             async {
               val space = spaceRenterRepository.getSpaceRenter(pin.uid)
-              SpaceMarkerPreview(
+              MarkerPreview.SpaceMarkerPreview(
                   name = space.name,
                   address = space.address.name,
                   open = isOpenNow(space.openingHours))
@@ -115,14 +120,14 @@ class MarkerPreviewRepository(
       PinType.SHOP -> {
         val shop = shopRepository.getShop(pin.uid)
         shop.let {
-          ShopMarkerPreview(
+          MarkerPreview.ShopMarkerPreview(
               name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
       }
       PinType.SESSION -> {
         val session = discussionRepository.getDiscussion(pin.uid).session
         session?.let {
-          SessionMarkerPreview(
+          MarkerPreview.SessionMarkerPreview(
               title = it.name,
               address = it.location.name,
               game = it.gameName,
@@ -132,7 +137,7 @@ class MarkerPreviewRepository(
       PinType.SPACE -> {
         val space = spaceRenterRepository.getSpaceRenter(pin.uid)
         space.let {
-          SpaceMarkerPreview(
+          MarkerPreview.SpaceMarkerPreview(
               name = it.name, address = it.address.name, open = isOpenNow(it.openingHours))
         }
       }

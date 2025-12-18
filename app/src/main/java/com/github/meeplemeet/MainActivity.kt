@@ -42,9 +42,9 @@ import com.github.meeplemeet.model.account.HandlesRepository
 import com.github.meeplemeet.model.auth.AuthenticationRepository
 import com.github.meeplemeet.model.discussions.DiscussionRepository
 import com.github.meeplemeet.model.images.ImageRepository
-import com.github.meeplemeet.model.map.MarkerPreviewRepository
 import com.github.meeplemeet.model.map.PinType
 import com.github.meeplemeet.model.map.StorableGeoPinRepository
+import com.github.meeplemeet.model.map.previews.MarkerPreviewRepository
 import com.github.meeplemeet.model.offline.OfflineModeManager
 import com.github.meeplemeet.model.posts.PostRepository
 import com.github.meeplemeet.model.sessions.SessionRepository

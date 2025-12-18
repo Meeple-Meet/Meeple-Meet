@@ -10,6 +10,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -47,6 +50,7 @@ import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.google.firebase.Timestamp
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
@@ -55,7 +59,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import org.hamcrest.Matchers.allOf
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -436,7 +439,7 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
    * Tests clustering display, single pin selection, and cluster interactions. Tests with both
    * single cluster strategy and no cluster strategy.
    */
-  @Ignore
+  // @Ignore
   @Test
   fun test_clustering_and_singlePin_interactions() {
     // First part: test with no clustering (individual pins)
@@ -604,6 +607,80 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             .assertTextContains("m", substring = true)
 
         // cleanup
+        shopRepository.deleteShop(shop.id)
+      }
+    }
+
+    checkpoint("singlePin_time_displayed") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Time Test Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        noClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(5000)
+
+        val clusters = noClusterViewModel.getClusters(regularAccount)
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
+
+        // show preview sheet
+        noClusterViewModel.selectPin(cluster!!.items[0])
+        delay(5000)
+
+        // time row visible
+        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_ESTIMATES).assertIsDisplayed()
+
+        // car time contains minutes/hours ('m' or 'h')
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_CAR)
+            .assertTextContains("m", substring = true) // e.g. "5m" or "1h 5m"
+
+        // Bike & walk exist
+        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_BIKE).assertExists()
+        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_WALK).assertExists()
+
+        shopRepository.deleteShop(shop.id)
+      }
+    }
+
+    checkpoint("singlePin_time_never_shows_zero_minutes") {
+      runBlocking {
+        val shop =
+            shopRepository.createShop(
+                owner = shopOwnerAccount,
+                name = "Min Time Shop",
+                address = testLocation,
+                openingHours = testOpeningHours)
+
+        refreshContent()
+
+        noClusterViewModel.startGeoQuery(
+            testLocation, radiusKm = DEFAULT_TEST_KM, currentUserId = regularAccount.uid)
+        delay(5000)
+
+        val clusters = noClusterViewModel.getClusters(regularAccount)
+        val cluster = clusters.find { it.items[0].geoPin.uid == shop.id }
+        assertNotNull(cluster)
+
+        noClusterViewModel.selectPin(cluster!!.items[0])
+        delay(5000)
+
+        // Assert that time is displayed
+        composeRule.onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_CAR).assertIsDisplayed()
+
+        // Assert we never show "0m"
+        composeRule
+            .onNodeWithTag(MapScreenTestTags.PREVIEW_TIME_CAR)
+            .assertIsDisplayed()
+            .assertTextDoesNotContainSubstring("0m")
+
         shopRepository.deleteShop(shop.id)
       }
     }
@@ -1093,5 +1170,15 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
         shopRepository.deleteShop(shop3.id)
       }
     }
+  }
+
+  private fun SemanticsNodeInteraction.assertTextDoesNotContainSubstring(forbidden: String) {
+    val node = fetchSemanticsNode()
+    val text =
+        node.config.getOrNull(SemanticsProperties.Text)?.joinToString(separator = "") { it.text }
+            ?: ""
+
+    assertFalse(
+        "Text should not contain \"$forbidden\" but was \"$text\"", text.contains(forbidden))
   }
 }
