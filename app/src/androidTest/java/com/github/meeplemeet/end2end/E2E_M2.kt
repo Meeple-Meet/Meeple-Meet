@@ -4,7 +4,6 @@ import android.Manifest
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -25,10 +24,6 @@ import com.github.meeplemeet.HttpClientProvider
 import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.ui.MapScreenTestTags
-import com.github.meeplemeet.ui.account.CreateAccountTestTags
-import com.github.meeplemeet.ui.auth.OnBoardingTestTags
-import com.github.meeplemeet.ui.auth.SignInScreenTestTags
-import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.components.SessionComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopComponentsTestTags
 import com.github.meeplemeet.ui.components.ShopFormTestTags
@@ -38,6 +33,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.posts.CreatePostTestTags
 import com.github.meeplemeet.ui.posts.FeedsOverviewTestTags
 import com.github.meeplemeet.ui.shops.CreateShopScreenTestTags
+import com.github.meeplemeet.utils.AuthUtils as authUser
 import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
@@ -184,96 +180,13 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     val mainUserHandle = "shop_$uniqueId"
     val mainUserName = "Shop_Owner_v.$uniqueId"
 
-    // Sign up the main user through UI, the rest of the other interactions will be done through
-    // repositories
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON)
-          .assertExists()
-          .performClick()
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
-          .assertExists()
-          .performTextInput(mainUserEmail)
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
-          .assertExists()
-          .performTextInput(mainUserPassword)
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
-          .assertExists()
-          .performTextInput(mainUserPassword)
-      true
-    })
-    composeTestRule.waitForIdle()
-
-    composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
-          .assertExists()
-          .assertIsEnabled()
-          .performClick()
-      true
-    })
-
-    composeTestRule.waitUntilWithCatch(
-        predicate = {
-          composeTestRule
-              .onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-              .fetchSemanticsNodes()
-              .isNotEmpty()
-        })
-
-    // Fill Create Account
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD, useUnmergedTree = true)
-          .assertExists()
-          .performTextInput(mainUserHandle)
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
-          .assertExists()
-          .performTextInput(mainUserName)
-      true
-    })
-    composeTestRule.closeKeyboardSafely()
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER)
-          .assertExists()
-          .performClick()
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule.onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER).assertIsOn()
-      true
-    })
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule
-          .onNodeWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
-          .assertExists()
-          .assertIsEnabled()
-          .performClick()
-      true
-    })
-    // Skip the OnBoarding screen
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
-      true
-    })
+    // Sign up the main user through utility
+    runBlocking {
+      with(authUser) {
+        composeTestRule.signup(
+            mainUserEmail, mainUserPassword, mainUserHandle, mainUserName, isShopOwner = true)
+      }
+    }
 
     composeTestRule.waitForIdle()
 
@@ -1036,6 +949,7 @@ class E2E_M2 : FirestoreTests(), OnMapsSdkInitializedCallback {
     composeTestRule.closeKeyboardSafely()
     composeTestRule.waitUntilWithCatch(
         predicate = {
+          composeTestRule.closeKeyboardSafely()
           var byTag =
               composeTestRule
                   .onAllNodesWithTag(itemTag, useUnmergedTree = true)

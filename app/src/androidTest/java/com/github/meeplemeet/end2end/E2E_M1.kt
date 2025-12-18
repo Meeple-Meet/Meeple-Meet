@@ -17,7 +17,7 @@ import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.utils.AuthUtils.closeKeyboardSafely
 import com.github.meeplemeet.utils.AuthUtils.signInUser
 import com.github.meeplemeet.utils.AuthUtils.signOutWithBottomBar
-import com.github.meeplemeet.utils.AuthUtils.signUpUser
+import com.github.meeplemeet.utils.AuthUtils.signup
 import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import java.util.UUID
@@ -62,7 +62,7 @@ class E2E_M1 : FirestoreTests() {
 
   @Test
   fun completeUserJourney_signUpCreateAccountAndNavigate() {
-    runBlocking { composeTestRule.signUpUser(testEmail, testPassword, testHandle, testUsername) }
+    runBlocking { composeTestRule.signup(testEmail, testPassword, testHandle, testUsername) }
 
     // Step 6: Navigate through the main tabs to verify full access
     composeTestRule.waitUntilWithCatch({
@@ -105,13 +105,13 @@ class E2E_M1 : FirestoreTests() {
 
     // ===== PART 1: Create first account (Alice) =====
     composeTestRule.waitForIdle()
-    runBlocking { composeTestRule.signUpUser(user1Email, password, user1Handle, user1Name) }
+    runBlocking { composeTestRule.signup(user1Email, password, user1Handle, user1Name) }
     runBlocking { waitUntilAuthReady() }
     composeTestRule.waitForIdle()
     composeTestRule.signOutWithBottomBar()
 
     // ===== PART 2: Create second account (Bob) =====
-    runBlocking { composeTestRule.signUpUser(user2Email, password, user2Handle, user2Name) }
+    runBlocking { composeTestRule.signup(user2Email, password, user2Handle, user2Name) }
     runBlocking { waitUntilAuthReady() }
     composeTestRule.signOutWithBottomBar()
 
@@ -251,12 +251,11 @@ class E2E_M1 : FirestoreTests() {
     })
     composeTestRule.waitForIdle()
 
-    composeTestRule.closeKeyboardSafely()
-
     // Bob should see the discussion that Alice created and added him to
     composeTestRule.waitUntilWithCatch(
         timeoutMs = 15_000,
         predicate = {
+          composeTestRule.closeKeyboardSafely()
           composeTestRule.onNodeWithText(discussionTitle, useUnmergedTree = true).assertExists()
           true
         })

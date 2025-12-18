@@ -39,11 +39,12 @@ object AuthUtils {
     }
   }
 
-  suspend fun ComposeTestRule.signUpUser(
+  suspend fun ComposeTestRule.signup(
       email: String,
       password: String,
       handle: String,
-      username: String
+      username: String,
+      isShopOwner: Boolean = false
   ) {
     delay(3000)
     waitForIdle()
@@ -73,11 +74,9 @@ object AuthUtils {
       true
     })
 
-    // --- Close keyboard (Compose-only!) ---
-    closeKeyboardSafely()
-
     // --- Submit ---
     waitUntilWithCatch({
+      closeKeyboardSafely()
       onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
           .assertExists()
           .assertIsEnabled()
@@ -107,7 +106,13 @@ object AuthUtils {
       true
     })
 
-    closeKeyboardSafely()
+    if (isShopOwner) {
+      waitUntilWithCatch({
+        closeKeyboardSafely()
+        onNodeWithTag(CreateAccountTestTags.CHECKBOX_OWNER).assertExists().performClick()
+        true
+      })
+    }
 
     waitUntilWithCatch({
       onNodeWithText("Let's go!").assertIsEnabled().performClick()
@@ -163,9 +168,8 @@ object AuthUtils {
       true
     })
 
-    closeKeyboardSafely()
-
     waitUntilWithCatch({
+      closeKeyboardSafely()
       onNodeWithTag(SignInScreenTestTags.SIGN_IN_BUTTON)
           .assertExists()
           .assertIsEnabled()
