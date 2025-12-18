@@ -883,7 +883,8 @@ fun DateAndTimePicker(
               text = "Cannot create a session in the past",
               color = MaterialTheme.colorScheme.error,
               style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.padding(start = Dimensions.Padding.medium))
+              modifier = Modifier.fillMaxWidth().padding(horizontal = Dimensions.Padding.medium),
+              textAlign = TextAlign.Center)
         }
       }
 }
