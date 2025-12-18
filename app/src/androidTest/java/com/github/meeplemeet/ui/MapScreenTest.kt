@@ -714,7 +714,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testGame.name,
             Timestamp.now(),
             testLocation,
-            rentalId = null,
             regularAccount.uid)
 
         refreshContent()
@@ -773,7 +772,6 @@ class MapScreenTest : FirestoreTests(), OnMapsSdkInitializedCallback {
             testGame.name,
             Timestamp.now(),
             testLocation,
-            rentalId = null,
             shopOwnerAccount.uid)
 
         refreshContent(regularAccount)

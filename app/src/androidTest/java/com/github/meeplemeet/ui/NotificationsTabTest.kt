@@ -139,7 +139,6 @@ class NotificationsTabTest : FirestoreTests() {
                   game.name,
                   Timestamp(Date(System.currentTimeMillis() + 86400000)),
                   location = Location(0.0, 0.0, "Game Store"),
-                  rentalId = null,
                   participants = arrayOf(otherUser.uid))
               .session!!
 
