@@ -225,6 +225,17 @@ internal fun EditSpaceRenterContent(
   var showHoursDialog by remember { mutableStateOf(false) }
 
   var spaces by remember { mutableStateOf(initialRenter.spaces) }
+  // Sync state when initialRenter changes (e.g. after reload or navigation)
+  LaunchedEffect(initialRenter) {
+    name = initialRenter.name
+    photoCollectionUrl = initialRenter.photoCollectionUrl
+    email = initialRenter.email
+    phone = initialRenter.phone
+    link = initialRenter.website
+    week = initialRenter.openingHours
+    spaces = initialRenter.spaces
+  }
+
   var spacesExpanded by rememberSaveable { mutableStateOf(false) }
   val validation = rememberSpaceRenterValidationState(week, spaces, locationUi)
 

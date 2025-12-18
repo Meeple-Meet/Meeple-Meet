@@ -65,15 +65,25 @@ class CreateSpaceRenterViewModel(
       openingHours: List<OpeningHours>,
       spaces: List<Space> = emptyList(),
       photoCollectionUrl: List<String> = emptyList(),
+      onSuccess: (SpaceRenter) -> Unit = {},
+      onFailure: (Exception) -> Unit = {}
   ) {
     // Validation
-    if (name.isBlank()) throw IllegalArgumentException("SpaceRenter name cannot be blank")
+    if (name.isBlank()) {
+      onFailure(IllegalArgumentException("SpaceRenter name cannot be blank"))
+      return
+    }
 
     val uniqueByDay = openingHours.distinctBy { it.day }
-    if (uniqueByDay.size != 7) throw IllegalArgumentException("7 opening hours are needed")
+    if (uniqueByDay.size != 7) {
+      onFailure(IllegalArgumentException("7 opening hours are needed"))
+      return
+    }
 
-    if (address == Location())
-        throw IllegalArgumentException("An address is required to create a space renter")
+    if (address == Location()) {
+      onFailure(IllegalArgumentException("An address is required to create a space renter"))
+      return
+    }
 
     viewModelScope.launch {
       val isOnline = OfflineModeManager.hasInternetConnection.value
@@ -110,8 +120,9 @@ class CreateSpaceRenterViewModel(
               throw Exception("Failed to save photo URLs: ${e.message}", e)
             }
           }
+          onSuccess(created)
         } catch (e: Exception) {
-          throw Exception("Failed to create space renter: ${e.message}", e)
+          onFailure(Exception("Failed to create space renter: ${e.message}", e))
         }
       } else {
         // OFFLINE: Queue for later creation
@@ -139,6 +150,7 @@ class CreateSpaceRenterViewModel(
 
         // Optional: Show a message to user that creation will happen when online
         // You might want to expose a callback or LiveData for this
+        onSuccess(pendingRenter)
       }
     }
   }

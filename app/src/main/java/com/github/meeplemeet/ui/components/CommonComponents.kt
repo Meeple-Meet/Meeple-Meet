@@ -261,7 +261,7 @@ fun ImageCarousel(
                         placeholder =
                             androidx.compose.ui.res.painterResource(R.drawable.ic_storefront),
                         error = androidx.compose.ui.res.painterResource(R.drawable.ic_storefront))
-                    if (page < photoCollectionUrl.size && editable) {
+                    if (page < photoCollectionState.size && editable) {
                       Box(
                           modifier =
                               Modifier.align(Alignment.TopEnd)

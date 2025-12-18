@@ -3,12 +3,15 @@
 // Docstrings were generated using copilot from Android studio
 package com.github.meeplemeet.ui.shops
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -203,6 +206,8 @@ fun AddShopContent(
   var isInputFocused by remember { mutableStateOf(false) }
   var focusedFieldTokens by remember { mutableStateOf(emptySet<Any>()) }
 
+  var isSaving by remember { mutableStateOf(false) }
+
   CompositionLocalProvider(
       LocalFocusableFieldObserver provides
           { token, focused ->
@@ -210,75 +215,92 @@ fun AddShopContent(
                 if (focused) focusedFieldTokens + token else focusedFieldTokens - token
             isInputFocused = focusedFieldTokens.isNotEmpty()
           }) {
-        ShopFormContent(
-            state = state,
-            viewModel = viewModel,
-            owner = owner,
-            online = online,
-            locationUi = locationUi,
-            topBar = {
-              CenterAlignedTopAppBar(
-                  title = {
-                    Text(
-                        MeepleMeetScreen.CreateShop.title,
-                        modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
-                  },
-                  navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
-                          Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                  },
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
-            },
-            snackbarHost = {
-              SnackbarHost(
-                  snackbarHostState,
-                  modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
-            },
-            bottomBar = {
-              val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
-
-              val isValid by
-                  remember(
-                      state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
-                        derivedStateOf {
-                          state.shopName.isNotBlank() &&
-                              isValidEmail(state.email) &&
-                              locationUi.selectedLocation != null &&
-                              hasOpeningHours
-                        }
-                      }
-              if (!(shouldHide && isInputFocused)) {
-                ActionBar(
-                    onDiscard = { state.onDiscard(onBack) },
-                    onPrimary = {
-                      scope.launch {
-                        try {
-                          val shop =
-                              viewModel.createShop(
-                                  context = context,
-                                  owner = owner,
-                                  name = state.shopName,
-                                  email = state.email,
-                                  phone = state.phone,
-                                  website = state.website,
-                                  address = locationUi.selectedLocation ?: Location(),
-                                  openingHours = state.week,
-                                  gameCollection = state.stock,
-                                  photoCollectionUrl = state.photoCollectionUrl)
-                          onCreated(shop.id)
-                        } catch (e: IllegalArgumentException) {
-                          snackbarHostState.showSnackbar(e.message ?: "Validation error")
-                        } catch (e: Exception) {
-                          snackbarHostState.showSnackbar("Failed to create shop")
-                        }
-                      }
+        Box(modifier = Modifier.fillMaxSize()) {
+          ShopFormContent(
+              state = state,
+              viewModel = viewModel,
+              owner = owner,
+              online = online,
+              locationUi = locationUi,
+              topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                      Text(
+                          MeepleMeetScreen.CreateShop.title,
+                          modifier = Modifier.testTag(CreateShopScreenTestTags.TITLE))
                     },
-                    enabled = isValid)
-              }
-            })
+                    navigationIcon = {
+                      IconButton(
+                          onClick = onBack,
+                          enabled = !isSaving,
+                          modifier = Modifier.testTag(CreateShopScreenTestTags.NAV_BACK)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                          }
+                    },
+                    modifier = Modifier.testTag(CreateShopScreenTestTags.TOPBAR))
+              },
+              snackbarHost = {
+                SnackbarHost(
+                    snackbarHostState,
+                    modifier = Modifier.testTag(CreateShopScreenTestTags.SNACKBAR_HOST))
+              },
+              bottomBar = {
+                val shouldHide = UiBehaviorConfig.hideBottomBarWhenInputFocused
+
+                val isValid by
+                    remember(
+                        state.shopName, state.email, locationUi.selectedLocation, hasOpeningHours) {
+                          derivedStateOf {
+                            state.shopName.isNotBlank() &&
+                                isValidEmail(state.email) &&
+                                locationUi.selectedLocation != null &&
+                                hasOpeningHours
+                          }
+                        }
+                if (!(shouldHide && isInputFocused)) {
+                  ActionBar(
+                      onDiscard = { state.onDiscard(onBack) },
+                      onPrimary = {
+                        isSaving = true
+                        scope.launch {
+                          try {
+                            val shop =
+                                viewModel.createShop(
+                                    context = context,
+                                    owner = owner,
+                                    name = state.shopName,
+                                    email = state.email,
+                                    phone = state.phone,
+                                    website = state.website,
+                                    address = locationUi.selectedLocation ?: Location(),
+                                    openingHours = state.week,
+                                    gameCollection = state.stock,
+                                    photoCollectionUrl = state.photoCollectionUrl)
+                            onCreated(shop.id)
+                          } catch (e: IllegalArgumentException) {
+                            isSaving = false
+                            snackbarHostState.showSnackbar(e.message ?: "Validation error")
+                          } catch (e: Exception) {
+                            isSaving = false
+                            snackbarHostState.showSnackbar("Failed to create shop")
+                          }
+                        }
+                      },
+                      enabled = isValid && !isSaving)
+                }
+              })
+
+          if (isSaving) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                        .clickable(enabled = true, onClick = {}),
+                contentAlignment = Alignment.Center) {
+                  CircularProgressIndicator()
+                }
+          }
+        }
       }
 
   OpeningHoursEditor(
@@ -517,7 +539,7 @@ fun rememberCreateShopFormState(
     onSetGameQuery: (String) -> Unit,
     onSetGame: (GameSearchResult) -> Unit
 ): CreateShopFormState {
-  return remember {
+  return remember(initialShop) {
     CreateShopFormState(
         initialStock = initialStock,
         initialWeek = emptyWeek(),
