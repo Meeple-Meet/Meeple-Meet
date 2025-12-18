@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -17,9 +18,13 @@ import com.github.meeplemeet.MainActivity
 import com.github.meeplemeet.model.account.Account
 import com.github.meeplemeet.model.account.NotificationSettings
 import com.github.meeplemeet.model.shared.location.Location
+import com.github.meeplemeet.ui.account.CreateAccountTestTags
 import com.github.meeplemeet.ui.account.FriendsManagementTestTags
 import com.github.meeplemeet.ui.account.NotificationsTabTestTags
 import com.github.meeplemeet.ui.account.PublicInfoTestTags
+import com.github.meeplemeet.ui.auth.OnBoardingTestTags
+import com.github.meeplemeet.ui.auth.SignInScreenTestTags
+import com.github.meeplemeet.ui.auth.SignUpScreenTestTags
 import com.github.meeplemeet.ui.navigation.NavigationTestTags
 import com.github.meeplemeet.ui.sessions.SessionViewerTestTags
 import com.github.meeplemeet.ui.sessions.SessionsOverviewScreenTestTags
@@ -27,7 +32,6 @@ import com.github.meeplemeet.utils.AuthUtils
 import com.github.meeplemeet.utils.AuthUtils.waitUntilWithCatch
 import com.github.meeplemeet.utils.FirestoreTests
 import com.google.firebase.Timestamp
-import java.util.UUID
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -36,6 +40,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class E2E_M3 : FirestoreTests() {
@@ -114,6 +119,105 @@ class E2E_M3 : FirestoreTests() {
     composeTestRule.waitForIdle()
   }
 
+  private fun aliceSignUp(email: String, password: String, handle: String, username: String) {
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignInScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .performClick()
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.EMAIL_FIELD)
+          .assertExists()
+          .performTextInput(email)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(password)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.CONFIRM_PASSWORD_FIELD)
+          .assertExists()
+          .performTextInput(password)
+      true
+    })
+    composeTestRule.waitForIdle()
+
+    AuthUtils.apply { composeTestRule.closeKeyboardSafely() }
+
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(SignUpScreenTestTags.SIGN_UP_BUTTON)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
+
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onAllNodesWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    })
+
+    // Fill Create Account
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.HANDLE_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(handle)
+      true
+    })
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.USERNAME_FIELD, useUnmergedTree = true)
+          .assertExists()
+          .performTextInput(username)
+      true
+    })
+    AuthUtils.apply { composeTestRule.closeKeyboardSafely() }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onNodeWithTag(CreateAccountTestTags.SUBMIT_BUTTON, useUnmergedTree = true)
+          .assertExists()
+          .assertIsEnabled()
+          .performClick()
+      true
+    })
+
+    // Skip the OnBoarding screen
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(OnBoardingTestTags.SKIP_BUTTON).assertExists().performClick()
+      true
+    })
+
+    composeTestRule.waitForIdle()
+
+    // Backend convergence
+    runBlocking {
+      waitUntilAuthReady()
+      retryUntil {
+        val doc = handlesRepository.collection.document(handle).get().await()
+        doc.exists() && doc.getString("accountId")?.isNotBlank() == true
+      }
+    }
+
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule
+          .onAllNodesWithTag(NavigationTestTags.BOTTOM_NAVIGATION_MENU)
+          .fetchSemanticsNodes()
+          .isNotEmpty()
+    })
+  }
+
   @OptIn(ExperimentalTestApi::class)
   @Test
   fun relationshipEndToEnd() {
@@ -123,16 +227,11 @@ class E2E_M3 : FirestoreTests() {
     val charlieHandle = "charlie_$uniqueId"
 
     // 1. Alice signs up (UI)
-    runBlocking {
-      AuthUtils.apply {
-        composeTestRule.signUpUser(
-            email = "alice_$uniqueId@test.com",
-            password = "Password123!",
-            handle = aliceHandle,
-            username = "Alice")
-      }
-      waitUntilAuthReady()
-    }
+    aliceSignUp(
+        email = "alice_$uniqueId@test.com",
+        password = "Password123!",
+        handle = aliceHandle,
+        username = "Alice")
 
     // Update Alice's settings to NO_ONE via repo (simulating her preference)
     runBlocking {
@@ -184,19 +283,17 @@ class E2E_M3 : FirestoreTests() {
     navigateToNotificationsScreen()
 
     // Wait for notification from Bob using the ID
-    composeTestRule.waitForIdle()
     val notifTag = NotificationsTabTestTags.NOTIFICATION_ITEM_PREFIX + notificationId
-    composeTestRule.waitUntil(30_000) {
-      composeTestRule.onAllNodesWithTag(notifTag).fetchSemanticsNodes().isNotEmpty()
-    }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(notifTag).assertIsDisplayed()
+      true
+    })
 
     // Open Notification Sheet
-    composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(notifTag).performClick()
       true
     })
-    composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(NotificationsTabTestTags.SHEET_TITLE).assertIsDisplayed()
       true
@@ -231,29 +328,24 @@ class E2E_M3 : FirestoreTests() {
     }
 
     // Navigate to discussion to see the message
-    composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
       true
     })
-    composeTestRule.waitForIdle()
 
     // Wait for discussion item
-    composeTestRule.waitUntil(10_000) {
-      composeTestRule.onAllNodesWithText(discussionTitle).fetchSemanticsNodes().isNotEmpty()
-    }
     composeTestRule.waitUntilWithCatch({
-      composeTestRule.onNodeWithText(discussionTitle).performClick()
+      composeTestRule.onNodeWithText(discussionTitle).assertIsDisplayed().performClick()
       true
     })
 
     // Verify message is visible
-    composeTestRule.waitUntil(10_000) {
-      composeTestRule.onAllNodesWithText(badMessage).fetchSemanticsNodes().isNotEmpty()
-    }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithText(badMessage).assertIsDisplayed()
+      true
+    })
 
     // Go back
-    composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch({
       composeTestRule
           .onNodeWithTag(NavigationTestTags.GO_BACK_BUTTON, useUnmergedTree = true)
@@ -261,7 +353,6 @@ class E2E_M3 : FirestoreTests() {
       true
     })
 
-    composeTestRule.waitForIdle()
     navigateToFriendsList()
 
     composeTestRule.waitUntilWithCatch({
@@ -270,59 +361,39 @@ class E2E_M3 : FirestoreTests() {
           .performTextInput(charlieHandle)
       true
     })
-    composeTestRule.waitForIdle()
 
-    // Wait for search result
-    composeTestRule.waitUntil(10_000) {
-      composeTestRule
-          .onAllNodesWithTag(
-              FriendsManagementTestTags.SEARCH_RESULT_ITEM_PREFIX + charlie.uid,
-              useUnmergedTree = true)
-          .fetchSemanticsNodes()
-          .isNotEmpty()
-    }
-
-    // Click block button
+    // Wait for search result and Click block button
     composeTestRule.waitUntilWithCatch({
       composeTestRule
           .onNodeWithTag(
               FriendsManagementTestTags.SEARCH_RESULT_BLOCK_BUTTON_PREFIX + charlie.uid,
               useUnmergedTree = true)
+          .assertIsDisplayed()
           .performClick()
       true
     })
 
-    composeTestRule.waitForIdle()
-
     // Clear search to reset view (optional)
-    composeTestRule.waitUntilWithCatch(
-        {
-          composeTestRule.onNodeWithTag(FriendsManagementTestTags.SEARCH_CLEAR).performClick()
-          true
-        },
-        timeoutMs = 2000)
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onNodeWithTag(FriendsManagementTestTags.SEARCH_CLEAR).performClick()
+      true
+    })
 
     // 8. Verify Charlie's messages disappear (UI)
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(NavigationTestTags.DISCUSSIONS_TAB).performClick()
       true
     })
-    composeTestRule.waitForIdle()
 
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithText(discussionTitle).performClick()
       true
     })
-    composeTestRule.waitForIdle()
 
     // Wait for message to NOT exist
-    composeTestRule.waitUntil(20_000) {
-      try {
-        composeTestRule.onAllNodesWithText(badMessage).fetchSemanticsNodes().isEmpty()
-      } catch (_: Throwable) {
-        false
-      }
-    }
+    composeTestRule.waitUntilWithCatch({
+      composeTestRule.onAllNodesWithText(badMessage).fetchSemanticsNodes().isEmpty()
+    })
 
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithText(badMessage).assertDoesNotExist()
@@ -334,10 +405,39 @@ class E2E_M3 : FirestoreTests() {
           .performClick()
       true
     })
+  }
 
-    // --- SESSION SECTION ---
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun sessionEndToEnd() {
+    val uniqueId = UUID.randomUUID().toString().take(8)
+    val aliceHandle = "alice_$uniqueId"
+    val bobHandle = "bob_$uniqueId"
+    val discussionTitle = "Session Discussion $uniqueId"
 
-    // 9. Bob creates a session (Repo)
+    // 1. Alice signs up (UI)
+    aliceSignUp(
+        email = "alice_$uniqueId@test.com",
+        password = "Password123!",
+        handle = aliceHandle,
+        username = "Alice")
+
+    // 2. Create Bob and a discussion via Repo
+    val bob = runBlocking {
+      val b =
+          createUserWithSettings(
+              "Bob", bobHandle, "bob_$uniqueId@test.com", NotificationSettings.FRIENDS_ONLY)
+      val aliceUid = auth.currentUser!!.uid
+      val discussion =
+          discussionRepository.createDiscussion(
+              creatorId = b.uid,
+              name = discussionTitle,
+              description = "Discussion for sessions",
+              participants = listOf(b.uid, aliceUid))
+      b
+    }
+
+    // 3. Bob creates a session (Repo)
     val initialSessionName = "Board Game Night $uniqueId"
     val updatedSessionName = "Cozy Catan $uniqueId"
     val gameId = "g_catan"
@@ -358,20 +458,15 @@ class E2E_M3 : FirestoreTests() {
           participants = arrayOf(bob.uid, auth.currentUser!!.uid))
     }
 
-    // 10. Alice opens session overview (UI)
+    // 4. Alice opens session overview (UI)
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(NavigationTestTags.SESSIONS_TAB).performClick()
       true
     })
 
-    // 11. Alice checks session and selects it (UI)
+    // 5. Alice checks session and selects it (UI)
     composeTestRule.waitUntilWithCatch({
-      composeTestRule.onNodeWithText(initialSessionName).assertIsDisplayed()
-      true
-    })
-
-    composeTestRule.waitUntilWithCatch({
-      composeTestRule.onNodeWithText(initialSessionName).performClick()
+      composeTestRule.onNodeWithText(initialSessionName).assertIsDisplayed().performClick()
       true
     })
 
@@ -382,7 +477,7 @@ class E2E_M3 : FirestoreTests() {
       true
     })
 
-    // 12. Bob edits the session (Repo)
+    // 6. Bob edits the session (Repo)
     runBlocking {
       val discussions =
           discussionRepository.collection.whereEqualTo("name", discussionTitle).get().await()
@@ -395,14 +490,13 @@ class E2E_M3 : FirestoreTests() {
           gameName = gameName)
     }
 
-    // 13. Alice sees changes (UI)
+    // 7. Alice sees changes (UI)
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithText(updatedSessionName).assertIsDisplayed()
       true
     })
 
     // Close the details card
-    composeTestRule.waitForIdle()
     composeTestRule.waitUntilWithCatch(
         {
           composeTestRule
@@ -411,9 +505,13 @@ class E2E_M3 : FirestoreTests() {
           true
         },
         20_000)
-    composeTestRule.waitForIdle()
+      composeTestRule.waitUntilWithCatch(
+          {
+              composeTestRule.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).assertExists(); true
+          }
+      )
 
-    // 14. Bob archives the session (Repo)
+    // 8. Bob archives the session (Repo)
     val archivedSessionId = UUID.randomUUID().toString()
     runBlocking {
       val discussions =
@@ -422,7 +520,7 @@ class E2E_M3 : FirestoreTests() {
       sessionRepository.archiveSession(discussionId, archivedSessionId, null)
     }
 
-    // 15. Alice opens history and clicks popup (UI)
+    // 9. Alice opens history and clicks popup (UI)
     composeTestRule.waitUntilWithCatch({
       composeTestRule.onNodeWithTag(SessionsOverviewScreenTestTags.TEST_TAG_HISTORY).performClick()
       true
